@@ -103,38 +103,39 @@ public class State {
 	}
 
 	public enum Piece {
-		WHITE_PAWN_A(0, 0x06, '♙'),
-		WHITE_PAWN_B(BITS_PER_PIECE, 0x16, '♙'),
-		WHITE_PAWN_C(BITS_PER_PIECE * 2, 0x26, '♙'), // a2, alive
-		WHITE_PAWN_D(BITS_PER_PIECE * 3, 0x36, '♙'), // b2, alive
-		WHITE_PAWN_E(BITS_PER_PIECE * 4, 0x46, '♙'),
-		WHITE_PAWN_F(BITS_PER_PIECE * 5, 0x56, '♙'),
-		WHITE_PAWN_G(BITS_PER_PIECE * 6, 0x66, '♙'),
-		WHITE_PAWN_H(BITS_PER_PIECE * 7, 0x76, '♙'),
-		WHITE_KNIGHT_QS(BITS_PER_PIECE * 8, 0x22,'♘'), // b1, alive
-		WHITE_KNIGHT_KS(BITS_PER_PIECE * 9, 0xC2,'♘'), // g1, alive
-		WHITE_BISHOP_QS(BITS_PER_PIECE * 10, 0x32,'♗'), // c1, alive
-		WHITE_BISHOP_KS(BITS_PER_PIECE * 11, 0xB2,'♗'), // f1, alive
-		WHITE_ROOK_QS(BITS_PER_PIECE * 12, 0x12,'♖'), // a1, alive
-		WHITE_ROOK_KS(BITS_PER_PIECE * 13, 0xC2,'♖'), // h1, alive
-		WHITE_QUEEN(BITS_PER_PIECE * 14, 0x62,'♕'), // d1, alive
-		WHITE_KING(BITS_PER_PIECE * 15, 0x72,'♔'), // e1, alive
-		BLACK_PAWN_A(BITS_PER_PIECE * 16, 0x1A, '♟'), // a7, alive
-		BLACK_PAWN_B(BITS_PER_PIECE * 17, 0x3A, '♟'), // b7, alive
-		BLACK_PAWN_C(BITS_PER_PIECE * 18, 0x5A, '♟'),
-		BLACK_PAWN_D(BITS_PER_PIECE * 19, 0x7A, '♟'),
-		BLACK_PAWN_E(BITS_PER_PIECE * 20, 0x9A, '♟'),
-		BLACK_PAWN_F(BITS_PER_PIECE * 21, 0xBA, '♟'),
-		BLACK_PAWN_G(BITS_PER_PIECE * 22, 0xDA, '♟'),
-		BLACK_PAWN_H(BITS_PER_PIECE * 23, 0xFA, '♟'),
-		BLACK_KNIGHT_QS(BITS_PER_PIECE * 24, 0x3E, '♞'), // b8, alive
-		BLACK_KNIGHT_KS(BITS_PER_PIECE * 25, 0xDE,'♞'), // g8, alive
-		BLACK_BISHOP_QS(BITS_PER_PIECE * 26, 0x5E, '♝'), // c8, alive
-		BLACK_BISHOP_KS(BITS_PER_PIECE * 27, 0xAE,'♝'), // f8, alive
-		BLACK_ROOK_QS(BITS_PER_PIECE * 28, 0x1E, '♜'), // a8, alive
-		BLACK_ROOK_KS(BITS_PER_PIECE * 29, 0xFE, '♜'), // h8, alive
-		BLACK_QUEEN(BITS_PER_PIECE * 30, 0x7E,'♛'), // d8, alive
-		BLACK_KING(BITS_PER_PIECE * 31, 0x9E,'♚'); // e8, alive
+		WHITE_PAWN_A(0,                         0x06, '♙'), // a2, alive
+		WHITE_PAWN_B(BITS_PER_PIECE,                    0x16, '♙'), // b2, alive
+		WHITE_PAWN_C(BITS_PER_PIECE * 2,        0x26, '♙'),
+		WHITE_PAWN_D(BITS_PER_PIECE * 3,        0x36, '♙'),
+		WHITE_PAWN_E(BITS_PER_PIECE * 4,        0x46, '♙'),
+		WHITE_PAWN_F(BITS_PER_PIECE * 5,        0x56, '♙'),
+		WHITE_PAWN_G(BITS_PER_PIECE * 6,        0x66, '♙'),
+		WHITE_PAWN_H(BITS_PER_PIECE * 7,        0x76, '♙'),
+		WHITE_ROOK_QS(BITS_PER_PIECE * 8,       0x02,'♖'), // a1, alive
+		WHITE_KNIGHT_QS(BITS_PER_PIECE * 9,     0x22,'♘'), // b1, alive
+		WHITE_BISHOP_QS(BITS_PER_PIECE * 10,    0x42,'♗'), // c1, alive
+		WHITE_QUEEN(BITS_PER_PIECE * 11,        0x62,'♕'), // d1, alive
+		WHITE_KING(BITS_PER_PIECE * 12,         0x82,'♔'), // e1, alive
+		WHITE_BISHOP_KS(BITS_PER_PIECE * 13,    0xA2,'♗'), // f1, alive
+		WHITE_KNIGHT_KS(BITS_PER_PIECE * 14,    0xC2,'♘'), // g1, alive
+		WHITE_ROOK_KS(BITS_PER_PIECE * 15,      0xE2,'♖'), // h1, alive
+
+		BLACK_PAWN_A(BITS_PER_PIECE * 16,       0x1A, '♟'), // a7, alive
+		BLACK_PAWN_B(BITS_PER_PIECE * 17,       0x3A, '♟'), // b7, alive
+		BLACK_PAWN_C(BITS_PER_PIECE * 18,       0x5A, '♟'),
+		BLACK_PAWN_D(BITS_PER_PIECE * 19,       0x7A, '♟'),
+		BLACK_PAWN_E(BITS_PER_PIECE * 20,       0x9A, '♟'),
+		BLACK_PAWN_F(BITS_PER_PIECE * 21,       0xBA, '♟'),
+		BLACK_PAWN_G(BITS_PER_PIECE * 22,       0xDA, '♟'),
+		BLACK_PAWN_H(BITS_PER_PIECE * 23,       0xFA, '♟'),
+		BLACK_ROOK_QS(BITS_PER_PIECE * 24,      0x1E, '♜'), // a8, alive
+		BLACK_KNIGHT_QS(BITS_PER_PIECE * 25,    0x3E, '♞'), // b8, alive
+		BLACK_BISHOP_QS(BITS_PER_PIECE * 26,    0x5E, '♝'), // c8, alive
+		BLACK_QUEEN(BITS_PER_PIECE * 27,        0x7E,'♛'), // d8, alive
+		BLACK_KING(BITS_PER_PIECE * 28,         0x9E,'♚'), // e8, alive
+		BLACK_BISHOP_KS(BITS_PER_PIECE * 29,    0xBE,'♝'), // f8, alive
+		BLACK_KNIGHT_KS(BITS_PER_PIECE * 30,    0xDE,'♞'), // g8, alive
+		BLACK_ROOK_KS(BITS_PER_PIECE * 31,      0xFE, '♜'); // h8, alive
 
 		/**
 		 * Index to pieces array, in bits.
