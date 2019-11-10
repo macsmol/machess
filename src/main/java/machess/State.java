@@ -1,7 +1,5 @@
 package machess;
 
-import java.util.Arrays;
-
 /**
  * basic snapshot of game state. Supplementary data will be derived from this class.
  * <p>
@@ -55,7 +53,14 @@ public class State {
 
 	@Override
 	public String toString() {
-		return Arrays.toString(pieces);
+		StringBuilder sb = new StringBuilder();
+		for(Piece piece: Piece.values()) {
+			byte pieceAsByte = readPieceAndZeroLsb(piece);
+			sb.append("" + piece + ": " + String.format("%02x, ", pieceAsByte));
+		}
+
+		// something wrong is output...
+		return sb.toString();
 	}
 
 	/**
@@ -63,11 +68,16 @@ public class State {
 	 */
 	private byte readPieceAsByte(Piece piece) {
 		byte msbsOfPiece = (byte) (pieces[toByteIndexForMsbs(piece)] << toMsbHalfBitIndex(piece));
-		byte lsbsOfPiece = (byte) (pieces[toByteIndexForLsbs(piece)] >>> (toLsbHalfBitIndex(piece)));
-
+		byte lsbsOfPiece = 0;
+		if (toByteIndexForLsbs(piece) < pieces.length) {
+			lsbsOfPiece = (byte) (pieces[toByteIndexForLsbs(piece)] >>> (toLsbHalfBitIndex(piece)));
+		}
 		// LSBs from second half are rubbish from next byte - dont overwrite it!
 		return (byte)(msbsOfPiece | lsbsOfPiece);
 	}
+	 private byte readPieceAndZeroLsb(Piece piece) {
+		return (byte)(readPieceAsByte(piece) & ~1);
+	 }
 
 	/**
 	 *  Writes piece into pieces array.
