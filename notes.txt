@@ -1,0 +1,4 @@
+11.11.2019
+-dropped unicode chess symbols for toString() purposes. They are not monospace.
+-moved to 8 bit per piece model. Joining pieces from adjacent bytes was to cumbersome (probably slow?) BitSet+7bpp is also worth exploring.
+-new-ing some objects in toString() - watch out for GC!;

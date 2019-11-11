@@ -24,10 +24,11 @@ public class State {
 	/**
 	 * list of pieces. 7 bit per figure. 3 bit for file, 3 bits for row, 1 bit isAlive. Type of figure denoted by location.
 	 * 7 bits * 32 figures = 224 bits -> 28 bytes
-	 *      b0      b1       b2       b3       b4       b5       b6
-	 * +--------+--------+--------+--------+--------+--------+--------+
-	 * |FFFRRRxF|FFRRRxFF|FRRRxFFF|RRRxFFFR|RRxFFFRR|RxFFFRRR|xFFFRRRx|
-	           7       14      21      28      35      42      49
+	 *      b0      b1       b2       b3       b4       b5       b6       b7       b8
+	 * +--------+--------+--------+--------+--------+--------+--------+--------+--------+
+	 * |FFFRRRxF|FFRRRxFF|FRRRxFFF|RRRxFFFR|RRxFFFRR|RxFFFRRR|xFFFRRRx|FFFRRRxF|FFRRRxFF|
+	 *                            |___RRRxF
+	    0      7       14      21      28      35      42      49      56     63      70
 	 */
 	private byte[] pieces = new byte[28];
 
@@ -56,10 +57,10 @@ public class State {
 		StringBuilder sb = new StringBuilder();
 		for(Piece piece: Piece.values()) {
 			byte pieceAsByte = readPieceAndZeroLsb(piece);
-			sb.append("" + piece + ": " + String.format("%02x, ", pieceAsByte));
+			sb.append(piece).append(": ").append(String.format("%02x, ", pieceAsByte));
 		}
 
-		// something wrong is output...
+		// something wrong is being output...
 		return sb.toString();
 	}
 
@@ -73,11 +74,12 @@ public class State {
 			lsbsOfPiece = (byte) (pieces[toByteIndexForLsbs(piece)] >>> (toLsbHalfBitIndex(piece)));
 		}
 		// LSBs from second half are rubbish from next byte - dont overwrite it!
-		return (byte)(msbsOfPiece | lsbsOfPiece);
+		return (byte) (msbsOfPiece | lsbsOfPiece);
 	}
-	 private byte readPieceAndZeroLsb(Piece piece) {
-		return (byte)(readPieceAsByte(piece) & ~1);
-	 }
+
+	private byte readPieceAndZeroLsb(Piece piece) {
+		return (byte) (readPieceAsByte(piece) & ~1);
+	}
 
 	/**
 	 *  Writes piece into pieces array.
@@ -113,45 +115,45 @@ public class State {
 	}
 
 	public enum Piece {
-		WHITE_PAWN_A(0,                         0x06, '♙'), // a2, alive
-		WHITE_PAWN_B(BITS_PER_PIECE,                    0x16, '♙'), // b2, alive
-		WHITE_PAWN_C(BITS_PER_PIECE * 2,        0x26, '♙'),
-		WHITE_PAWN_D(BITS_PER_PIECE * 3,        0x36, '♙'),
-		WHITE_PAWN_E(BITS_PER_PIECE * 4,        0x46, '♙'),
-		WHITE_PAWN_F(BITS_PER_PIECE * 5,        0x56, '♙'),
-		WHITE_PAWN_G(BITS_PER_PIECE * 6,        0x66, '♙'),
-		WHITE_PAWN_H(BITS_PER_PIECE * 7,        0x76, '♙'),
-		WHITE_ROOK_QS(BITS_PER_PIECE * 8,       0x02,'♖'), // a1, alive
-		WHITE_KNIGHT_QS(BITS_PER_PIECE * 9,     0x22,'♘'), // b1, alive
-		WHITE_BISHOP_QS(BITS_PER_PIECE * 10,    0x42,'♗'), // c1, alive
-		WHITE_QUEEN(BITS_PER_PIECE * 11,        0x62,'♕'), // d1, alive
-		WHITE_KING(BITS_PER_PIECE * 12,         0x82,'♔'), // e1, alive
-		WHITE_BISHOP_KS(BITS_PER_PIECE * 13,    0xA2,'♗'), // f1, alive
-		WHITE_KNIGHT_KS(BITS_PER_PIECE * 14,    0xC2,'♘'), // g1, alive
-		WHITE_ROOK_KS(BITS_PER_PIECE * 15,      0xE2,'♖'), // h1, alive
+		WHITE_PAWN_A(0,                         0x06, 'p'), // a2, alive
+		WHITE_PAWN_B(BITS_PER_PIECE,                    0x26, 'p'), // b2, alive
+		WHITE_PAWN_C(BITS_PER_PIECE * 2,        0x46, 'p'),
+		WHITE_PAWN_D(BITS_PER_PIECE * 3,        0x66, 'p'),
+		WHITE_PAWN_E(BITS_PER_PIECE * 4,        0x86, 'p'),
+		WHITE_PAWN_F(BITS_PER_PIECE * 5,        0xA6, 'p'),
+		WHITE_PAWN_G(BITS_PER_PIECE * 6,        0xC6, 'p'),
+		WHITE_PAWN_H(BITS_PER_PIECE * 7,        0xE6, 'p'),
+		WHITE_ROOK_QS(BITS_PER_PIECE * 8,       0x02, 'r'), // a1, alive
+		WHITE_KNIGHT_QS(BITS_PER_PIECE * 9,     0x22, 'n'), // b1, alive
+		WHITE_BISHOP_QS(BITS_PER_PIECE * 10,    0x42, 'b'), // c1, alive
+		WHITE_QUEEN(BITS_PER_PIECE * 11,        0x62, 'q'), // d1, alive
+		WHITE_KING(BITS_PER_PIECE * 12,         0x82, 'k'), // e1, alive
+		WHITE_BISHOP_KS(BITS_PER_PIECE * 13,    0xA2, 'b'), // f1, alive
+		WHITE_KNIGHT_KS(BITS_PER_PIECE * 14,    0xC2, 'n'), // g1, alive
+		WHITE_ROOK_KS(BITS_PER_PIECE * 15,      0xE2, 'r'), // h1, alive
 
-		BLACK_PAWN_A(BITS_PER_PIECE * 16,       0x1A, '♟'), // a7, alive
-		BLACK_PAWN_B(BITS_PER_PIECE * 17,       0x3A, '♟'), // b7, alive
-		BLACK_PAWN_C(BITS_PER_PIECE * 18,       0x5A, '♟'),
-		BLACK_PAWN_D(BITS_PER_PIECE * 19,       0x7A, '♟'),
-		BLACK_PAWN_E(BITS_PER_PIECE * 20,       0x9A, '♟'),
-		BLACK_PAWN_F(BITS_PER_PIECE * 21,       0xBA, '♟'),
-		BLACK_PAWN_G(BITS_PER_PIECE * 22,       0xDA, '♟'),
-		BLACK_PAWN_H(BITS_PER_PIECE * 23,       0xFA, '♟'),
-		BLACK_ROOK_QS(BITS_PER_PIECE * 24,      0x1E, '♜'), // a8, alive
-		BLACK_KNIGHT_QS(BITS_PER_PIECE * 25,    0x3E, '♞'), // b8, alive
-		BLACK_BISHOP_QS(BITS_PER_PIECE * 26,    0x5E, '♝'), // c8, alive
-		BLACK_QUEEN(BITS_PER_PIECE * 27,        0x7E,'♛'), // d8, alive
-		BLACK_KING(BITS_PER_PIECE * 28,         0x9E,'♚'), // e8, alive
-		BLACK_BISHOP_KS(BITS_PER_PIECE * 29,    0xBE,'♝'), // f8, alive
-		BLACK_KNIGHT_KS(BITS_PER_PIECE * 30,    0xDE,'♞'), // g8, alive
-		BLACK_ROOK_KS(BITS_PER_PIECE * 31,      0xFE, '♜'); // h8, alive
+		BLACK_PAWN_A(BITS_PER_PIECE * 16,       0x1A, 'P'), // a7, alive
+		BLACK_PAWN_B(BITS_PER_PIECE * 17,       0x3A, 'P'), // b7, alive
+		BLACK_PAWN_C(BITS_PER_PIECE * 18,       0x5A, 'P'),
+		BLACK_PAWN_D(BITS_PER_PIECE * 19,       0x7A, 'P'),
+		BLACK_PAWN_E(BITS_PER_PIECE * 20,       0x9A, 'P'),
+		BLACK_PAWN_F(BITS_PER_PIECE * 21,       0xBA, 'P'),
+		BLACK_PAWN_G(BITS_PER_PIECE * 22,       0xDA, 'P'),
+		BLACK_PAWN_H(BITS_PER_PIECE * 23,       0xFA, 'P'),
+		BLACK_ROOK_QS(BITS_PER_PIECE * 24,      0x1E, 'R'), // a8, alive
+		BLACK_KNIGHT_QS(BITS_PER_PIECE * 25,    0x3E, 'N'), // b8, alive
+		BLACK_BISHOP_QS(BITS_PER_PIECE * 26,    0x5E, 'B'), // c8, alive
+		BLACK_QUEEN(BITS_PER_PIECE * 27,        0x7E, 'Q'), // d8, alive
+		BLACK_KING(BITS_PER_PIECE * 28,         0x9E, 'K'), // e8, alive
+		BLACK_BISHOP_KS(BITS_PER_PIECE * 29,    0xBE, 'B'), // f8, alive
+		BLACK_KNIGHT_KS(BITS_PER_PIECE * 30,    0xDE, 'N'), // g8, alive
+		BLACK_ROOK_KS(BITS_PER_PIECE * 31,      0xFE, 'R'); // h8, alive
 
 		/**
 		 * Index to pieces array, in bits.
 		 */
 		public final int bitIndex;
-		
+
 		/**
 		 Initial position and alive flag, lowest bit unset (has no meaning)
 		 */

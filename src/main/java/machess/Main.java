@@ -2,7 +2,7 @@ package machess;
 
 public class Main {
 	public static void main(String[] args) {
-		State newGame = new State();
+		State8Bit newGame = new State8Bit();
 		System.out.println(newGame.toString());
 	}
 }
