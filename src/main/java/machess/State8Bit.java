@@ -16,8 +16,6 @@ import java.util.*;
  */
 public class State8Bit {
 	private static int NUMBER_OF_PIECES = 32;
-	private static byte FILES_COUNT = 8;
-	private static byte RANKS_COUNT = 8;
 
 	private static byte ALIVE_BIT_MASK = (byte)0x2;
 	// use to mask file or rank once they are shifted
@@ -49,10 +47,10 @@ public class State8Bit {
 		Map<Field, PieceName> pieceLocations = getPieceLocations();
 		sb.append(" | a | b | c | d | e | f | g | h |\n");
 		sb.append(" =================================\n");
-		for (int rank = RANKS_COUNT - 1; rank >= 0; rank--) {
+		for (int rank = Field.RANKS_COUNT - 1; rank >= 0; rank--) {
 			sb.append(rank + 1).append("|");
-			for (byte file = 0; file < FILES_COUNT; file++) {
-				PieceName piece = pieceLocations.get(new Field(file, rank));
+			for (byte file = 0; file < Field.FILES_COUNT; file++) {
+				PieceName piece = pieceLocations.get(Field.fromInts(file, rank));
 				if (piece != null) {
 					sb.append(" ").append(piece.symbol).append(" |");
 				} else {
@@ -73,42 +71,9 @@ public class State8Bit {
 			}
 			byte file = (byte) ((piece >>> FILE_OFFSET) & COORD_BIT_MASK);
 			byte rank = (byte) ((piece >>> RANK_OFFSET) & COORD_BIT_MASK);
-			locations.put(new Field(file, rank), name);
+			locations.put(Field.fromInts(file, rank), name);
 		}
 		return locations;
-	}
-
-	private class Field {
-		byte file;
-		byte rank;
-
-		Field(int file, int rank) {
-			this.file= (byte) file;
-			this.rank= (byte) rank;
-		}
-
-		@Override
-		public String toString() {
-			return "Field{" +
-					"file=" + file +
-					", rank=" + rank +
-					'}';
-		}
-
-		@Override
-		public boolean equals(Object o) {
-			if (!(o instanceof Field)) {
-				return false;
-			}
-			Field that = (Field) o;
-			return file == that.file &&
-					rank == that.rank;
-		}
-
-		@Override
-		public int hashCode() {
-			return Objects.hash(file, rank);
-		}
 	}
 
 	public enum PieceName {
