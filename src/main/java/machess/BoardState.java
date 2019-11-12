@@ -1,9 +1,15 @@
 package machess;
 
+import java.util.Arrays;
+
+/**
+ * Game state seen as game board rather than a list of figures.
+ * All is static in order to avoid allocations.
+ */
 public class BoardState {
 
-	private static final byte PIECE_TYPE_MASK 	= 0x07;
-	private static final byte IS_WHITE_FLAG		= 0x08;
+	static final byte PIECE_TYPE_MASK 	= 0x07;
+	static final byte IS_WHITE_FLAG		= 0x08;
 	private static final byte IN_CHECK_BY_WHITE	= 0x10;
 	private static final byte IN_CHECK_BY_BLACK	= 0x20;
 	/**
@@ -23,6 +29,25 @@ public class BoardState {
 
 			setFieldContent(file, rank, pieceName);
 		}
+	}
+
+//	public static String debugString() {
+//		StringBuilder sb = new StringBuilder();
+//		sb.append(" | a | b | c | d | e | f | g | h |\n");
+//		sb.append(" =================================\n");
+//		for (int rank = Field.RANKS_COUNT - 1; rank >= 0; rank--) {
+//			sb.append(rank + 1).append("|");
+//			for (byte file = 0; file < Field.FILES_COUNT; file++) {
+//				byte contentAsByte = getFieldContent(file, rank);
+//				FieldContent fieldContent = FieldContent.fromByte(contentAsByte);
+//				sb.append(" ").append(fieldContent.symbol).append(" |");
+//			}
+//			sb.append("\n-+---+---+---+---+---+---+---+---+\n");
+//		}
+//		return sb.toString();
+//	}
+	public static String debugString() {
+		return Arrays.toString(board);
 	}
 
 	public static byte getFieldContent(int file, int rank) {
@@ -54,6 +79,11 @@ public class BoardState {
 		WHITE_QUEEN(	0x0D, 'q'),
 		WHITE_KING(		0x0E, 'k');
 
+		private static final FieldContent[] byteToContents = {
+				EMPTY, BLACK_PAWN, BLACK_KNIGHT, BLACK_BISHOP, BLACK_ROOK, BLACK_QUEEN,	BLACK_KING,	EMPTY,
+				EMPTY, WHITE_PAWN, WHITE_KNIGHT, WHITE_BISHOP, WHITE_ROOK, WHITE_QUEEN,	WHITE_KING,	EMPTY,
+		};
+
 		final byte contentAsByte;
 		/**
 		 * printable symbol for toString()
@@ -63,6 +93,10 @@ public class BoardState {
 		FieldContent(int contentAsByte, char symbol) {
 			this.contentAsByte = (byte) contentAsByte;
 			this.symbol = symbol;
+		}
+
+		static FieldContent fromByte(byte contentAsByte) {
+			return byteToContents[contentAsByte & BoardState.PIECE_TYPE_MASK & BoardState.IS_WHITE_FLAG];
 		}
 
 		/**
