@@ -3,7 +3,7 @@ package machess;
 import java.util.*;
 
 /**
- * basic snapshot of game state. Supplementary data will be derived from this class.
+ * Basic snapshot of game state. Supplementary data will be derived from this class.
  * <p>
  * From wiki:
  * A full description of a chess position, i.e. the position "state", must contain the following elements:
@@ -14,15 +14,17 @@ import java.util.*;
  * -Whether either player is permanently disqualified to castle, both kingside and queenside.
  * -If an en passant capture is possible.
  */
-public class State8Bit {
+public class MasterState8Bit {
 	private static int NUMBER_OF_PIECES = 32;
 
-	private static byte ALIVE_BIT_MASK = (byte)0x2;
+	static byte ALIVE_BIT_MASK = (byte)0x2;
 	// use to mask file or rank once they are shifted
-	private static byte COORD_BIT_MASK = (byte)0x07;
+	static byte COORD_BIT_MASK = (byte)0x07;
 
-	private static byte FILE_OFFSET = 5;
-	private static byte RANK_OFFSET = 2;
+	static byte FILE_OFFSET = 5;
+	static byte RANK_OFFSET = 2;
+
+
 
 	/**
 	 * list of pieces. byte per figure. 3 bit for file, 3 bits for row, 1 bit isAlive, not sure what lsb will be used for .
@@ -30,12 +32,13 @@ public class State8Bit {
 	 * +--------+--------+--------+--------+--------+--------+--------+--------+--------+
 	 * |FFFRRRx_|FFFRRRx_|FFFRRRx_|FFFRRRx_|FFFRRRx_|FFFRRRx_|FFFRRRx_|FFFRRRx_|FFFRRRx_|
 	 */
-	private byte[] pieces = new byte[NUMBER_OF_PIECES];
+	byte[] pieces = new byte[NUMBER_OF_PIECES];
+	private boolean isWhiteTurn = true;
 
 	/*
 	   Initializes pieces for new game
 	*/
-	State8Bit() {
+	MasterState8Bit() {
 		for (PieceName pieceName : PieceName.values()) {
 			pieces[pieceName.ordinal()] = pieceName.initialValue;
 		}
@@ -62,16 +65,18 @@ public class State8Bit {
 		return sb.toString();
 	}
 
+	// TODO gc problems with map?
 	private Map<Field, PieceName> getPieceLocations() {
 		Map<Field, PieceName> locations = new LinkedHashMap<>();
-		for (PieceName name : PieceName.values()) {
-			byte piece = pieces[name.ordinal()];
+		for (PieceName pieceName : PieceName.values()) {
+			byte piece = pieces[pieceName.ordinal()];
 			if ((piece & ALIVE_BIT_MASK) == 0) {
 				continue;
 			}
 			byte file = (byte) ((piece >>> FILE_OFFSET) & COORD_BIT_MASK);
 			byte rank = (byte) ((piece >>> RANK_OFFSET) & COORD_BIT_MASK);
-			locations.put(Field.fromInts(file, rank), name);
+			PieceName shouldBeNull = locations.put(Field.fromInts(file, rank), pieceName);
+			assert shouldBeNull == null : "Two pieces on " + Field.fromInts(file, rank) + ": " + shouldBeNull + " and " + pieceName;
 		}
 		return locations;
 	}
@@ -117,7 +122,7 @@ public class State8Bit {
 		public final byte initialValue;
 
 		/**
-		 * printable symbol
+		 * printable symbol for toString()
 		 */
 		public final char symbol;
 
