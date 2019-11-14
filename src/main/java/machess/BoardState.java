@@ -31,23 +31,20 @@ public class BoardState {
 		}
 	}
 
-//	public static String debugString() {
-//		StringBuilder sb = new StringBuilder();
-//		sb.append(" | a | b | c | d | e | f | g | h |\n");
-//		sb.append(" =================================\n");
-//		for (int rank = Field.RANKS_COUNT - 1; rank >= 0; rank--) {
-//			sb.append(rank + 1).append("|");
-//			for (byte file = 0; file < Field.FILES_COUNT; file++) {
-//				byte contentAsByte = getFieldContent(file, rank);
-//				FieldContent fieldContent = FieldContent.fromByte(contentAsByte);
-//				sb.append(" ").append(fieldContent.symbol).append(" |");
-//			}
-//			sb.append("\n-+---+---+---+---+---+---+---+---+\n");
-//		}
-//		return sb.toString();
-//	}
 	public static String debugString() {
-		return Arrays.toString(board);
+		StringBuilder sb = new StringBuilder();
+		sb.append(" | a  | b  | c  | d  | e  | f  | g  | h  |\n");
+		sb.append(" =========================================\n");
+		for (int rank = Field.RANKS_COUNT - 1; rank >= 0; rank--) {
+			sb.append(rank + 1).append("|");
+			for (byte file = 0; file < Field.FILES_COUNT; file++) {
+				byte contentAsByte = getFieldContent(file, rank);
+				FieldContent fieldContent = FieldContent.fromByte(contentAsByte);
+				sb.append("  ").append(fieldContent.symbol).append(" |");
+			}
+			sb.append("\n-+----+----+----+----+----+----+----+----+\n");
+		}
+		return sb.toString();
 	}
 
 	public static byte getFieldContent(int file, int rank) {
@@ -96,7 +93,7 @@ public class BoardState {
 		}
 
 		static FieldContent fromByte(byte contentAsByte) {
-			return byteToContents[contentAsByte & BoardState.PIECE_TYPE_MASK & BoardState.IS_WHITE_FLAG];
+			return byteToContents[contentAsByte & (BoardState.PIECE_TYPE_MASK | BoardState.IS_WHITE_FLAG)];
 		}
 
 		/**
