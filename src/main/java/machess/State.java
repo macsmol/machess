@@ -96,10 +96,11 @@ public class State {
 
 		//  update boardCopy
 		FieldContent movedPiece = FieldContent.fromByte(boardCopy[from.ordinal()]);
-		assert movedPiece != FieldContent.EMPTY;
+		assert movedPiece != FieldContent.EMPTY :  from + "->" + to;
 		boardCopy[from.ordinal()] = FieldContent.EMPTY.asByte;
 
 		FieldContent takenPiece = FieldContent.fromByte(boardCopy[to.ordinal()]);
+		assert takenPiece != FieldContent.BLACK_KING && takenPiece != FieldContent.WHITE_KING : from + "->" + to;
 		boardCopy[to.ordinal()] = movedPiece.asByte;
 
 		// update pieces lists

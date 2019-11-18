@@ -12,7 +12,6 @@ public enum Field {
 
 	public static byte FILES_COUNT = 8;
 	public static byte RANKS_COUNT = 8;
-	public static byte FIELDS_COUNT = (byte) (FILES_COUNT * RANKS_COUNT);
 
 	public final byte file;
 	public final byte rank;
