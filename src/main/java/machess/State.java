@@ -23,10 +23,10 @@ public class State {
 
 	// king, queen, rooks and knights, pawns
 	private final Field[] fieldsWithWhites;
-	private final byte fieldsWithWhitesCount;
+	private final byte whitesCount;
 
 	private final Field[] fieldsWithBlacks;
-	private final byte fieldsWithBlacksCount;
+	private final byte blacksCount;
 
 	/**
 	 * new game
@@ -68,21 +68,21 @@ public class State {
 				Field.E1, Field.D1, Field.A1, Field.H1, Field.B1, Field.C1, Field.F1, Field.G1,
 				Field.A2, Field.B2, Field.C2, Field.D2, Field.E2, Field.F2, Field.G2, Field.H2
 		};
-		fieldsWithWhitesCount = INITIAL_PLAYER_PIECES_COUNT;
+		whitesCount = INITIAL_PLAYER_PIECES_COUNT;
 
 		fieldsWithBlacks = new Field[]{
 				Field.E8, Field.D8, Field.A8, Field.H8, Field.B8, Field.C8, Field.F8, Field.G8,
 				Field.A7, Field.B7, Field.C7, Field.D7, Field.E7, Field.F7, Field.G7, Field.H7
 		};
-		fieldsWithBlacksCount = INITIAL_PLAYER_PIECES_COUNT;
+		blacksCount = INITIAL_PLAYER_PIECES_COUNT;
 	}
 
 	State(byte[] board, Field[] fieldsWithWhites, byte whitesCount, Field[] fieldsWithBlacks, byte blacksCount, boolean isWhiteTurn) {
 		this.board = board;
 		this.fieldsWithWhites = fieldsWithWhites;
 		this.fieldsWithBlacks = fieldsWithBlacks;
-		fieldsWithWhitesCount = whitesCount;
-		fieldsWithBlacksCount = blacksCount;
+		this.whitesCount = whitesCount;
+		this.blacksCount = blacksCount;
 		this.isWhiteTurn = isWhiteTurn;
 	}
 
@@ -104,9 +104,9 @@ public class State {
 
 		// update pieces lists
 		Field[] movingPieces = isWhiteTurn ? fieldsWithWhitesCopy : fieldsWithBlacksCopy;
-		byte movingPiecesCount = isWhiteTurn ? fieldsWithWhitesCount : fieldsWithBlacksCount;
+		byte movingPiecesCount = isWhiteTurn ? whitesCount : blacksCount;
 		Field[] takenPieces = isWhiteTurn ? fieldsWithBlacksCopy : fieldsWithWhitesCopy;
-		byte takenPiecesCount = isWhiteTurn ? fieldsWithBlacksCount : fieldsWithWhitesCount;
+		byte takenPiecesCount = isWhiteTurn ? blacksCount : whitesCount;
 
 		for (int i = 0; i < movingPiecesCount; i++) {
 			if (movingPieces[i] == from) {
@@ -122,13 +122,14 @@ public class State {
 				}
 			}
 		}
-		byte updatedWhitesCount = isWhiteTurn ? fieldsWithWhitesCount : takenPiecesCount;
-		byte updatedBlacksCount = isWhiteTurn ? takenPiecesCount : fieldsWithBlacksCount;
+		byte updatedWhitesCount = isWhiteTurn ? whitesCount : takenPiecesCount;
+		byte updatedBlacksCount = isWhiteTurn ? takenPiecesCount : blacksCount;
 		return new State(boardCopy, fieldsWithWhitesCopy, updatedWhitesCount, fieldsWithBlacksCopy, updatedBlacksCount, !isWhiteTurn);
 	}
 
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
+		sb.append("Turn: ").append(isWhiteTurn ? "WHITE" : "BLACK").append('\n');
 		sb.append(" | a  | b  | c  | d  | e  | f  | g  | h  |\n");
 		sb.append(" =========================================\n");
 		for (int rank = Field.RANKS_COUNT - 1; rank >= 0; rank--) {
@@ -140,11 +141,21 @@ public class State {
 			}
 			sb.append("\n-+----+----+----+----+----+----+----+----+\n");
 		}
+		sb.append("fieldsWithWhites: [");
+		for (int i = 0; i < fieldsWithWhites.length; i++) {
+			sb.append(fieldsWithWhites[i]).append(i == (whitesCount-1) ? ";  " : ", ");
+		}
+		sb.append("] count: ").append(whitesCount).append('\n');
+		sb.append("fieldsWithBlacks: [");
+		for (int i = 0; i < fieldsWithBlacks.length; i++) {
+			sb.append(fieldsWithBlacks[i]).append(i == (blacksCount-1) ? ";  " : ", ");
+		}
+		sb.append("] count: ").append(blacksCount).append('\n');
 		return sb.toString();
 	}
 
 	public byte getFieldContent(int file, int rank) {
-		return board[Field.fromInts(file, rank).ordinal()];
+		return getFieldContent(Field.fromInts(file, rank));
 	}
 
 	public byte getFieldContent(Field field) {
