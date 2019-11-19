@@ -1,5 +1,7 @@
 package machess;
 
+import com.sun.istack.internal.Nullable;
+
 public enum Field {
 	A1(0, 0), A2(0, 1), A3(0, 2), A4(0, 3), A5(0, 4), A6(0, 5), A7(0, 6), A8(0, 7),
 	B1(1, 0), B2(1, 1), B3(1, 2), B4(1, 3), B5(1, 4), B6(1, 5), B7(1, 6), B8(1, 7),
@@ -32,9 +34,17 @@ public enum Field {
 		this.rank = (byte) rank;
 	}
 
+	static Field fromUnsafeInts(int file, int rank) {
+		assert file >= 0 && file < FILES_COUNT : "invalid file in: " + file + ", " + rank;
+		assert rank >= 0 && rank < RANKS_COUNT : "invalid rank in: " + file + ", " + rank;
+		return intsToFields[file * FILES_COUNT + rank];
+	}
+
+	@Nullable
 	static Field fromInts(int file, int rank) {
-		assert file >= 0 && file < FILES_COUNT : "invalid file:" + file;
-		assert rank >= 0 && rank < RANKS_COUNT : "invalid rank:" + rank;
+		if(file < 0 || file >= FILES_COUNT || rank < 0 || rank >= RANKS_COUNT) {
+			return null;
+		}
 		return intsToFields[file * FILES_COUNT + rank];
 	}
 }
