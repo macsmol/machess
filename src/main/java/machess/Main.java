@@ -1,5 +1,7 @@
 package machess;
 
+import java.util.List;
+
 public class Main {
 	public static void main(String[] args) {
 		State newGame = new State();
@@ -13,8 +15,10 @@ public class Main {
 		System.out.println(s2);
 
 		long before = System.currentTimeMillis();
-		System.out.println(s2.generateMoves().size());
+		List<State> legalMoves = s2.generateMoves();
 		System.out.println(" elapsed ms: " + (System.currentTimeMillis() - before));
-
+		for (State state : legalMoves) {
+			System.out.println(state);
+		}
 	}
 }

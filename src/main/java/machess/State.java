@@ -131,15 +131,16 @@ public class State {
 		assert takenPiece != Content.BLACK_KING && takenPiece != Content.WHITE_KING : from + "->" + to + " is taking king";
 		boardCopy[to.ordinal()] = promotion != null ? promotion.asByte : movedPiece.asByte;
 
+		Field fieldWithPawnTakenEnPassant = null;
 		if (enPassantField == to) {
 			if (movedPiece == Content.WHITE_PAWN) {
-				Field fieldWithTakenPawn = Field.fromUnsafeInts(to.file, to.rank - 1);
-				takenPiece = Content.fromByte(boardCopy[fieldWithTakenPawn.ordinal()]);
-				boardCopy[fieldWithTakenPawn.ordinal()] = Content.EMPTY.asByte;
+				fieldWithPawnTakenEnPassant = Field.fromUnsafeInts(to.file, to.rank - 1);
+				takenPiece = Content.fromByte(boardCopy[fieldWithPawnTakenEnPassant.ordinal()]);
+				boardCopy[fieldWithPawnTakenEnPassant.ordinal()] = Content.EMPTY.asByte;
 			} else if (movedPiece == Content.BLACK_PAWN) {
-				Field fieldWithTakenPawn = Field.fromUnsafeInts(to.file, to.rank + 1);
-				takenPiece = Content.fromByte(boardCopy[fieldWithTakenPawn.ordinal()]);
-				boardCopy[fieldWithTakenPawn.ordinal()] = Content.EMPTY.asByte;
+				fieldWithPawnTakenEnPassant = Field.fromUnsafeInts(to.file, to.rank + 1);
+				takenPiece = Content.fromByte(boardCopy[fieldWithPawnTakenEnPassant.ordinal()]);
+				boardCopy[fieldWithPawnTakenEnPassant.ordinal()] = Content.EMPTY.asByte;
 			}
 		}
 
@@ -152,15 +153,17 @@ public class State {
 		for (int i = 0; i < movingPiecesCount; i++) {
 			if (movingPieces[i] == from) {
 				movingPieces[i] = to;
+				break;
 			}
 		}
 		if (takenPiece != Content.EMPTY) {
 			assert movedPiece.isWhite != takenPiece.isWhite : from + "->" + to + " is friendly take";
 			for (int i = 0; i < takenPiecesCount; i++) {
-				if (takenPieces[i] == to) {
+				if (takenPieces[i] == to || takenPieces[i] == fieldWithPawnTakenEnPassant) {
 					// decrement size of alive pieces
 					takenPiecesCount--;
 					takenPieces[i] = takenPieces[takenPiecesCount];
+					break;
 				}
 			}
 		}
@@ -306,21 +309,13 @@ public class State {
 		// head-on move
 		if (getContent(to) == Content.EMPTY) {
 			if (to.rank == 7) {
-				State e = fromUnsafeMoveWithPromotion(from, to, Content.WHITE_QUEEN);
-				System.out.println(e);
-				pawnMoves.add(e);
-				e = fromUnsafeMoveWithPromotion(from, to, Content.WHITE_KNIGHT);
-				System.out.println(e);
-				pawnMoves.add(e);
+				pawnMoves.add(fromUnsafeMoveWithPromotion(from, to, Content.WHITE_QUEEN));
+				pawnMoves.add(fromUnsafeMoveWithPromotion(from, to, Content.WHITE_KNIGHT));
 			} else {
-				State e = fromUnsafeMove(from, to);
-				System.out.println(e);
-				pawnMoves.add(e);
+				pawnMoves.add(fromUnsafeMove(from, to));
 				to = Field.fromUnsafeInts(from.file, from.rank + 2);
 				if (from.rank == 1 && getContent(to) == Content.EMPTY) {
-					State e1 = fromUnsafePawnFirstMove(from, to, Field.fromUnsafeInts(from.file, from.rank + 1));
-					System.out.println(e1);
-					pawnMoves.add(e1);
+					pawnMoves.add(fromUnsafePawnFirstMove(from, to, Field.fromUnsafeInts(from.file, from.rank + 1)));
 				}
 			}
 		}
@@ -328,32 +323,20 @@ public class State {
 		to = Field.fromInts(from.file - 1, from.rank + 1);
 		if (to != null && (isBlackPieceOn(to) || to == enPassantField)) {
 			if (to.rank == 7) {
-				State e = fromUnsafeMoveWithPromotion(from, to, Content.WHITE_QUEEN);
-				System.out.println(e);
-				pawnMoves.add(e);
-				e = fromUnsafeMoveWithPromotion(from, to, Content.WHITE_KNIGHT);
-				System.out.println(e);
-				pawnMoves.add(e);
+				pawnMoves.add(fromUnsafeMoveWithPromotion(from, to, Content.WHITE_QUEEN));
+				pawnMoves.add(fromUnsafeMoveWithPromotion(from, to, Content.WHITE_KNIGHT));
 			} else {
-				State e = fromUnsafeMove(from, to);
-				System.out.println(e);
-				pawnMoves.add(e);
+				pawnMoves.add(fromUnsafeMove(from, to));
 			}
 		}
 		// move with take to the right
 		to = Field.fromInts(from.file + 1, from.rank + 1);
 		if (to != null && (isBlackPieceOn(to) || to == enPassantField)) {
 			if (to.rank == 7) {
-				State e = fromUnsafeMoveWithPromotion(from, to, Content.WHITE_QUEEN);
-				System.out.println(e);
-				pawnMoves.add(e);
-				e = fromUnsafeMoveWithPromotion(from, to, Content.WHITE_KNIGHT);
-				System.out.println(e);
-				pawnMoves.add(e);
+				pawnMoves.add(fromUnsafeMoveWithPromotion(from, to, Content.WHITE_QUEEN));
+				pawnMoves.add(fromUnsafeMoveWithPromotion(from, to, Content.WHITE_KNIGHT));
 			} else {
-				State e = fromUnsafeMove(from, to);
-				System.out.println(e);
-				pawnMoves.add(e);
+				pawnMoves.add(fromUnsafeMove(from, to));
 			}
 		}
 		return pawnMoves;
