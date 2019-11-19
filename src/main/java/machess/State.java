@@ -139,18 +139,18 @@ public class State {
 			sb.append(rank + 1).append("|");
 			for (byte file = 0; file < Field.FILES_COUNT; file++) {
 				Content content = getContent(file, rank);
-				sb.append("  ").append(content.symbol).append(" |");
+				sb.append(" ").append(content.symbol).append(" |");
 			}
 			sb.append("\n-+----+----+----+----+----+----+----+----+\n");
 		}
 		sb.append("fieldsWithWhites: [");
 		for (int i = 0; i < fieldsWithWhites.length; i++) {
-			sb.append(fieldsWithWhites[i]).append(i == (whitesCount - 1) ? ";  " : ", ");
+			sb.append(fieldsWithWhites[i]).append(i == (whitesCount - 1) ? ";   " : ", ");
 		}
 		sb.append("] count: ").append(whitesCount).append('\n');
 		sb.append("fieldsWithBlacks: [");
 		for (int i = 0; i < fieldsWithBlacks.length; i++) {
-			sb.append(fieldsWithBlacks[i]).append(i == (blacksCount - 1) ? ";  " : ", ");
+			sb.append(fieldsWithBlacks[i]).append(i == (blacksCount - 1) ? ";   " : ", ");
 		}
 		sb.append("] count: ").append(blacksCount).append('\n');
 		return sb.toString();
@@ -191,19 +191,19 @@ public class State {
 	}
 
 	public enum Content {
-		EMPTY(0x00, ' ', false),
-		BLACK_PAWN(0x01, 'P', false),
-		BLACK_KNIGHT(0x02, 'N', false),
-		BLACK_BISHOP(0x03, 'B', false),
-		BLACK_ROOK(0x04, 'R', false),
-		BLACK_QUEEN(0x05, 'Q', false),
-		BLACK_KING(0x06, 'K', false),
-		WHITE_PAWN(0x09, 'p', true),
-		WHITE_KNIGHT(0x0A, 'n', true),
-		WHITE_BISHOP(0x0B, 'b', true),
-		WHITE_ROOK(0x0C, 'r', true),
-		WHITE_QUEEN(0x0D, 'q', true),
-		WHITE_KING(0x0E, 'k', true);
+		EMPTY(0x00,"  ", false),
+		BLACK_PAWN(0x01,    "PP", false),
+		BLACK_KNIGHT(0x02,  "NN", false),
+		BLACK_BISHOP(0x03,  "BB", false),
+		BLACK_ROOK(0x04,    "RR", false),
+		BLACK_QUEEN(0x05,   "QQ", false),
+		BLACK_KING(0x06,    "KK", false),
+		WHITE_PAWN(0x09,    "P ", true),
+		WHITE_KNIGHT(0x0A,  "N ", true),
+		WHITE_BISHOP(0x0B,  "B ", true),
+		WHITE_ROOK(0x0C,    "R ", true),
+		WHITE_QUEEN(0x0D,   "Q ", true),
+		WHITE_KING(0x0E,    "K ", true);
 
 		private static final Content[] byteToContents = {
 				EMPTY, BLACK_PAWN, BLACK_KNIGHT, BLACK_BISHOP, BLACK_ROOK, BLACK_QUEEN, BLACK_KING, EMPTY,
