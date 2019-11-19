@@ -310,6 +310,8 @@ public class State {
 		if (getContent(to) == Content.EMPTY) {
 			if (to.rank == 7) {
 				pawnMoves.add(fromUnsafeMoveWithPromotion(from, to, Content.WHITE_QUEEN));
+				pawnMoves.add(fromUnsafeMoveWithPromotion(from, to, Content.WHITE_ROOK));
+				pawnMoves.add(fromUnsafeMoveWithPromotion(from, to, Content.WHITE_BISHOP));
 				pawnMoves.add(fromUnsafeMoveWithPromotion(from, to, Content.WHITE_KNIGHT));
 			} else {
 				pawnMoves.add(fromUnsafeMove(from, to));
@@ -324,6 +326,8 @@ public class State {
 		if (to != null && (isBlackPieceOn(to) || to == enPassantField)) {
 			if (to.rank == 7) {
 				pawnMoves.add(fromUnsafeMoveWithPromotion(from, to, Content.WHITE_QUEEN));
+				pawnMoves.add(fromUnsafeMoveWithPromotion(from, to, Content.WHITE_ROOK));
+				pawnMoves.add(fromUnsafeMoveWithPromotion(from, to, Content.WHITE_BISHOP));
 				pawnMoves.add(fromUnsafeMoveWithPromotion(from, to, Content.WHITE_KNIGHT));
 			} else {
 				pawnMoves.add(fromUnsafeMove(from, to));
@@ -334,6 +338,8 @@ public class State {
 		if (to != null && (isBlackPieceOn(to) || to == enPassantField)) {
 			if (to.rank == 7) {
 				pawnMoves.add(fromUnsafeMoveWithPromotion(from, to, Content.WHITE_QUEEN));
+				pawnMoves.add(fromUnsafeMoveWithPromotion(from, to, Content.WHITE_ROOK));
+				pawnMoves.add(fromUnsafeMoveWithPromotion(from, to, Content.WHITE_BISHOP));
 				pawnMoves.add(fromUnsafeMoveWithPromotion(from, to, Content.WHITE_KNIGHT));
 			} else {
 				pawnMoves.add(fromUnsafeMove(from, to));
