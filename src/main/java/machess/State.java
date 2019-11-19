@@ -29,6 +29,10 @@ public class State {
 
 	private final Field[] fieldsWithBlacks;
 	private final byte blacksCount;
+	/**
+	 * If not null it means there is a possibility to en-passant on this field
+	 */
+	private final Field enPassantField;
 
 	/**
 	 * new game
@@ -77,24 +81,42 @@ public class State {
 				Field.A7, Field.B7, Field.C7, Field.D7, Field.E7, Field.F7, Field.G7, Field.H7
 		};
 		blacksCount = INITIAL_PLAYER_PIECES_COUNT;
+		enPassantField = null;
 	}
 
-	State(byte[] board, Field[] fieldsWithWhites, byte whitesCount, Field[] fieldsWithBlacks, byte blacksCount, boolean isWhiteTurn) {
+	State(byte[] board, Field[] fieldsWithWhites, byte whitesCount, Field[] fieldsWithBlacks, byte blacksCount,
+	      boolean isWhiteTurn, @Nullable Field enPassantField) {
 		this.board = board;
 		this.fieldsWithWhites = fieldsWithWhites;
 		this.fieldsWithBlacks = fieldsWithBlacks;
 		this.whitesCount = whitesCount;
 		this.blacksCount = blacksCount;
 		this.isWhiteTurn = isWhiteTurn;
+		this.enPassantField = enPassantField;
 	}
 
-	State fromUnsafeMove(Field from, Field to) {
-		return fromUnsafeMove(from, to, null);
+	private State fromUnsafePawnFirstMove(Field from, Field to, Field enPassantField) {
+		assert enPassantField != null;
+		return fromUnsafeMove(from, to, null, enPassantField);
 	}
+
+	State fromUnsafeMoveWithPromotion(Field from, Field to, Content promotion) {
+		assert promotion != null;
+		return fromUnsafeMove(from, to, promotion, null);
+	}
+
+	/**
+	 * Generates new BoardState based on move. Typical move without special events.
+	 */
+	State fromUnsafeMove(Field from, Field to) {
+		return fromUnsafeMove(from, to, null, null);
+	}
+
 	/**
 	 * Generates new BoardState based on move. It's unsafe - does not verify game rules.
+	 * This is the root method - it covers all cases. All 'overload' methods should call this one.
 	 */
-	private State fromUnsafeMove(Field from, Field to, @Nullable Content promotion) {
+	private State fromUnsafeMove(Field from, Field to, @Nullable Content promotion, @Nullable Field futureEnPassantField) {
 		assert from != to : from + "->" + to + " is no move";
 		byte[] boardCopy = board.clone();
 		Field[] fieldsWithWhitesCopy = fieldsWithWhites.clone();
@@ -108,6 +130,18 @@ public class State {
 		Content takenPiece = Content.fromByte(boardCopy[to.ordinal()]);
 		assert takenPiece != Content.BLACK_KING && takenPiece != Content.WHITE_KING : from + "->" + to + " is taking king";
 		boardCopy[to.ordinal()] = promotion != null ? promotion.asByte : movedPiece.asByte;
+
+		if (enPassantField == to) {
+			if (movedPiece == Content.WHITE_PAWN) {
+				Field fieldWithTakenPawn = Field.fromUnsafeInts(to.file, to.rank - 1);
+				takenPiece = Content.fromByte(boardCopy[fieldWithTakenPawn.ordinal()]);
+				boardCopy[fieldWithTakenPawn.ordinal()] = Content.EMPTY.asByte;
+			} else if (movedPiece == Content.BLACK_PAWN) {
+				Field fieldWithTakenPawn = Field.fromUnsafeInts(to.file, to.rank + 1);
+				takenPiece = Content.fromByte(boardCopy[fieldWithTakenPawn.ordinal()]);
+				boardCopy[fieldWithTakenPawn.ordinal()] = Content.EMPTY.asByte;
+			}
+		}
 
 		// update pieces lists
 		Field[] movingPieces = isWhiteTurn ? fieldsWithWhitesCopy : fieldsWithBlacksCopy;
@@ -132,7 +166,8 @@ public class State {
 		}
 		byte updatedWhitesCount = isWhiteTurn ? whitesCount : takenPiecesCount;
 		byte updatedBlacksCount = isWhiteTurn ? takenPiecesCount : blacksCount;
-		return new State(boardCopy, fieldsWithWhitesCopy, updatedWhitesCount, fieldsWithBlacksCopy, updatedBlacksCount, !isWhiteTurn);
+		return new State(boardCopy, fieldsWithWhitesCopy, updatedWhitesCount, fieldsWithBlacksCopy, updatedBlacksCount,
+				!isWhiteTurn, futureEnPassantField);
 	}
 
 	public String toString() {
@@ -158,6 +193,7 @@ public class State {
 			sb.append(fieldsWithBlacks[i]).append(i == (blacksCount - 1) ? ";   " : ", ");
 		}
 		sb.append("] count: ").append(blacksCount).append('\n');
+		sb.append("enPassantField: ").append(enPassantField).append('\n');
 		return sb.toString();
 	}
 
@@ -235,6 +271,7 @@ public class State {
 	}
 
 	List<State> generateMoves() {
+		System.out.println("Generated moves---------------");
 		List<State> moves = new ArrayList<>();
 		if (isWhiteTurn) {
 			for (int i = 0; i < whitesCount; i++) {
@@ -259,6 +296,7 @@ public class State {
 				}
 			}
 		}
+		System.out.println("Generated moves END ---------------");
 		return moves;
 	}
 
@@ -268,31 +306,32 @@ public class State {
 		// head-on move
 		if (getContent(to) == Content.EMPTY) {
 			if (to.rank == 7) {
-				State e = fromUnsafeMove(from, to, Content.WHITE_QUEEN);
+				State e = fromUnsafeMoveWithPromotion(from, to, Content.WHITE_QUEEN);
 				System.out.println(e);
 				pawnMoves.add(e);
-				e = fromUnsafeMove(from, to, Content.WHITE_KNIGHT);
+				e = fromUnsafeMoveWithPromotion(from, to, Content.WHITE_KNIGHT);
 				System.out.println(e);
 				pawnMoves.add(e);
 			} else {
 				State e = fromUnsafeMove(from, to);
 				System.out.println(e);
 				pawnMoves.add(e);
-				if (from.rank == 1 && getContent(from.file, from.rank + 2) == Content.EMPTY) {
-					State e1 = fromUnsafeMove(from, Field.fromUnsafeInts(from.file, from.rank + 2));
+				to = Field.fromUnsafeInts(from.file, from.rank + 2);
+				if (from.rank == 1 && getContent(to) == Content.EMPTY) {
+					State e1 = fromUnsafePawnFirstMove(from, to, Field.fromUnsafeInts(from.file, from.rank + 1));
 					System.out.println(e1);
 					pawnMoves.add(e1);
 				}
 			}
 		}
-
+		// move with take to the left
 		to = Field.fromInts(from.file - 1, from.rank + 1);
-		if (to != null && isBlackPieceOn(to)) {
+		if (to != null && (isBlackPieceOn(to) || to == enPassantField)) {
 			if (to.rank == 7) {
-				State e = fromUnsafeMove(from, to, Content.WHITE_QUEEN);
+				State e = fromUnsafeMoveWithPromotion(from, to, Content.WHITE_QUEEN);
 				System.out.println(e);
 				pawnMoves.add(e);
-				e = fromUnsafeMove(from, to, Content.WHITE_KNIGHT);
+				e = fromUnsafeMoveWithPromotion(from, to, Content.WHITE_KNIGHT);
 				System.out.println(e);
 				pawnMoves.add(e);
 			} else {
@@ -301,13 +340,14 @@ public class State {
 				pawnMoves.add(e);
 			}
 		}
+		// move with take to the right
 		to = Field.fromInts(from.file + 1, from.rank + 1);
-		if (to != null && isBlackPieceOn(to)) {
+		if (to != null && (isBlackPieceOn(to) || to == enPassantField)) {
 			if (to.rank == 7) {
-				State e = fromUnsafeMove(from, to, Content.WHITE_QUEEN);
+				State e = fromUnsafeMoveWithPromotion(from, to, Content.WHITE_QUEEN);
 				System.out.println(e);
 				pawnMoves.add(e);
-				e = fromUnsafeMove(from, to, Content.WHITE_KNIGHT);
+				e = fromUnsafeMoveWithPromotion(from, to, Content.WHITE_KNIGHT);
 				System.out.println(e);
 				pawnMoves.add(e);
 			} else {
@@ -318,6 +358,4 @@ public class State {
 		}
 		return pawnMoves;
 	}
-
-
 }
