@@ -34,14 +34,14 @@ public enum Field {
 		this.rank = (byte) rank;
 	}
 
-	static Field fromUnsafeInts(int file, int rank) {
+	static Field fromInts(int file, int rank) {
 		assert file >= 0 && file < FILES_COUNT : "invalid file in: " + file + ", " + rank;
 		assert rank >= 0 && rank < RANKS_COUNT : "invalid rank in: " + file + ", " + rank;
 		return intsToFields[file * FILES_COUNT + rank];
 	}
 
 	@Nullable
-	static Field fromInts(int file, int rank) {
+	static Field fromUnsafeInts(int file, int rank) {
 		if(file < 0 || file >= FILES_COUNT || rank < 0 || rank >= RANKS_COUNT) {
 			return null;
 		}

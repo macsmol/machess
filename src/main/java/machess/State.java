@@ -3,6 +3,7 @@ package machess;
 import com.sun.istack.internal.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -41,32 +42,32 @@ public class State {
 		isWhiteTurn = true;
 		board = new byte[Field.FILES_COUNT * Field.RANKS_COUNT];
 		for (int file = 0; file < Field.FILES_COUNT; file++) {
-			board[Field.fromUnsafeInts(file, 1).ordinal()] = Content.WHITE_PAWN.asByte;
-			board[Field.fromUnsafeInts(file, 6).ordinal()] = Content.BLACK_PAWN.asByte;
+			board[Field.fromInts(file, 1).ordinal()] = Content.WHITE_PAWN.asByte;
+			board[Field.fromInts(file, 6).ordinal()] = Content.BLACK_PAWN.asByte;
 
 			switch (file) {
 				case 0:
 				case 7:
-					board[Field.fromUnsafeInts(file, 0).ordinal()] = Content.WHITE_ROOK.asByte;
-					board[Field.fromUnsafeInts(file, 7).ordinal()] = Content.BLACK_ROOK.asByte;
+					board[Field.fromInts(file, 0).ordinal()] = Content.WHITE_ROOK.asByte;
+					board[Field.fromInts(file, 7).ordinal()] = Content.BLACK_ROOK.asByte;
 					break;
 				case 1:
 				case 6:
-					board[Field.fromUnsafeInts(file, 0).ordinal()] = Content.WHITE_KNIGHT.asByte;
-					board[Field.fromUnsafeInts(file, 7).ordinal()] = Content.BLACK_KNIGHT.asByte;
+					board[Field.fromInts(file, 0).ordinal()] = Content.WHITE_KNIGHT.asByte;
+					board[Field.fromInts(file, 7).ordinal()] = Content.BLACK_KNIGHT.asByte;
 					break;
 				case 2:
 				case 5:
-					board[Field.fromUnsafeInts(file, 0).ordinal()] = Content.WHITE_BISHOP.asByte;
-					board[Field.fromUnsafeInts(file, 7).ordinal()] = Content.BLACK_BISHOP.asByte;
+					board[Field.fromInts(file, 0).ordinal()] = Content.WHITE_BISHOP.asByte;
+					board[Field.fromInts(file, 7).ordinal()] = Content.BLACK_BISHOP.asByte;
 					break;
 				case 3:
-					board[Field.fromUnsafeInts(file, 0).ordinal()] = Content.WHITE_QUEEN.asByte;
-					board[Field.fromUnsafeInts(file, 7).ordinal()] = Content.BLACK_QUEEN.asByte;
+					board[Field.fromInts(file, 0).ordinal()] = Content.WHITE_QUEEN.asByte;
+					board[Field.fromInts(file, 7).ordinal()] = Content.BLACK_QUEEN.asByte;
 					break;
 				case 4:
-					board[Field.fromUnsafeInts(file, 0).ordinal()] = Content.WHITE_KING.asByte;
-					board[Field.fromUnsafeInts(file, 7).ordinal()] = Content.BLACK_KING.asByte;
+					board[Field.fromInts(file, 0).ordinal()] = Content.WHITE_KING.asByte;
+					board[Field.fromInts(file, 7).ordinal()] = Content.BLACK_KING.asByte;
 					break;
 			}
 		}
@@ -134,11 +135,11 @@ public class State {
 		Field fieldWithPawnTakenEnPassant = null;
 		if (enPassantField == to) {
 			if (movedPiece == Content.WHITE_PAWN) {
-				fieldWithPawnTakenEnPassant = Field.fromUnsafeInts(to.file, to.rank - 1);
+				fieldWithPawnTakenEnPassant = Field.fromInts(to.file, to.rank - 1);
 				takenPiece = Content.fromByte(boardCopy[fieldWithPawnTakenEnPassant.ordinal()]);
 				boardCopy[fieldWithPawnTakenEnPassant.ordinal()] = Content.EMPTY.asByte;
 			} else if (movedPiece == Content.BLACK_PAWN) {
-				fieldWithPawnTakenEnPassant = Field.fromUnsafeInts(to.file, to.rank + 1);
+				fieldWithPawnTakenEnPassant = Field.fromInts(to.file, to.rank + 1);
 				takenPiece = Content.fromByte(boardCopy[fieldWithPawnTakenEnPassant.ordinal()]);
 				boardCopy[fieldWithPawnTakenEnPassant.ordinal()] = Content.EMPTY.asByte;
 			}
@@ -201,7 +202,7 @@ public class State {
 	}
 
 	public Content getContent(int file, int rank) {
-		return getContent(Field.fromUnsafeInts(file, rank));
+		return getContent(Field.fromInts(file, rank));
 	}
 
 	public Content getContent(Field field) {
@@ -209,7 +210,7 @@ public class State {
 	}
 
 	public boolean isWhitePieceOn(int file, int rank) {
-			return isWhitePieceOn(Field.fromUnsafeInts(file, rank));
+			return isWhitePieceOn(Field.fromInts(file, rank));
 	}
 
 	boolean isWhitePieceOn(Field field) {
@@ -218,7 +219,7 @@ public class State {
 	}
 
 	public boolean isBlackPieceOn(int file, int rank) {
-			return isBlackPieceOn(Field.fromUnsafeInts(file, rank));
+			return isBlackPieceOn(Field.fromInts(file, rank));
 	}
 
 	public boolean isBlackPieceOn(Field field) {
@@ -236,13 +237,13 @@ public class State {
 
 	public enum Content {
 		EMPTY(0x00,"  ", false),
-		BLACK_PAWN(0x01,    "PP", false),
+		BLACK_PAWN(0x01,    "pp", false),
 		BLACK_KNIGHT(0x02,  "NN", false),
 		BLACK_BISHOP(0x03,  "BB", false),
 		BLACK_ROOK(0x04,    "RR", false),
 		BLACK_QUEEN(0x05,   "QQ", false),
 		BLACK_KING(0x06,    "KK", false),
-		WHITE_PAWN(0x09,    "P ", true),
+		WHITE_PAWN(0x09,    "p ", true),
 		WHITE_KNIGHT(0x0A,  "N ", true),
 		WHITE_BISHOP(0x0B,  "B ", true),
 		WHITE_ROOK(0x0C,    "R ", true),
@@ -285,8 +286,10 @@ public class State {
 						moves.addAll(generateWhitePawnMoves(currField));
 						break;
 					case WHITE_KNIGHT:
+						moves.addAll(generateWhiteKnightMoves(currField));
 						break;
 					case WHITE_BISHOP:
+						moves.addAll(generateWhiteBishopMoves(currField));
 						break;
 					case WHITE_ROOK:
 						break;
@@ -303,9 +306,43 @@ public class State {
 		return moves;
 	}
 
+	private List<State> generateWhiteBishopMoves(Field from) {
+		List<State> bishopMoves = new ArrayList<>();
+		for (int i = 1; true; i++) {
+			Field to = Field.fromUnsafeInts(from.file + i, from.rank + i);
+			if (to == null || isWhitePieceOn(to)) {
+				break;
+			}
+			bishopMoves.add(fromUnsafeMove(from, to));
+		}
+		for (int i = 1; true; i++) {
+			Field to = Field.fromUnsafeInts(from.file + i, from.rank - i);
+			if (to == null || isWhitePieceOn(to)) {
+				break;
+			}
+			bishopMoves.add(fromUnsafeMove(from, to));
+		}
+		for (int i = 1; true; i++) {
+			Field to = Field.fromUnsafeInts(from.file - i, from.rank + i);
+			if (to == null || isWhitePieceOn(to)) {
+				break;
+			}
+			bishopMoves.add(fromUnsafeMove(from, to));
+		}
+		for (int i = 1; true; i++) {
+			Field to = Field.fromUnsafeInts(from.file - i, from.rank - i);
+			if (to == null || isWhitePieceOn(to)) {
+				break;
+			}
+			bishopMoves.add(fromUnsafeMove(from, to));
+		}
+
+		return bishopMoves;
+	}
+
 	private List<State> generateWhitePawnMoves(Field from) {
 		List<State> pawnMoves = new ArrayList<>();
-		Field to = Field.fromUnsafeInts(from.file, from.rank + 1);
+		Field to = Field.fromInts(from.file, from.rank + 1);
 		// head-on move
 		if (getContent(to) == Content.EMPTY) {
 			if (to.rank == 7) {
@@ -315,14 +352,14 @@ public class State {
 				pawnMoves.add(fromUnsafeMoveWithPromotion(from, to, Content.WHITE_KNIGHT));
 			} else {
 				pawnMoves.add(fromUnsafeMove(from, to));
-				to = Field.fromUnsafeInts(from.file, from.rank + 2);
+				to = Field.fromInts(from.file, from.rank + 2);
 				if (from.rank == 1 && getContent(to) == Content.EMPTY) {
-					pawnMoves.add(fromUnsafePawnFirstMove(from, to, Field.fromUnsafeInts(from.file, from.rank + 1)));
+					pawnMoves.add(fromUnsafePawnFirstMove(from, to, Field.fromInts(from.file, from.rank + 1)));
 				}
 			}
 		}
 		// move with take to the left
-		to = Field.fromInts(from.file - 1, from.rank + 1);
+		to = Field.fromUnsafeInts(from.file - 1, from.rank + 1);
 		if (to != null && (isBlackPieceOn(to) || to == enPassantField)) {
 			if (to.rank == 7) {
 				pawnMoves.add(fromUnsafeMoveWithPromotion(from, to, Content.WHITE_QUEEN));
@@ -334,7 +371,7 @@ public class State {
 			}
 		}
 		// move with take to the right
-		to = Field.fromInts(from.file + 1, from.rank + 1);
+		to = Field.fromUnsafeInts(from.file + 1, from.rank + 1);
 		if (to != null && (isBlackPieceOn(to) || to == enPassantField)) {
 			if (to.rank == 7) {
 				pawnMoves.add(fromUnsafeMoveWithPromotion(from, to, Content.WHITE_QUEEN));
@@ -346,5 +383,42 @@ public class State {
 			}
 		}
 		return pawnMoves;
+	}
+
+	private List<State> generateWhiteKnightMoves(Field from) {
+		ArrayList<State> knightMoves = new ArrayList<>();
+		Field to = Field.fromUnsafeInts(from.file + 1, from.rank + 2);
+		if (to != null && !isWhitePieceOn(to)) {
+			knightMoves.add(fromUnsafeMove(from, to));
+		}
+		to = Field.fromUnsafeInts(from.file + 1, from.rank - 2);
+		if (to != null && !isWhitePieceOn(to)) {
+			knightMoves.add(fromUnsafeMove(from, to));
+		}
+		to = Field.fromUnsafeInts(from.file - 1, from.rank + 2);
+		if (to != null && !isWhitePieceOn(to)) {
+			knightMoves.add(fromUnsafeMove(from, to));
+		}
+		to = Field.fromUnsafeInts(from.file - 1, from.rank - 2);
+		if (to != null && !isWhitePieceOn(to)) {
+			knightMoves.add(fromUnsafeMove(from, to));
+		}
+		to = Field.fromUnsafeInts(from.file + 2, from.rank + 1);
+		if (to != null && !isWhitePieceOn(to)) {
+			knightMoves.add(fromUnsafeMove(from, to));
+		}
+		to = Field.fromUnsafeInts(from.file + 2, from.rank - 1);
+		if (to != null && !isWhitePieceOn(to)) {
+			knightMoves.add(fromUnsafeMove(from, to));
+		}
+		to = Field.fromUnsafeInts(from.file - 2, from.rank + 1);
+		if (to != null && !isWhitePieceOn(to)) {
+			knightMoves.add(fromUnsafeMove(from, to));
+		}
+		to = Field.fromUnsafeInts(from.file - 2, from.rank - 1);
+		if (to != null && !isWhitePieceOn(to)) {
+			knightMoves.add(fromUnsafeMove(from, to));
+		}
+		return knightMoves;
 	}
 }
