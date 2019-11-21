@@ -292,10 +292,13 @@ public class State {
 						moves.addAll(generateWhiteBishopMoves(currField));
 						break;
 					case WHITE_ROOK:
+						moves.addAll(generateWhiteRookMoves(currField));
 						break;
 					case WHITE_QUEEN:
+						moves.addAll(generateWhiteQueenMoves(currField));
 						break;
 					case WHITE_KING:
+						moves.addAll(generateWhiteKingMoves(currField));
 						break;
 					default:
 						assert false : "Thing on:" + fieldsWithWhites[i] + " should be white but is: " + whitePiece;
@@ -306,6 +309,95 @@ public class State {
 		return moves;
 	}
 
+	private List<State> generateWhiteKingMoves(Field from) {
+		ArrayList<State> kingMoves = new ArrayList<>();
+		Field to = Field.fromUnsafeInts(from.file, from.rank + 1);
+		if (to != null && !isWhitePieceOn(to)) {
+			kingMoves.add(fromUnsafeMove(from, to));
+		}
+		to = Field.fromUnsafeInts(from.file + 1, from.rank + 1);
+		if (to != null && !isWhitePieceOn(to)) {
+			kingMoves.add(fromUnsafeMove(from, to));
+		}
+		to = Field.fromUnsafeInts(from.file + 1, from.rank);
+		if (to != null && !isWhitePieceOn(to)) {
+			kingMoves.add(fromUnsafeMove(from, to));
+		}
+		to = Field.fromUnsafeInts(from.file + 1, from.rank - 1);
+		if (to != null && !isWhitePieceOn(to)) {
+			kingMoves.add(fromUnsafeMove(from, to));
+		}
+		to = Field.fromUnsafeInts(from.file, from.rank - 1);
+		if (to != null && !isWhitePieceOn(to)) {
+			kingMoves.add(fromUnsafeMove(from, to));
+		}
+		to = Field.fromUnsafeInts(from.file - 1, from.rank - 1);
+		if (to != null && !isWhitePieceOn(to)) {
+			kingMoves.add(fromUnsafeMove(from, to));
+		}
+		to = Field.fromUnsafeInts(from.file - 1, from.rank);
+		if (to != null && !isWhitePieceOn(to)) {
+			kingMoves.add(fromUnsafeMove(from, to));
+		}
+		to = Field.fromUnsafeInts(from.file - 1, from.rank + 1);
+		if (to != null && !isWhitePieceOn(to)) {
+			kingMoves.add(fromUnsafeMove(from, to));
+		}
+		return kingMoves;
+	}
+
+	private List<State> generateWhiteQueenMoves(Field from) {
+		List<State> queenMoves = new ArrayList<>();
+		queenMoves.addAll(generateWhiteRookMoves(from));
+		queenMoves.addAll(generateWhiteBishopMoves(from));
+		return queenMoves;
+	}
+
+	private List<State> generateWhiteRookMoves(Field from) {
+		List<State> rookMoves = new ArrayList<>();
+		for (int i = 1; true; i++) {
+			Field to = Field.fromUnsafeInts(from.file + i, from.rank);
+			if (to == null || isWhitePieceOn(to)) {
+				break;
+			}
+			rookMoves.add(fromUnsafeMove(from, to));
+			if (isBlackPieceOn(to)) {
+				break;
+			}
+		}
+		for (int i = 1; true; i++) {
+			Field to = Field.fromUnsafeInts(from.file - i, from.rank);
+			if (to == null || isWhitePieceOn(to)) {
+				break;
+			}
+			rookMoves.add(fromUnsafeMove(from, to));
+			if (isBlackPieceOn(to)) {
+				break;
+			}
+		}
+		for (int i = 1; true; i++) {
+			Field to = Field.fromUnsafeInts(from.file, from.rank + 1);
+			if (to == null || isWhitePieceOn(to)) {
+				break;
+			}
+			rookMoves.add(fromUnsafeMove(from, to));
+			if (isBlackPieceOn(to)) {
+				break;
+			}
+		}
+		for (int i = 1; true; i++) {
+			Field to = Field.fromUnsafeInts(from.file, from.rank - 1);
+			if (to == null || isWhitePieceOn(to)) {
+				break;
+			}
+			rookMoves.add(fromUnsafeMove(from, to));
+			if (isBlackPieceOn(to)) {
+				break;
+			}
+		}
+		return rookMoves;
+	}
+
 	private List<State> generateWhiteBishopMoves(Field from) {
 		List<State> bishopMoves = new ArrayList<>();
 		for (int i = 1; true; i++) {
@@ -314,6 +406,9 @@ public class State {
 				break;
 			}
 			bishopMoves.add(fromUnsafeMove(from, to));
+			if (isBlackPieceOn(to)) {
+				break;
+			}
 		}
 		for (int i = 1; true; i++) {
 			Field to = Field.fromUnsafeInts(from.file + i, from.rank - i);
@@ -321,6 +416,9 @@ public class State {
 				break;
 			}
 			bishopMoves.add(fromUnsafeMove(from, to));
+			if (isBlackPieceOn(to)) {
+				break;
+			}
 		}
 		for (int i = 1; true; i++) {
 			Field to = Field.fromUnsafeInts(from.file - i, from.rank + i);
@@ -328,6 +426,9 @@ public class State {
 				break;
 			}
 			bishopMoves.add(fromUnsafeMove(from, to));
+			if (isBlackPieceOn(to)) {
+				break;
+			}
 		}
 		for (int i = 1; true; i++) {
 			Field to = Field.fromUnsafeInts(from.file - i, from.rank - i);
@@ -335,6 +436,9 @@ public class State {
 				break;
 			}
 			bishopMoves.add(fromUnsafeMove(from, to));
+			if (isBlackPieceOn(to)) {
+				break;
+			}
 		}
 
 		return bishopMoves;
