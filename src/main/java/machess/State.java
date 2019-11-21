@@ -186,7 +186,7 @@ public class State {
 			sb.append(rank + 1).append("|");
 			for (byte file = 0; file < Field.FILES_COUNT; file++) {
 				Content content = getContent(file, rank);
-				sb.append(" ").append(content.symbol).append(" |");
+				sb.append(content.symbol).append(" |");
 			}
 			sb.append("\n-+----+----+----+----+----+----+----+----+\n");
 		}
@@ -238,19 +238,19 @@ public class State {
 	}
 
 	public enum Content {
-		EMPTY(0x00,"  ", false),
-		BLACK_PAWN(0x01,    "pp", false),
-		BLACK_KNIGHT(0x02,  "NN", false),
-		BLACK_BISHOP(0x03,  "BB", false),
-		BLACK_ROOK(0x04,    "RR", false),
-		BLACK_QUEEN(0x05,   "QQ", false),
-		BLACK_KING(0x06,    "KK", false),
-		WHITE_PAWN(0x09,    "p ", true),
-		WHITE_KNIGHT(0x0A,  "N ", true),
-		WHITE_BISHOP(0x0B,  "B ", true),
-		WHITE_ROOK(0x0C,    "R ", true),
-		WHITE_QUEEN(0x0D,   "Q ", true),
-		WHITE_KING(0x0E,    "K ", true);
+		EMPTY(0x00,"   ", false),
+		BLACK_PAWN(0x01,    "pp ", false),
+		BLACK_KNIGHT(0x02,  "NN_", false),
+		BLACK_BISHOP(0x03,  "BB_", false),
+		BLACK_ROOK(0x04,    "_RR", false),
+		BLACK_QUEEN(0x05,   "QQ_", false),
+		BLACK_KING(0x06,    "KK_", false),
+		WHITE_PAWN(0x09,    " p ", true),
+		WHITE_KNIGHT(0x0A,  " N_", true),
+		WHITE_BISHOP(0x0B,  " B_", true),
+		WHITE_ROOK(0x0C,    " _R", true),
+		WHITE_QUEEN(0x0D,   " Q_", true),
+		WHITE_KING(0x0E,    " K_", true);
 
 		private static final Content[] byteToContents = {
 				EMPTY, BLACK_PAWN, BLACK_KNIGHT, BLACK_BISHOP, BLACK_ROOK, BLACK_QUEEN, BLACK_KING, EMPTY,
@@ -288,11 +288,11 @@ public class State {
 			switch (piece) {
 				case WHITE_PAWN:
 				case BLACK_PAWN:
-//					generateWhitePawnMoves(currField, moves);
+//					generateLegalWhitePawnMoves(currField, moves);
 					break;
 				case WHITE_KNIGHT:
 				case BLACK_KNIGHT:
-//					generateWhiteKnightMoves(currField, moves);
+					generateLegalKnightMoves(currField, moves);
 					break;
 				case WHITE_BISHOP:
 				case BLACK_BISHOP:
@@ -304,11 +304,11 @@ public class State {
 					break;
 				case WHITE_QUEEN:
 				case BLACK_QUEEN:
-//					generateWhiteQueenMoves(currField, moves);
+					generateLegalQueenMoves(currField, moves);
 					break;
 				case WHITE_KING:
 				case BLACK_KING:
-//					generateWhiteKingMoves(currField, moves);
+					generateLegalKingMoves(currField, moves);
 					break;
 				default:
 					assert false : "Thing on:" + fieldsWithPiecesTakingTurn[i] + " is unknown piece: " + piece;
@@ -317,42 +317,42 @@ public class State {
 		return moves;
 	}
 
-	private void generateLegalWhiteKingMoves(Field from, List<State> outputMoves) {
+	private void generateLegalKingMoves(Field from, List<State> outputMoves) {
 		Field to = Field.fromUnsafeInts(from.file, from.rank + 1);
-		if (to != null && !isWhitePieceOn(to)) {
+		if (to != null && !isSameColorPieceOn(to, isWhiteTurn)) {
 			outputMoves.add(fromTrustedMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file + 1, from.rank + 1);
-		if (to != null && !isWhitePieceOn(to)) {
+		if (to != null && !isSameColorPieceOn(to, isWhiteTurn)) {
 			outputMoves.add(fromTrustedMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file + 1, from.rank);
-		if (to != null && !isWhitePieceOn(to)) {
+		if (to != null && !isSameColorPieceOn(to, isWhiteTurn)) {
 			outputMoves.add(fromTrustedMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file + 1, from.rank - 1);
-		if (to != null && !isWhitePieceOn(to)) {
+		if (to != null && !isSameColorPieceOn(to, isWhiteTurn)) {
 			outputMoves.add(fromTrustedMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file, from.rank - 1);
-		if (to != null && !isWhitePieceOn(to)) {
+		if (to != null && !isSameColorPieceOn(to, isWhiteTurn)) {
 			outputMoves.add(fromTrustedMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file - 1, from.rank - 1);
-		if (to != null && !isWhitePieceOn(to)) {
+		if (to != null && !isSameColorPieceOn(to, isWhiteTurn)) {
 			outputMoves.add(fromTrustedMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file - 1, from.rank);
-		if (to != null && !isWhitePieceOn(to)) {
+		if (to != null && !isSameColorPieceOn(to, isWhiteTurn)) {
 			outputMoves.add(fromTrustedMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file - 1, from.rank + 1);
-		if (to != null && !isWhitePieceOn(to)) {
+		if (to != null && !isSameColorPieceOn(to, isWhiteTurn)) {
 			outputMoves.add(fromTrustedMove(from, to));
 		}
 	}
 
-	private void generateLegalWhiteQueenMoves(Field from, List<State> outputMoves) {
+	private void generateLegalQueenMoves(Field from, List<State> outputMoves) {
 		generateLegalRookMoves(from, outputMoves);
 		generateLegalBishopMoves(from, outputMoves);
 	}
@@ -448,10 +448,7 @@ public class State {
 		// head-on move
 		if (getContent(to) == Content.EMPTY) {
 			if (to.rank == 7) {
-				outputMoves.add(fromTrustedMoveWithPromotion(from, to, Content.WHITE_QUEEN));
-				outputMoves.add(fromTrustedMoveWithPromotion(from, to, Content.WHITE_ROOK));
-				outputMoves.add(fromTrustedMoveWithPromotion(from, to, Content.WHITE_BISHOP));
-				outputMoves.add(fromTrustedMoveWithPromotion(from, to, Content.WHITE_KNIGHT));
+				generatePromotionMoves(from, to, outputMoves);
 			} else {
 				outputMoves.add(fromTrustedMove(from, to));
 				to = Field.fromInts(from.file, from.rank + 2);
@@ -464,10 +461,7 @@ public class State {
 		to = Field.fromUnsafeInts(from.file - 1, from.rank + 1);
 		if (to != null && (isBlackPieceOn(to) || to == enPassantField)) {
 			if (to.rank == 7) {
-				outputMoves.add(fromTrustedMoveWithPromotion(from, to, Content.WHITE_QUEEN));
-				outputMoves.add(fromTrustedMoveWithPromotion(from, to, Content.WHITE_ROOK));
-				outputMoves.add(fromTrustedMoveWithPromotion(from, to, Content.WHITE_BISHOP));
-				outputMoves.add(fromTrustedMoveWithPromotion(from, to, Content.WHITE_KNIGHT));
+				generatePromotionMoves(from, to, outputMoves);
 			} else {
 				outputMoves.add(fromTrustedMove(from, to));
 			}
@@ -476,47 +470,52 @@ public class State {
 		to = Field.fromUnsafeInts(from.file + 1, from.rank + 1);
 		if (to != null && (isBlackPieceOn(to) || to == enPassantField)) {
 			if (to.rank == 7) {
-				outputMoves.add(fromTrustedMoveWithPromotion(from, to, Content.WHITE_QUEEN));
-				outputMoves.add(fromTrustedMoveWithPromotion(from, to, Content.WHITE_ROOK));
-				outputMoves.add(fromTrustedMoveWithPromotion(from, to, Content.WHITE_BISHOP));
-				outputMoves.add(fromTrustedMoveWithPromotion(from, to, Content.WHITE_KNIGHT));
+				generatePromotionMoves(from, to, outputMoves);
 			} else {
 				outputMoves.add(fromTrustedMove(from, to));
 			}
 		}
 	}
 
-	private void generateLegalWhiteKnightMoves(Field from, List<State> outputMoves) {
+	private void generatePromotionMoves(Field from, Field to, List<State> outputMoves) {
+		outputMoves.add(fromTrustedMoveWithPromotion(from, to, Content.WHITE_QUEEN));
+		outputMoves.add(fromTrustedMoveWithPromotion(from, to, Content.WHITE_ROOK));
+		outputMoves.add(fromTrustedMoveWithPromotion(from, to, Content.WHITE_BISHOP));
+		outputMoves.add(fromTrustedMoveWithPromotion(from, to, Content.WHITE_KNIGHT));
+	}
+
+
+	private void generateLegalKnightMoves(Field from, List<State> outputMoves) {
 		Field to = Field.fromUnsafeInts(from.file + 1, from.rank + 2);
-		if (to != null && !isWhitePieceOn(to)) {
+		if (to != null && !isSameColorPieceOn(to, isWhiteTurn)) {
 			outputMoves.add(fromTrustedMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file + 1, from.rank - 2);
-		if (to != null && !isWhitePieceOn(to)) {
+		if (to != null && !isSameColorPieceOn(to, isWhiteTurn)) {
 			outputMoves.add(fromTrustedMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file - 1, from.rank + 2);
-		if (to != null && !isWhitePieceOn(to)) {
+		if (to != null && !isSameColorPieceOn(to, isWhiteTurn)) {
 			outputMoves.add(fromTrustedMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file - 1, from.rank - 2);
-		if (to != null && !isWhitePieceOn(to)) {
+		if (to != null && !isSameColorPieceOn(to, isWhiteTurn)) {
 			outputMoves.add(fromTrustedMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file + 2, from.rank + 1);
-		if (to != null && !isWhitePieceOn(to)) {
+		if (to != null && !isSameColorPieceOn(to, isWhiteTurn)) {
 			outputMoves.add(fromTrustedMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file + 2, from.rank - 1);
-		if (to != null && !isWhitePieceOn(to)) {
+		if (to != null && !isSameColorPieceOn(to, isWhiteTurn)) {
 			outputMoves.add(fromTrustedMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file - 2, from.rank + 1);
-		if (to != null && !isWhitePieceOn(to)) {
+		if (to != null && !isSameColorPieceOn(to, isWhiteTurn)) {
 			outputMoves.add(fromTrustedMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file - 2, from.rank - 1);
-		if (to != null && !isWhitePieceOn(to)) {
+		if (to != null && !isSameColorPieceOn(to, isWhiteTurn)) {
 			outputMoves.add(fromTrustedMove(from, to));
 		}
 	}
