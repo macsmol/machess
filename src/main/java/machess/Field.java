@@ -12,8 +12,13 @@ public enum Field {
 	G1(6, 0), G2(6, 1), G3(6, 2), G4(6, 3), G5(6, 4), G6(6, 5), G7(6, 6), G8(6, 7),
 	H1(7, 0), H2(7, 1), H3(7, 2), H4(7, 3), H5(7, 4), H6(7, 5), H7(7, 6), H8(7, 7);
 
-	public static byte FILES_COUNT = 8;
-	public static byte RANKS_COUNT = 8;
+	public static final byte FILES_COUNT = 8;
+	public static final byte RANKS_COUNT = 8;
+
+	public static final byte WHITE_PROMOTION_RANK = RANKS_COUNT - 1;
+	public static final byte BLACK_PROMOTION_RANK = 0;
+	public static final byte WHITE_PAWN_INITIAL_RANK = 1;
+	public static final byte BLACK_PAWN_INITIAL_RANK = 6;
 
 	public final byte file;
 	public final byte rank;
