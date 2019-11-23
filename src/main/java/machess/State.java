@@ -245,6 +245,21 @@ public class State {
 		return (contentAsByte & IS_WHITE_FLAG) == 0 && (contentAsByte & PIECE_TYPE_MASK) != 0;
 	}
 
+//		IN_CHECK_BY_WHITE;
+//		IN_CHECK_BY_BLACK
+	private void evaluateCheckFlags() {
+		Field field = Field.A2;
+		byte contentAsByte = board[field.ordinal()];
+
+		/*
+		for every piece do {
+		 something like generate moves but only set IN_CHECK_BY_WHITE IN_CHECK_BY_BLACK flags rather than new State()
+		}
+		 */
+		board[field.ordinal()] = (byte)(contentAsByte | IN_CHECK_BY_WHITE);
+		board[field.ordinal()] = (byte)(contentAsByte | IN_CHECK_BY_BLACK);
+	}
+
 	public enum Content {
 		EMPTY(0x00,"   ", false),
 		BLACK_PAWN(0x01,    "pp ", false),
