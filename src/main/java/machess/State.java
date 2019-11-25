@@ -85,6 +85,9 @@ public class State {
 		blacksCount = INITIAL_PLAYER_PIECES_COUNT;
 		enPassantField = null;
 		plyNumber = 1;
+
+		initFieldsInCheck(true); // whites
+		initFieldsInCheck(false); // blacks
 	}
 
 	private State(byte[] board, Field[] fieldsWithWhites, byte whitesCount, Field[] fieldsWithBlacks, byte blacksCount,
@@ -97,6 +100,9 @@ public class State {
 		this.isWhiteTurn = isWhiteTurn;
 		this.enPassantField = enPassantField;
 		this.plyNumber = plyNumber;
+
+		initFieldsInCheck(true); // whites
+		initFieldsInCheck(false); // blacks
 	}
 
 	private State fromTrustedPawnFirstMove(Field from, Field to, Field enPassantField) {
@@ -259,45 +265,48 @@ public class State {
 		return (contentAsByte & IS_WHITE_FLAG) == 0 && (contentAsByte & PIECE_TYPE_MASK) != 0;
 	}
 
-//		IN_CHECK_BY_WHITE;
-//		IN_CHECK_BY_BLACK
-	private void initFieldsInCheck() {
-//boolean isCheckByWhite = true;
-//		int countOfPiecesTakingTurn = isCheckByWhite ? whitesCount : blacksCount;
-//		Field[] fieldsWithPiecesTakingTurn = isCheckByWhite ? fieldsWithWhites  : fieldsWithBlacks;
-//
-//		for (int i = 0; i < countOfPiecesTakingTurn; i++) {
-//			Field currField = fieldsWithPiecesTakingTurn[i];
-//			Content piece = Content.fromByte(board[currField.ordinal()]);
-//			switch (piece) {
-//			case WHITE_PAWN:
-//			case BLACK_PAWN:
-//				initCheckFieldsByPawn(currField, isCheckByWhite);
-//				break;
-//			case WHITE_KNIGHT:
-//			case BLACK_KNIGHT:
-//				initCheckFieldsByKnight(currField, isCheckByWhite);
-//				break;
-//			case WHITE_BISHOP:
-//			case BLACK_BISHOP:
-//				initCheckFieldsByBishop(currField, isCheckByWhite);
-//				break;
-//			case WHITE_ROOK:
-//			case BLACK_ROOK:
-//				generateLegalRookMoves(currField, moves);
-//				break;
-//			case WHITE_QUEEN:
-//			case BLACK_QUEEN:
-//				generateLegalQueenMoves(currField, moves);
-//				break;
-//			case WHITE_KING:
-//			case BLACK_KING:
-//				generateLegalKingMoves(currField, moves);
-//				break;
-//			default:
-//				assert false : "Thing on:" + fieldsWithPiecesTakingTurn[i] + " is unknown piece: " + piece;
-//			}
-//		}
+	// TODO something takes much too long here...
+	private void initFieldsInCheck(boolean isCheckedByWhite) {
+		int countOfPiecesTakingTurn = isCheckedByWhite ? whitesCount : blacksCount;
+		Field[] fieldsWithPiecesTakingTurn = isCheckedByWhite ? fieldsWithWhites  : fieldsWithBlacks;
+
+		// for every piece except king - skip entry i=0
+		for (int i = countOfPiecesTakingTurn - 1; i > 0; i--) {
+			Field currField = fieldsWithPiecesTakingTurn[i];
+			Content piece = Content.fromByte(board[currField.ordinal()]);
+			switch (piece) {
+			case WHITE_PAWN:
+			case BLACK_PAWN:
+				initFieldsInCheckByPawn(currField, isCheckedByWhite);
+				break;
+			case WHITE_KNIGHT:
+			case BLACK_KNIGHT:
+				initFieldsInCheckByKnight(currField, isCheckedByWhite);
+				break;
+			case WHITE_BISHOP:
+			case BLACK_BISHOP:
+				initFieldsInCheckByBishop(currField, isCheckedByWhite);
+				break;
+			case WHITE_ROOK:
+			case BLACK_ROOK:
+				initFieldsInCheckByRook(currField, isCheckedByWhite);
+				break;
+			case WHITE_QUEEN:
+			case BLACK_QUEEN:
+				initFieldsInCheckByQueen(currField, isCheckedByWhite);
+				break;
+			case WHITE_KING:
+			case BLACK_KING:
+				// don't do anything
+				initFieldsInCheckByKing(currField, isCheckedByWhite);
+				break;
+			default:
+				assert false : "Thing on:" + fieldsWithPiecesTakingTurn[i] + " is unknown piece: " + piece;
+			}
+			// TODO reorganize this. Kings go after everything else (both black and white)
+			initFieldsInCheck(true); // whites
+			initFieldsInCheck(false); // blacks
+		}
 
 		////
 //		Field field = Field.A2;
@@ -313,103 +322,131 @@ public class State {
 		////
 	}
 
-	private void initCheckFieldsByBishop(Field from, boolean isCheckByWhite) {
+	private void initFieldsInCheckByKing(Field kingField, boolean isCheckedByWhite) {
+
+	}
+
+	private void initFieldsInCheckByQueen(Field queenField, boolean isCheckedByWhite) {
+		initFieldsInCheckByBishop(queenField, isCheckedByWhite);
+		initFieldsInCheckByRook(queenField, isCheckedByWhite);
+	}
+
+	private void initFieldsInCheckByRook(Field rookField, boolean isCheckedByWhite) {
 		for (int i = 1; true; i++) {
-			Field to = Field.fromUnsafeInts(from.file + i, from.rank + i);
-			if (to == null) {
-				break;
-			} else if (isSameColorPieceOn(to, isCheckByWhite)) {
-				setCheckFlagOnField(to, isCheckByWhite);
-				break;
-			}
-			setCheckFlagOnField(to, isCheckByWhite);
-			if (isOppositeColorPieceOn(to, isCheckByWhite)) {
+			Field to = Field.fromUnsafeInts(rookField.file + i, rookField.rank);
+			if (setCheckFlagForSlidingPiece(to, isCheckedByWhite)) {
 				break;
 			}
 		}
 		for (int i = 1; true; i++) {
-			Field to = Field.fromUnsafeInts(from.file + i, from.rank - i);
-			if (to == null || isSameColorPieceOn(to)) {
-				break;
-			}
-			setCheckFlagOnField(to, isCheckByWhite);
-			if (isOppositeColorPieceOn(to)) {
+			Field to = Field.fromUnsafeInts(rookField.file - i, rookField.rank);
+			if (setCheckFlagForSlidingPiece(to, isCheckedByWhite)) {
 				break;
 			}
 		}
 		for (int i = 1; true; i++) {
-			Field to = Field.fromUnsafeInts(from.file - i, from.rank + i);
-			if (to == null || isSameColorPieceOn(to, isCheckByWhite)) {
-				break;
-			}
-			setCheckFlagOnField(to, isCheckByWhite);
-			if (isOppositeColorPieceOn(to)) {
+			Field to = Field.fromUnsafeInts(rookField.file, rookField.rank + 1);
+			if (setCheckFlagForSlidingPiece(to, isCheckedByWhite)) {
 				break;
 			}
 		}
 		for (int i = 1; true; i++) {
-			Field to = Field.fromUnsafeInts(from.file - i, from.rank - i);
-			if (to == null || isSameColorPieceOn(to)) {
-				break;
-			}
-			setCheckFlagOnField(to, isCheckByWhite);
-			if (isOppositeColorPieceOn(to)) {
+			Field to = Field.fromUnsafeInts(rookField.file, rookField.rank - 1);
+			if (setCheckFlagForSlidingPiece(to, isCheckedByWhite)) {
 				break;
 			}
 		}
 	}
 
-	private void initCheckFieldsByPawn(Field from, boolean isCheckByWhite) {
-		int pawnDisplacement = isCheckByWhite ? 1 : -1;
+	private void initFieldsInCheckByBishop(Field bishopField, boolean isCheckedByWhite) {
+		for (int i = 1; true; i++) {
+			Field to = Field.fromUnsafeInts(bishopField.file + i, bishopField.rank + i);
+			if (setCheckFlagForSlidingPiece(to, isCheckedByWhite)) {
+				break;
+			}
+		}
+		for (int i = 1; true; i++) {
+			Field to = Field.fromUnsafeInts(bishopField.file + i, bishopField.rank - i);
+			if (setCheckFlagForSlidingPiece(to, isCheckedByWhite)) {
+				break;
+			}
+		}
+		for (int i = 1; true; i++) {
+			Field to = Field.fromUnsafeInts(bishopField.file - i, bishopField.rank + i);
+			if (setCheckFlagForSlidingPiece(to, isCheckedByWhite)) {
+				break;
+			}
+		}
+		for (int i = 1; true; i++) {
+			Field to = Field.fromUnsafeInts(bishopField.file - i, bishopField.rank - i);
+			if (setCheckFlagForSlidingPiece(to, isCheckedByWhite)) {
+				break;
+			}
+		}
+	}
+
+	private boolean setCheckFlagForSlidingPiece(Field underCheck, boolean isCheckedByWhite) {
+		if (underCheck == null) {
+			return true;
+		} else if (isSameColorPieceOn(underCheck, isCheckedByWhite)) {
+			setCheckFlagOnField(underCheck, isCheckedByWhite);
+			return true;
+		}
+		setCheckFlagOnField(underCheck, isCheckedByWhite);
+		return isOppositeColorPieceOn(underCheck, isCheckedByWhite);
+	}
+
+	private void initFieldsInCheckByPawn(Field from, boolean isCheckedByWhite) {
+		int pawnDisplacement = isCheckedByWhite ? 1 : -1;
 		// check to the queen side
 		Field to = Field.fromUnsafeInts(from.file - 1, from.rank + pawnDisplacement);
 		if (to != null) {
-			setCheckFlagOnField(to, isCheckByWhite);
+			setCheckFlagOnField(to, isCheckedByWhite);
 		}
 		// check to the king side
 		to = Field.fromUnsafeInts(from.file + 1, from.rank + pawnDisplacement);
 		if (to != null) {
-			setCheckFlagOnField(to, isCheckByWhite);
+			setCheckFlagOnField(to, isCheckedByWhite);
 		}
 	}
 
-	private void initCheckFieldsByKnight(Field from, boolean isCheckByWhite) {
-		Field to = Field.fromUnsafeInts(from.file + 1, from.rank + 2);
+	private void initFieldsInCheckByKnight(Field knightField, boolean isCheckedByWhite) {
+		Field to = Field.fromUnsafeInts(knightField.file + 1, knightField.rank + 2);
 		if (to != null) {
-			setCheckFlagOnField(to, isCheckByWhite);
+			setCheckFlagOnField(to, isCheckedByWhite);
 		}
-		to = Field.fromUnsafeInts(from.file + 1, from.rank - 2);
+		to = Field.fromUnsafeInts(knightField.file + 1, knightField.rank - 2);
 		if (to != null) {
-			setCheckFlagOnField(to, isCheckByWhite);
+			setCheckFlagOnField(to, isCheckedByWhite);
 		}
-		to = Field.fromUnsafeInts(from.file - 1, from.rank + 2);
+		to = Field.fromUnsafeInts(knightField.file - 1, knightField.rank + 2);
 		if (to != null) {
-			setCheckFlagOnField(to, isCheckByWhite);
+			setCheckFlagOnField(to, isCheckedByWhite);
 		}
-		to = Field.fromUnsafeInts(from.file - 1, from.rank - 2);
+		to = Field.fromUnsafeInts(knightField.file - 1, knightField.rank - 2);
 		if (to != null) {
-			setCheckFlagOnField(to, isCheckByWhite);
+			setCheckFlagOnField(to, isCheckedByWhite);
 		}
-		to = Field.fromUnsafeInts(from.file + 2, from.rank + 1);
+		to = Field.fromUnsafeInts(knightField.file + 2, knightField.rank + 1);
 		if (to != null) {
-			setCheckFlagOnField(to, isCheckByWhite);
+			setCheckFlagOnField(to, isCheckedByWhite);
 		}
-		to = Field.fromUnsafeInts(from.file + 2, from.rank - 1);
+		to = Field.fromUnsafeInts(knightField.file + 2, knightField.rank - 1);
 		if (to != null) {
-			setCheckFlagOnField(to, isCheckByWhite);
+			setCheckFlagOnField(to, isCheckedByWhite);
 		}
-		to = Field.fromUnsafeInts(from.file - 2, from.rank + 1);
+		to = Field.fromUnsafeInts(knightField.file - 2, knightField.rank + 1);
 		if (to != null) {
-			setCheckFlagOnField(to, isCheckByWhite);
+			setCheckFlagOnField(to, isCheckedByWhite);
 		}
-		to = Field.fromUnsafeInts(from.file - 2, from.rank - 1);
+		to = Field.fromUnsafeInts(knightField.file - 2, knightField.rank - 1);
 		if (to != null) {
-			setCheckFlagOnField(to, isCheckByWhite);
+			setCheckFlagOnField(to, isCheckedByWhite);
 		}
 	}
 	
-	private void setCheckFlagOnField(Field field, boolean isCheckByWhite) {
-		int checkFlag = isCheckByWhite ? IN_CHECK_BY_WHITE : IN_CHECK_BY_BLACK;
+	private void setCheckFlagOnField(Field field, boolean isCheckedByWhite) {
+		int checkFlag = isCheckedByWhite ? IN_CHECK_BY_WHITE : IN_CHECK_BY_BLACK;
 		byte contentAsByte = board[field.ordinal()];
 		board[field.ordinal()] = (byte)(contentAsByte | checkFlag);
 	}
