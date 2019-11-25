@@ -10,8 +10,13 @@ import java.util.List;
  * All is static in order to avoid allocations.
  */
 public class State {
-	static final byte PIECE_TYPE_MASK = 0x07;
-	static final byte IS_WHITE_FLAG = 0x08;
+	private static final boolean WHITE = true;
+	private static final boolean BLACK = false;
+	
+	private static final byte PIECE_TYPE_MASK = 0x07;
+	private static final byte IS_WHITE_FLAG = 0x08;
+
+	// Field has these flags set to true when a piece of given color can walk on this field on the next move
 	private static final byte IN_CHECK_BY_WHITE = 0x10;
 	private static final byte IN_CHECK_BY_BLACK = 0x20;
 
@@ -40,7 +45,7 @@ public class State {
 	 * new game
 	 */
 	State() {
-		isWhiteTurn = true;
+		isWhiteTurn = WHITE;
 		board = new byte[Field.FILES_COUNT * Field.RANKS_COUNT];
 		for (int file = 0; file < Field.FILES_COUNT; file++) {
 			board[Field.fromInts(file, 1).ordinal()] = Content.WHITE_PAWN.asByte;
@@ -85,9 +90,7 @@ public class State {
 		blacksCount = INITIAL_PLAYER_PIECES_COUNT;
 		enPassantField = null;
 		plyNumber = 1;
-
-		initFieldsInCheck(true); // whites
-		initFieldsInCheck(false); // blacks
+		initFieldsInCheck();
 	}
 
 	private State(byte[] board, Field[] fieldsWithWhites, byte whitesCount, Field[] fieldsWithBlacks, byte blacksCount,
@@ -100,9 +103,7 @@ public class State {
 		this.isWhiteTurn = isWhiteTurn;
 		this.enPassantField = enPassantField;
 		this.plyNumber = plyNumber;
-
-		initFieldsInCheck(true); // whites
-		initFieldsInCheck(false); // blacks
+		initFieldsInCheck();
 	}
 
 	private State fromTrustedPawnFirstMove(Field from, Field to, Field enPassantField) {
@@ -188,11 +189,16 @@ public class State {
 		sb.append("Turn: ").append(isWhiteTurn ? "WHITE" : "BLACK").append('\n');
 		sb.append(" | a  | b  | c  | d  | e  | f  | g  | h  |\n");
 		sb.append(" =========================================\n");
-		for (int rank = Field.RANKS_COUNT - 1; rank >= 0; rank--) {
+		for (byte rank = Field.RANKS_COUNT - 1; rank >= 0; rank--) {
 			sb.append(rank + 1).append("|");
 			for (byte file = 0; file < Field.FILES_COUNT; file++) {
 				Content content = getContent(file, rank);
-				sb.append(content.symbol).append(" |");
+				sb.append(content.symbol);
+				if (Config.DEBUG_FIELD_IN_CHECK_FLAGS) {
+					sb.append(debugFieldInCheck(file,rank)). append('|');
+				} else {
+					sb.append(" |");
+				}
 			}
 			sb.append("\n-+----+----+----+----+----+----+----+----+\n");
 		}
@@ -209,6 +215,20 @@ public class State {
 		sb.append("enPassantField: ").append(enPassantField).append('\n');
 		sb.append("plyNumber: ").append(plyNumber).append('\n');
 		return sb.toString();
+	}
+
+	private char debugFieldInCheck(byte file, byte rank) {
+		byte contentAsByte = board[Field.fromInts(file, rank).ordinal()];
+		boolean inCheckByWhite = (contentAsByte & State.IN_CHECK_BY_WHITE) != 0;
+		boolean inCheckByBlack = (contentAsByte & State.IN_CHECK_BY_BLACK) != 0;
+		if (inCheckByWhite && inCheckByBlack) {
+			return 'X';
+		} else if (inCheckByWhite) {
+			return '/';
+		} else if (inCheckByBlack) {
+			return '\\';
+		}
+		return ' ';
 	}
 
 	public Content getContent(int file, int rank) {
@@ -265,65 +285,53 @@ public class State {
 		return (contentAsByte & IS_WHITE_FLAG) == 0 && (contentAsByte & PIECE_TYPE_MASK) != 0;
 	}
 
-	// TODO something takes much too long here...
+	private void initFieldsInCheck() {
+		initFieldsInCheck(BLACK);
+		initFieldsInCheck(WHITE);
+		initFieldsInCheckByKings();
+	}
+	
 	private void initFieldsInCheck(boolean isCheckedByWhite) {
 		int countOfPiecesTakingTurn = isCheckedByWhite ? whitesCount : blacksCount;
 		Field[] fieldsWithPiecesTakingTurn = isCheckedByWhite ? fieldsWithWhites  : fieldsWithBlacks;
 
-		// for every piece except king - skip entry i=0
+		// for every piece except king - skip i == 0
 		for (int i = countOfPiecesTakingTurn - 1; i > 0; i--) {
 			Field currField = fieldsWithPiecesTakingTurn[i];
 			Content piece = Content.fromByte(board[currField.ordinal()]);
 			switch (piece) {
-			case WHITE_PAWN:
-			case BLACK_PAWN:
-				initFieldsInCheckByPawn(currField, isCheckedByWhite);
-				break;
-			case WHITE_KNIGHT:
-			case BLACK_KNIGHT:
-				initFieldsInCheckByKnight(currField, isCheckedByWhite);
-				break;
-			case WHITE_BISHOP:
-			case BLACK_BISHOP:
-				initFieldsInCheckByBishop(currField, isCheckedByWhite);
-				break;
-			case WHITE_ROOK:
-			case BLACK_ROOK:
-				initFieldsInCheckByRook(currField, isCheckedByWhite);
-				break;
-			case WHITE_QUEEN:
-			case BLACK_QUEEN:
-				initFieldsInCheckByQueen(currField, isCheckedByWhite);
-				break;
-			case WHITE_KING:
-			case BLACK_KING:
-				// don't do anything
-				initFieldsInCheckByKing(currField, isCheckedByWhite);
-				break;
-			default:
-				assert false : "Thing on:" + fieldsWithPiecesTakingTurn[i] + " is unknown piece: " + piece;
+				case WHITE_PAWN:
+				case BLACK_PAWN:
+					initFieldsInCheckByPawn(currField, isCheckedByWhite);
+					break;
+				case WHITE_KNIGHT:
+				case BLACK_KNIGHT:
+					initFieldsInCheckByKnight(currField, isCheckedByWhite);
+					break;
+				case WHITE_BISHOP:
+				case BLACK_BISHOP:
+					initFieldsInCheckByBishop(currField, isCheckedByWhite);
+					break;
+				case WHITE_ROOK:
+				case BLACK_ROOK:
+					initFieldsInCheckByRook(currField, isCheckedByWhite);
+					break;
+				case WHITE_QUEEN:
+				case BLACK_QUEEN:
+					initFieldsInCheckByQueen(currField, isCheckedByWhite);
+					break;
+				default:
+					assert false : "Thing on:" + fieldsWithPiecesTakingTurn[i] + " is unknown piece: " + piece;
 			}
-			// TODO reorganize this. Kings go after everything else (both black and white)
-			initFieldsInCheck(true); // whites
-			initFieldsInCheck(false); // blacks
 		}
-
-		////
-//		Field field = Field.A2;
-//		byte contentAsByte = board[field.ordinal()];
-//
-//		/*
-//		for every piece do {
-//		 something like generate moves but only set IN_CHECK_BY_WHITE IN_CHECK_BY_BLACK flags rather than new State()
-//		}
-//		 */
-//		board[field.ordinal()] = (byte)(contentAsByte | IN_CHECK_BY_WHITE);
-//		board[field.ordinal()] = (byte)(contentAsByte | IN_CHECK_BY_BLACK);
-		////
 	}
 
-	private void initFieldsInCheckByKing(Field kingField, boolean isCheckedByWhite) {
-
+	private void initFieldsInCheckByKings() {
+		Field whiteKing = fieldsWithWhites[0];
+		Field blackKing = fieldsWithBlacks[0];
+		assert Math.abs(blackKing.rank - whiteKing.rank) > 1
+				|| Math.abs(blackKing.file - whiteKing.file) > 1 : "Kings to close w: " + whiteKing+ ", b: " + blackKing;
+		//TODO actually implement it
 	}
 
 	private void initFieldsInCheckByQueen(Field queenField, boolean isCheckedByWhite) {
@@ -345,13 +353,13 @@ public class State {
 			}
 		}
 		for (int i = 1; true; i++) {
-			Field to = Field.fromUnsafeInts(rookField.file, rookField.rank + 1);
+			Field to = Field.fromUnsafeInts(rookField.file, rookField.rank + i);
 			if (setCheckFlagForSlidingPiece(to, isCheckedByWhite)) {
 				break;
 			}
 		}
 		for (int i = 1; true; i++) {
-			Field to = Field.fromUnsafeInts(rookField.file, rookField.rank - 1);
+			Field to = Field.fromUnsafeInts(rookField.file, rookField.rank - i);
 			if (setCheckFlagForSlidingPiece(to, isCheckedByWhite)) {
 				break;
 			}
@@ -452,19 +460,19 @@ public class State {
 	}
 
 	public enum Content {
-		EMPTY(0x00,"   ", false),
-		BLACK_PAWN(0x01,    "pp ", false),
-		BLACK_KNIGHT(0x02,  "NN_", false),
-		BLACK_BISHOP(0x03,  "BB_", false),
-		BLACK_ROOK(0x04,    "_RR", false),
-		BLACK_QUEEN(0x05,   "QQ_", false),
-		BLACK_KING(0x06,    "KK_", false),
-		WHITE_PAWN(0x09,    " p ", true),
-		WHITE_KNIGHT(0x0A,  " N_", true),
-		WHITE_BISHOP(0x0B,  " B_", true),
-		WHITE_ROOK(0x0C,    " _R", true),
-		WHITE_QUEEN(0x0D,   " Q_", true),
-		WHITE_KING(0x0E,    " K_", true);
+		EMPTY(0x00,"   ", BLACK),
+		BLACK_PAWN(0x01,    "pp ", BLACK),
+		BLACK_KNIGHT(0x02,  "NN_", BLACK),
+		BLACK_BISHOP(0x03,  "BB_", BLACK),
+		BLACK_ROOK(0x04,    "_RR", BLACK),
+		BLACK_QUEEN(0x05,   "QQ_", BLACK),
+		BLACK_KING(0x06,    "KK_", BLACK),
+		WHITE_PAWN(0x09,    " p ", WHITE),
+		WHITE_KNIGHT(0x0A,  " N_", WHITE),
+		WHITE_BISHOP(0x0B,  " B_", WHITE),
+		WHITE_ROOK(0x0C,    " _R", WHITE),
+		WHITE_QUEEN(0x0D,   " Q_", WHITE),
+		WHITE_KING(0x0E,    " K_", WHITE);
 
 		private static final Content[] byteToContents = {
 				EMPTY, BLACK_PAWN, BLACK_KNIGHT, BLACK_BISHOP, BLACK_ROOK, BLACK_QUEEN, BLACK_KING, EMPTY,

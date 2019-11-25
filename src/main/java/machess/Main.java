@@ -5,6 +5,7 @@ import java.util.List;
 public class Main {
 	public static void main(String[] args) {
 		State newGame = new State();
+		System.out.println(newGame);
 		State kingsPawnGame = newGame
 				.fromTrustedMove(Field.E2, Field.E4)
 				.fromTrustedMove(Field.E7, Field.E5);
