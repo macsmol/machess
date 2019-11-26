@@ -103,6 +103,7 @@ public class State {
 		this.isWhiteTurn = isWhiteTurn;
 		this.enPassantField = enPassantField;
 		this.plyNumber = plyNumber;
+		resetFieldsInCheck();
 		initFieldsInCheck();
 	}
 
@@ -285,6 +286,13 @@ public class State {
 		return (contentAsByte & IS_WHITE_FLAG) == 0 && (contentAsByte & PIECE_TYPE_MASK) != 0;
 	}
 
+	private void resetFieldsInCheck() {
+		for (int i = 0; i < board.length; i++) {
+			byte contentAsByte = board[i];
+			board[i] = (byte)(contentAsByte & (State.PIECE_TYPE_MASK | State.IS_WHITE_FLAG));
+		}
+	}
+
 	private void initFieldsInCheck() {
 		initFieldsInCheck(BLACK);
 		initFieldsInCheck(WHITE);
@@ -330,8 +338,46 @@ public class State {
 		Field whiteKing = fieldsWithWhites[0];
 		Field blackKing = fieldsWithBlacks[0];
 		assert Math.abs(blackKing.rank - whiteKing.rank) > 1
-				|| Math.abs(blackKing.file - whiteKing.file) > 1 : "Kings to close w: " + whiteKing+ ", b: " + blackKing;
-		//TODO actually implement it
+				|| Math.abs(blackKing.file - whiteKing.file) > 1 : "Kings to close. w: " + whiteKing+ ", b: " + blackKing;
+
+		initFieldsInCheckByKing(whiteKing, WHITE);
+		initFieldsInCheckByKing(blackKing, BLACK);
+	}
+
+	private void initFieldsInCheckByKing(Field king, boolean isWhiteKing) {
+		Field to = Field.fromUnsafeInts(king.file, king.rank + 1);
+		// TODO kings shouldn't check their mutual perimeters
+		if (to != null && !isFieldCheckedBy(to, !isWhiteKing)) {
+			setCheckFlagOnField(to, isWhiteKing);
+		}
+		to = Field.fromUnsafeInts(king.file + 1, king.rank + 1);
+		if (to != null && !isFieldCheckedBy(to, !isWhiteKing)) {
+			setCheckFlagOnField(to, isWhiteKing);
+		}
+		to = Field.fromUnsafeInts(king.file + 1, king.rank);
+		if (to != null && !isFieldCheckedBy(to, !isWhiteKing)) {
+			setCheckFlagOnField(to, isWhiteKing);
+		}
+		to = Field.fromUnsafeInts(king.file + 1, king.rank - 1);
+		if (to != null && !isFieldCheckedBy(to, !isWhiteKing)) {
+			setCheckFlagOnField(to, isWhiteKing);
+		}
+		to = Field.fromUnsafeInts(king.file, king.rank - 1);
+		if (to != null && !isFieldCheckedBy(to, !isWhiteKing)) {
+			setCheckFlagOnField(to, isWhiteKing);
+		}
+		to = Field.fromUnsafeInts(king.file - 1, king.rank - 1);
+		if (to != null && !isFieldCheckedBy(to, !isWhiteKing)) {
+			setCheckFlagOnField(to, isWhiteKing);
+		}
+		to = Field.fromUnsafeInts(king.file - 1, king.rank);
+		if (to != null && !isFieldCheckedBy(to, !isWhiteKing)) {
+			setCheckFlagOnField(to, isWhiteKing);
+		}
+		to = Field.fromUnsafeInts(king.file - 1, king.rank + 1);
+		if (to != null && !isFieldCheckedBy(to, !isWhiteKing)) {
+			setCheckFlagOnField(to, isWhiteKing);
+		}
 	}
 
 	private void initFieldsInCheckByQueen(Field queenField, boolean isCheckedByWhite) {
@@ -457,6 +503,12 @@ public class State {
 		int checkFlag = isCheckedByWhite ? IN_CHECK_BY_WHITE : IN_CHECK_BY_BLACK;
 		byte contentAsByte = board[field.ordinal()];
 		board[field.ordinal()] = (byte)(contentAsByte | checkFlag);
+	}
+
+	private boolean isFieldCheckedBy(Field field, boolean checkBy) {
+		int checkFlag = checkBy ? IN_CHECK_BY_WHITE : IN_CHECK_BY_BLACK;
+		byte contentAsByte = board[field.ordinal()];
+		return (contentAsByte & checkFlag) != 0;
 	}
 
 	public enum Content {
