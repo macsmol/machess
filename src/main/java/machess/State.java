@@ -3,7 +3,9 @@ package machess;
 import com.sun.istack.internal.Nullable;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Game state seen as game board rather than a list of figures.
@@ -19,6 +21,8 @@ public class State {
 	// Field has these flags set to true when a piece of given color can walk on this field on the next move
 	private static final byte IN_CHECK_BY_WHITE = 0x10;
 	private static final byte IN_CHECK_BY_BLACK = 0x20;
+	// flag for fields adjacent to both kings at once
+	private static final byte NO_KINGS_FLAG = 0x40;
 
 	private static final int INITIAL_PLAYER_PIECES_COUNT = 16;
 
@@ -229,6 +233,8 @@ public class State {
 		} else if (inCheckByBlack) {
 			return '\\';
 		}
+
+		// TODO improve toString to include NO_KINGS flags
 		return ' ';
 	}
 
@@ -340,44 +346,66 @@ public class State {
 		assert Math.abs(blackKing.rank - whiteKing.rank) > 1
 				|| Math.abs(blackKing.file - whiteKing.file) > 1 : "Kings to close. w: " + whiteKing+ ", b: " + blackKing;
 
-		initFieldsInCheckByKing(whiteKing, WHITE);
-		initFieldsInCheckByKing(blackKing, BLACK);
+		Set<Field> whiteNeighbourhood = getKingNeighbourhood(whiteKing, WHITE);
+		Set<Field> blackNeighbourhood = getKingNeighbourhood(blackKing, BLACK);
+
+		Set<Field> noKingsZone = new HashSet<>(whiteNeighbourhood);
+		if (noKingsZone.retainAll(blackNeighbourhood)) {
+			for (Field field : noKingsZone) {
+				setNoKingFlagOnField(field);
+			}
+			whiteNeighbourhood.removeAll(noKingsZone);
+			blackNeighbourhood.removeAll(noKingsZone);
+		}
+		for (Field field : whiteNeighbourhood) {
+			setCheckFlagOnFieldByKing(field, WHITE);
+		}
+		for (Field field : blackNeighbourhood) {
+			setCheckFlagOnFieldByKing(field, BLACK);
+		}
 	}
 
-	private void initFieldsInCheckByKing(Field king, boolean isWhiteKing) {
+	private void setCheckFlagOnFieldByKing(Field field, boolean isKingWhite) {
+		if (!isFieldCheckedBy(field, !isKingWhite)) {
+			setCheckFlagOnField(field, isKingWhite);
+		}
+	}
+
+	private Set<Field> getKingNeighbourhood(Field king, boolean isWhiteKing) {
+		Set<Field> neighbourhood = new HashSet<>();
 		Field to = Field.fromUnsafeInts(king.file, king.rank + 1);
-		// TODO kings shouldn't check their mutual perimeters
-		if (to != null && !isFieldCheckedBy(to, !isWhiteKing)) {
-			setCheckFlagOnField(to, isWhiteKing);
+		if (to != null) {
+			neighbourhood.add(to);
 		}
 		to = Field.fromUnsafeInts(king.file + 1, king.rank + 1);
-		if (to != null && !isFieldCheckedBy(to, !isWhiteKing)) {
-			setCheckFlagOnField(to, isWhiteKing);
+		if (to != null) {
+			neighbourhood.add(to);
 		}
 		to = Field.fromUnsafeInts(king.file + 1, king.rank);
-		if (to != null && !isFieldCheckedBy(to, !isWhiteKing)) {
-			setCheckFlagOnField(to, isWhiteKing);
+		if (to != null) {
+			neighbourhood.add(to);
 		}
 		to = Field.fromUnsafeInts(king.file + 1, king.rank - 1);
-		if (to != null && !isFieldCheckedBy(to, !isWhiteKing)) {
-			setCheckFlagOnField(to, isWhiteKing);
+		if (to != null) {
+			neighbourhood.add(to);
 		}
 		to = Field.fromUnsafeInts(king.file, king.rank - 1);
-		if (to != null && !isFieldCheckedBy(to, !isWhiteKing)) {
-			setCheckFlagOnField(to, isWhiteKing);
+		if (to != null) {
+			neighbourhood.add(to);
 		}
 		to = Field.fromUnsafeInts(king.file - 1, king.rank - 1);
-		if (to != null && !isFieldCheckedBy(to, !isWhiteKing)) {
-			setCheckFlagOnField(to, isWhiteKing);
+		if (to != null) {
+			neighbourhood.add(to);
 		}
 		to = Field.fromUnsafeInts(king.file - 1, king.rank);
-		if (to != null && !isFieldCheckedBy(to, !isWhiteKing)) {
-			setCheckFlagOnField(to, isWhiteKing);
+		if (to != null) {
+			neighbourhood.add(to);
 		}
 		to = Field.fromUnsafeInts(king.file - 1, king.rank + 1);
-		if (to != null && !isFieldCheckedBy(to, !isWhiteKing)) {
-			setCheckFlagOnField(to, isWhiteKing);
+		if (to != null) {
+			neighbourhood.add(to);
 		}
+		return neighbourhood;
 	}
 
 	private void initFieldsInCheckByQueen(Field queenField, boolean isCheckedByWhite) {
@@ -505,8 +533,13 @@ public class State {
 		board[field.ordinal()] = (byte)(contentAsByte | checkFlag);
 	}
 
-	private boolean isFieldCheckedBy(Field field, boolean checkBy) {
-		int checkFlag = checkBy ? IN_CHECK_BY_WHITE : IN_CHECK_BY_BLACK;
+	private void setNoKingFlagOnField(Field field) {
+		byte contentAsByte = board[field.ordinal()];
+		board[field.ordinal()] = (byte)(contentAsByte | NO_KINGS_FLAG);
+	}
+
+	private boolean isFieldCheckedBy(Field field, boolean testChecksByWhite) {
+		int checkFlag = testChecksByWhite ? IN_CHECK_BY_WHITE : IN_CHECK_BY_BLACK;
 		byte contentAsByte = board[field.ordinal()];
 		return (contentAsByte & checkFlag) != 0;
 	}

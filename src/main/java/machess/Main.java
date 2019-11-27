@@ -6,8 +6,8 @@ public class Main {
 		System.out.println(newGame);
 
 		State ply2 = newGame
-				.fromLegalMove(Field.E1, Field.A4)
-				.fromLegalMove(Field.E8, Field.A6);
+				.fromLegalMove(Field.E1, Field.C4)
+				.fromLegalMove(Field.E8, Field.E6);
 		System.out.println("ply2:"+ ply2);
 //
 //		State kingsPawnGame = ply2
