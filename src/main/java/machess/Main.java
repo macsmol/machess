@@ -1,15 +1,13 @@
 package machess;
 
-import java.util.List;
-
 public class Main {
 	public static void main(String[] args) {
 		State newGame = new State();
 		System.out.println(newGame);
 
 		State ply2 = newGame
-				.fromTrustedMove(Field.E1, Field.A4)
-				.fromTrustedMove(Field.E8, Field.A6);
+				.fromLegalMove(Field.E1, Field.A4)
+				.fromLegalMove(Field.E8, Field.A6);
 		System.out.println("ply2:"+ ply2);
 //
 //		State kingsPawnGame = ply2

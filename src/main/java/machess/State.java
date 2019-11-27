@@ -107,28 +107,28 @@ public class State {
 		initFieldsInCheck();
 	}
 
-	private State fromTrustedPawnFirstMove(Field from, Field to, Field enPassantField) {
+	private State fromLegalPawnFirstMove(Field from, Field to, Field enPassantField) {
 		assert enPassantField != null;
-		return fromTrustedMove(from, to, null, enPassantField);
+		return fromLegalMove(from, to, null, enPassantField);
 	}
 
-	private State fromTrustedMoveWithPromotion(Field from, Field to, Content promotion) {
+	private State fromLegalMoveWithPromotion(Field from, Field to, Content promotion) {
 		assert promotion != null;
-		return fromTrustedMove(from, to, promotion, null);
+		return fromLegalMove(from, to, promotion, null);
 	}
 
 	/**
 	 * Generates new BoardState based on move. Typical move without special events.
 	 */
-	State fromTrustedMove(Field from, Field to) {
-		return fromTrustedMove(from, to, null, null);
+	State fromLegalMove(Field from, Field to) {
+		return fromLegalMove(from, to, null, null);
 	}
 
 	/**
-	 * Generates new BoardState based on move. It's unsafe - does not verify game rules.
+	 * Generates new BoardState based on move. It does not verify game rules - assumes input is a legal move.
 	 * This is the root method - it covers all cases. All 'overload' methods should call this one.
 	 */
-	private State fromTrustedMove(Field from, Field to, @Nullable Content promotion, @Nullable Field futureEnPassantField) {
+	private State fromLegalMove(Field from, Field to, @Nullable Content promotion, @Nullable Field futureEnPassantField) {
 		assert from != to : from + "->" + to + " is no move";
 		byte[] boardCopy = board.clone();
 		Field[] fieldsWithWhitesCopy = fieldsWithWhites.clone();
@@ -594,35 +594,35 @@ public class State {
 	private void generateLegalKingMoves(Field from, List<State> outputMoves) {
 		Field to = Field.fromUnsafeInts(from.file, from.rank + 1);
 		if (to != null && !isSameColorPieceOn(to)) {
-			outputMoves.add(fromTrustedMove(from, to));
+			outputMoves.add(fromLegalMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file + 1, from.rank + 1);
 		if (to != null && !isSameColorPieceOn(to)) {
-			outputMoves.add(fromTrustedMove(from, to));
+			outputMoves.add(fromLegalMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file + 1, from.rank);
 		if (to != null && !isSameColorPieceOn(to)) {
-			outputMoves.add(fromTrustedMove(from, to));
+			outputMoves.add(fromLegalMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file + 1, from.rank - 1);
 		if (to != null && !isSameColorPieceOn(to)) {
-			outputMoves.add(fromTrustedMove(from, to));
+			outputMoves.add(fromLegalMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file, from.rank - 1);
 		if (to != null && !isSameColorPieceOn(to)) {
-			outputMoves.add(fromTrustedMove(from, to));
+			outputMoves.add(fromLegalMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file - 1, from.rank - 1);
 		if (to != null && !isSameColorPieceOn(to)) {
-			outputMoves.add(fromTrustedMove(from, to));
+			outputMoves.add(fromLegalMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file - 1, from.rank);
 		if (to != null && !isSameColorPieceOn(to)) {
-			outputMoves.add(fromTrustedMove(from, to));
+			outputMoves.add(fromLegalMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file - 1, from.rank + 1);
 		if (to != null && !isSameColorPieceOn(to)) {
-			outputMoves.add(fromTrustedMove(from, to));
+			outputMoves.add(fromLegalMove(from, to));
 		}
 	}
 
@@ -689,7 +689,7 @@ public class State {
 		if (to == null || isSameColorPieceOn(to)) {
 			return true;
 		}
-		outputMoves.add(fromTrustedMove(from, to));
+		outputMoves.add(fromLegalMove(from, to));
 		return isOppositeColorPieceOn(to);
 	}
 
@@ -702,10 +702,10 @@ public class State {
 			if (isPromotingField(to)) {
 				generatePromotionMoves(from, to, outputMoves);
 			} else {
-				outputMoves.add(fromTrustedMove(from, to));
+				outputMoves.add(fromLegalMove(from, to));
 				to = Field.fromInts(from.file, from.rank + pawnDoubleDisplacement);
 				if (isInitialFieldOfPawn(from) && getContent(to) == Content.EMPTY) {
-					outputMoves.add(fromTrustedPawnFirstMove(from, to, Field.fromInts(from.file, from.rank + pawnDisplacement)));
+					outputMoves.add(fromLegalPawnFirstMove(from, to, Field.fromInts(from.file, from.rank + pawnDisplacement)));
 				}
 			}
 		}
@@ -715,7 +715,7 @@ public class State {
 			if (isPromotingField(to)) {
 				generatePromotionMoves(from, to, outputMoves);
 			} else {
-				outputMoves.add(fromTrustedMove(from, to));
+				outputMoves.add(fromLegalMove(from, to));
 			}
 		}
 		// move with take to the king side
@@ -724,51 +724,51 @@ public class State {
 			if (isPromotingField(to)) {
 				generatePromotionMoves(from, to, outputMoves);
 			} else {
-				outputMoves.add(fromTrustedMove(from, to));
+				outputMoves.add(fromLegalMove(from, to));
 			}
 		}
 	}
 
 	private void generatePromotionMoves(Field from, Field to, List<State> outputMoves) {
-		outputMoves.add(fromTrustedMoveWithPromotion(from, to, Content.WHITE_QUEEN));
-		outputMoves.add(fromTrustedMoveWithPromotion(from, to, Content.WHITE_ROOK));
-		outputMoves.add(fromTrustedMoveWithPromotion(from, to, Content.WHITE_BISHOP));
-		outputMoves.add(fromTrustedMoveWithPromotion(from, to, Content.WHITE_KNIGHT));
+		outputMoves.add(fromLegalMoveWithPromotion(from, to, Content.WHITE_QUEEN));
+		outputMoves.add(fromLegalMoveWithPromotion(from, to, Content.WHITE_ROOK));
+		outputMoves.add(fromLegalMoveWithPromotion(from, to, Content.WHITE_BISHOP));
+		outputMoves.add(fromLegalMoveWithPromotion(from, to, Content.WHITE_KNIGHT));
 	}
 
 
 	private void generateLegalKnightMoves(Field from, List<State> outputMoves) {
 		Field to = Field.fromUnsafeInts(from.file + 1, from.rank + 2);
 		if (to != null && !isSameColorPieceOn(to)) {
-			outputMoves.add(fromTrustedMove(from, to));
+			outputMoves.add(fromLegalMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file + 1, from.rank - 2);
 		if (to != null && !isSameColorPieceOn(to)) {
-			outputMoves.add(fromTrustedMove(from, to));
+			outputMoves.add(fromLegalMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file - 1, from.rank + 2);
 		if (to != null && !isSameColorPieceOn(to)) {
-			outputMoves.add(fromTrustedMove(from, to));
+			outputMoves.add(fromLegalMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file - 1, from.rank - 2);
 		if (to != null && !isSameColorPieceOn(to)) {
-			outputMoves.add(fromTrustedMove(from, to));
+			outputMoves.add(fromLegalMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file + 2, from.rank + 1);
 		if (to != null && !isSameColorPieceOn(to)) {
-			outputMoves.add(fromTrustedMove(from, to));
+			outputMoves.add(fromLegalMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file + 2, from.rank - 1);
 		if (to != null && !isSameColorPieceOn(to)) {
-			outputMoves.add(fromTrustedMove(from, to));
+			outputMoves.add(fromLegalMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file - 2, from.rank + 1);
 		if (to != null && !isSameColorPieceOn(to)) {
-			outputMoves.add(fromTrustedMove(from, to));
+			outputMoves.add(fromLegalMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file - 2, from.rank - 1);
 		if (to != null && !isSameColorPieceOn(to)) {
-			outputMoves.add(fromTrustedMove(from, to));
+			outputMoves.add(fromLegalMove(from, to));
 		}
 	}
 }
