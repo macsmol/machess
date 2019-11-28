@@ -603,6 +603,8 @@ public class State {
 	}
 
 	List<State> generateLegalMoves() {
+		// TODO pinned pieces movement
+		// TODO generation when king under check
 		List<State> moves = new ArrayList<>();
 
 		int countOfPiecesTakingTurn = isWhiteTurn ? whitesCount : blacksCount;
@@ -644,6 +646,7 @@ public class State {
 	}
 
 	private void generateLegalKingMoves(Field from, List<State> outputMoves) {
+		//TODO castlings
 		Field to = Field.fromUnsafeInts(from.file, from.rank + 1);
 		if (to != null && !isSameColorPieceOn(to) && isFieldOkForKing(to, isWhiteTurn)) {
 			outputMoves.add(fromLegalMove(from, to));
