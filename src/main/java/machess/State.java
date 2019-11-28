@@ -198,12 +198,7 @@ public class State {
 			sb.append(rank + 1).append("|");
 			for (byte file = 0; file < Field.FILES_COUNT; file++) {
 				Content content = getContent(file, rank);
-				sb.append(content.symbol);
-				if (Config.DEBUG_FIELD_IN_CHECK_FLAGS) {
-					sb.append(debugFieldInCheck(file,rank)). append('|');
-				} else {
-					sb.append(" |");
-				}
+				sb.append(content.symbol).append(" |");
 			}
 			sb.append("\n-+----+----+----+----+----+----+----+----+\n");
 		}
@@ -219,23 +214,43 @@ public class State {
 		sb.append("] count: ").append(blacksCount).append('\n');
 		sb.append("enPassantField: ").append(enPassantField).append('\n');
 		sb.append("plyNumber: ").append(plyNumber).append('\n');
+		sb.append(debugCheckFlags());
 		return sb.toString();
 	}
 
-	private char debugFieldInCheck(byte file, byte rank) {
-		byte contentAsByte = board[Field.fromInts(file, rank).ordinal()];
-		boolean inCheckByWhite = (contentAsByte & State.IN_CHECK_BY_WHITE) != 0;
-		boolean inCheckByBlack = (contentAsByte & State.IN_CHECK_BY_BLACK) != 0;
-		if (inCheckByWhite && inCheckByBlack) {
-			return 'X';
-		} else if (inCheckByWhite) {
-			return '/';
-		} else if (inCheckByBlack) {
-			return '\\';
+	private String debugCheckFlags() {
+		if (!Config.DEBUG_FIELD_IN_CHECK_FLAGS) {
+			return "";
 		}
+		StringBuilder sb = new StringBuilder();
+		sb.append(" | a  | b  | c  | d  | e  | f  | g  | h  |\n");
+		sb.append(" =========================================\n");
+		for (byte rank = Field.RANKS_COUNT - 1; rank >= 0; rank--) {
+			sb.append(rank + 1).append("|");
+			for (byte file = 0; file < Field.FILES_COUNT; file++) {
+				byte contentAsByte = board[Field.fromInts(file, rank).ordinal()];
 
-		// TODO improve toString to include NO_KINGS flags
-		return ' ';
+				sb.append(intToString(contentAsByte, 4))
+						.append('|');
+			}
+			sb.append("\n-+----+----+----+----+----+----+----+----+\n");
+		}
+		return sb.toString();
+	}
+
+	public static String intToString(int number, int groupSize) {
+		number >>>= 4;
+		StringBuilder result = new StringBuilder();
+		for(int i = 3; i >= 0 ; i--) {
+			int mask = 1 << i;
+			result.append((number & mask) != 0 ? "1" : ".");
+
+			if (i % groupSize == 0)
+				result.append(" ");
+		}
+		result.replace(result.length() - 1, result.length(), "");
+
+		return result.toString();
 	}
 
 	public Content getContent(int file, int rank) {
@@ -544,6 +559,10 @@ public class State {
 		return (contentAsByte & checkFlag) != 0;
 	}
 
+	private boolean isFieldOkForKing(Field field, boolean isKingWhite) {
+		return !isFieldCheckedBy(field, !isKingWhite) && (board[field.ordinal()] & NO_KINGS_FLAG) == 0;
+	}
+
 	public enum Content {
 		EMPTY(0x00,"   ", BLACK),
 		BLACK_PAWN(0x01,    "pp ", BLACK),
@@ -626,35 +645,35 @@ public class State {
 
 	private void generateLegalKingMoves(Field from, List<State> outputMoves) {
 		Field to = Field.fromUnsafeInts(from.file, from.rank + 1);
-		if (to != null && !isSameColorPieceOn(to)) {
+		if (to != null && !isSameColorPieceOn(to) && isFieldOkForKing(to, isWhiteTurn)) {
 			outputMoves.add(fromLegalMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file + 1, from.rank + 1);
-		if (to != null && !isSameColorPieceOn(to)) {
+		if (to != null && !isSameColorPieceOn(to) && isFieldOkForKing(to, isWhiteTurn)) {
 			outputMoves.add(fromLegalMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file + 1, from.rank);
-		if (to != null && !isSameColorPieceOn(to)) {
+		if (to != null && !isSameColorPieceOn(to) && isFieldOkForKing(to, isWhiteTurn)) {
 			outputMoves.add(fromLegalMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file + 1, from.rank - 1);
-		if (to != null && !isSameColorPieceOn(to)) {
+		if (to != null && !isSameColorPieceOn(to) && isFieldOkForKing(to, isWhiteTurn)) {
 			outputMoves.add(fromLegalMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file, from.rank - 1);
-		if (to != null && !isSameColorPieceOn(to)) {
+		if (to != null && !isSameColorPieceOn(to) && isFieldOkForKing(to, isWhiteTurn)) {
 			outputMoves.add(fromLegalMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file - 1, from.rank - 1);
-		if (to != null && !isSameColorPieceOn(to)) {
+		if (to != null && !isSameColorPieceOn(to) && isFieldOkForKing(to, isWhiteTurn)) {
 			outputMoves.add(fromLegalMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file - 1, from.rank);
-		if (to != null && !isSameColorPieceOn(to)) {
+		if (to != null && !isSameColorPieceOn(to) && isFieldOkForKing(to, isWhiteTurn)) {
 			outputMoves.add(fromLegalMove(from, to));
 		}
 		to = Field.fromUnsafeInts(from.file - 1, from.rank + 1);
-		if (to != null && !isSameColorPieceOn(to)) {
+		if (to != null && !isSameColorPieceOn(to) && isFieldOkForKing(to, isWhiteTurn)) {
 			outputMoves.add(fromLegalMove(from, to));
 		}
 	}
