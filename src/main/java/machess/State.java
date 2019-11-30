@@ -192,15 +192,22 @@ public class State {
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 		sb.append("Turn: ").append(isWhiteTurn ? "WHITE" : "BLACK").append('\n');
-		sb.append(" | a  | b  | c  | d  | e  | f  | g  | h  |\n");
-		sb.append(" =========================================\n");
+		sb.append(" | a  | b  | c  | d  | e  | f  | g  | h  || a  | b  | c  | d  | e  | f  | g  | h  |\n");
+		sb.append(" ==================================================================================\n");
 		for (byte rank = Field.RANKS_COUNT - 1; rank >= 0; rank--) {
+			StringBuilder sbCheckFlags = new StringBuilder();
 			sb.append(rank + 1).append("|");
 			for (byte file = 0; file < Field.FILES_COUNT; file++) {
 				Content content = getContent(file, rank);
 				sb.append(content.symbol).append(" |");
+
+				if (Config.DEBUG_FIELD_IN_CHECK_FLAGS) {
+					byte contentAsByte = board[Field.fromInts(file, rank).ordinal()];
+					sbCheckFlags.append('|').append(Utils.checkFlagsToString(contentAsByte));
+				}
 			}
-			sb.append("\n-+----+----+----+----+----+----+----+----+\n");
+			sb.append(sbCheckFlags).append("|\n-+----+----+----+----+----+----+----+----+" +
+					"+----+----+----+----+----+----+----+----+\n");
 		}
 		sb.append("fieldsWithWhites: [");
 		for (int i = 0; i < fieldsWithWhites.length; i++) {
@@ -214,43 +221,7 @@ public class State {
 		sb.append("] count: ").append(blacksCount).append('\n');
 		sb.append("enPassantField: ").append(enPassantField).append('\n');
 		sb.append("plyNumber: ").append(plyNumber).append('\n');
-		sb.append(debugCheckFlags());
 		return sb.toString();
-	}
-
-	private String debugCheckFlags() {
-		if (!Config.DEBUG_FIELD_IN_CHECK_FLAGS) {
-			return "";
-		}
-		StringBuilder sb = new StringBuilder();
-		sb.append(" | a  | b  | c  | d  | e  | f  | g  | h  |\n");
-		sb.append(" =========================================\n");
-		for (byte rank = Field.RANKS_COUNT - 1; rank >= 0; rank--) {
-			sb.append(rank + 1).append("|");
-			for (byte file = 0; file < Field.FILES_COUNT; file++) {
-				byte contentAsByte = board[Field.fromInts(file, rank).ordinal()];
-
-				sb.append(intToString(contentAsByte, 4))
-						.append('|');
-			}
-			sb.append("\n-+----+----+----+----+----+----+----+----+\n");
-		}
-		return sb.toString();
-	}
-
-	public static String intToString(int number, int groupSize) {
-		number >>>= 4;
-		StringBuilder result = new StringBuilder();
-		for(int i = 3; i >= 0 ; i--) {
-			int mask = 1 << i;
-			result.append((number & mask) != 0 ? "1" : ".");
-
-			if (i % groupSize == 0)
-				result.append(" ");
-		}
-		result.replace(result.length() - 1, result.length(), "");
-
-		return result.toString();
 	}
 
 	public Content getContent(int file, int rank) {
