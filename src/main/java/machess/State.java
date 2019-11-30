@@ -16,7 +16,7 @@ public class State {
 	private static final boolean BLACK = false;
 	
 	private static final byte PIECE_TYPE_MASK = 0x07;
-	private static final byte IS_WHITE_FLAG = 0x08;
+	private static final byte IS_WHITE_PIECE_FLAG = 0x08;
 
 	// Field has these flags set to true when a piece of given color can walk on this field on the next move
 	private static final byte IN_CHECK_BY_WHITE = 0x10;
@@ -26,7 +26,16 @@ public class State {
 
 	private static final int INITIAL_PLAYER_PIECES_COUNT = 16;
 
-	private final boolean isWhiteTurn;
+	// flags
+	private final byte flags;
+	private static final int IS_WHITE_TURN =           0x01;
+	private static final int HAS_WHITE_KING_MOVED =    0x02;
+	private static final int HAS_BLACK_KING_MOVED =    0x04;
+	private static final int HAS_WHITE_KS_ROOK_MOVED = 0x08;
+	private static final int HAS_WHITE_QS_ROOK_MOVED = 0x10;
+	private static final int HAS_BLACK_KS_ROOK_MOVED = 0x20;
+	private static final int HAS_BLACK_QS_ROOK_MOVED = 0x40;
+
 	/**
 	 * one byte per field.
 	 */
@@ -49,7 +58,7 @@ public class State {
 	 * new game
 	 */
 	State() {
-		isWhiteTurn = WHITE;
+		flags = IS_WHITE_TURN;
 		board = new byte[Field.FILES_COUNT * Field.RANKS_COUNT];
 		for (int file = 0; file < Field.FILES_COUNT; file++) {
 			board[Field.fromInts(file, 1).ordinal()] = Content.WHITE_PAWN.asByte;
@@ -98,13 +107,13 @@ public class State {
 	}
 
 	private State(byte[] board, Field[] fieldsWithWhites, byte whitesCount, Field[] fieldsWithBlacks, byte blacksCount,
-	      boolean isWhiteTurn, @Nullable Field enPassantField, int plyNumber) {
+	              byte flags, @Nullable Field enPassantField, int plyNumber) {
 		this.board = board;
 		this.fieldsWithWhites = fieldsWithWhites;
 		this.fieldsWithBlacks = fieldsWithBlacks;
 		this.whitesCount = whitesCount;
 		this.blacksCount = blacksCount;
-		this.isWhiteTurn = isWhiteTurn;
+		this.flags = flags;
 		this.enPassantField = enPassantField;
 		this.plyNumber = plyNumber;
 		resetFieldsInCheck();
@@ -141,6 +150,7 @@ public class State {
 		//  update boardCopy
 		Content movedPiece = Content.fromByte(boardCopy[from.ordinal()]);
 		assert movedPiece != Content.EMPTY : from + "->" + to + " moves nothing";
+		assert movedPiece.isWhite == test(IS_WHITE_TURN) : "Moved " + movedPiece + " on " + (test(IS_WHITE_TURN) ? "white" : "black" ) + " turn";
 		boardCopy[from.ordinal()] = Content.EMPTY.asByte;
 
 		Content takenPiece = Content.fromByte(boardCopy[to.ordinal()]);
@@ -161,10 +171,10 @@ public class State {
 		}
 
 		// update pieces lists
-		Field[] movingPieces = isWhiteTurn ? fieldsWithWhitesCopy : fieldsWithBlacksCopy;
-		byte movingPiecesCount = isWhiteTurn ? whitesCount : blacksCount;
-		Field[] takenPieces = isWhiteTurn ? fieldsWithBlacksCopy : fieldsWithWhitesCopy;
-		byte takenPiecesCount = isWhiteTurn ? blacksCount : whitesCount;
+		Field[] movingPieces = test(IS_WHITE_TURN) ? fieldsWithWhitesCopy : fieldsWithBlacksCopy;
+		byte movingPiecesCount = test(IS_WHITE_TURN) ? whitesCount : blacksCount;
+		Field[] takenPieces = test(IS_WHITE_TURN) ? fieldsWithBlacksCopy : fieldsWithWhitesCopy;
+		byte takenPiecesCount = test(IS_WHITE_TURN) ? blacksCount : whitesCount;
 
 		for (int i = 0; i < movingPiecesCount; i++) {
 			if (movingPieces[i] == from) {
@@ -183,15 +193,23 @@ public class State {
 				}
 			}
 		}
-		byte updatedWhitesCount = isWhiteTurn ? whitesCount : takenPiecesCount;
-		byte updatedBlacksCount = isWhiteTurn ? takenPiecesCount : blacksCount;
+		byte updatedWhitesCount = test(IS_WHITE_TURN) ? whitesCount : takenPiecesCount;
+		byte updatedBlacksCount = test(IS_WHITE_TURN) ? takenPiecesCount : blacksCount;
 		return new State(boardCopy, fieldsWithWhitesCopy, updatedWhitesCount, fieldsWithBlacksCopy, updatedBlacksCount,
-				!isWhiteTurn, futureEnPassantField, plyNumber + 1);
+				(byte)(flags ^ IS_WHITE_TURN), futureEnPassantField, plyNumber + 1);
+	}
+
+	private byte turnOnFlag(int flagMask) {
+		return (byte)(flags | flagMask);
+	}
+
+	private boolean test(int flagMask) {
+		return (flags & flagMask) != 0;
 	}
 
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		sb.append("Turn: ").append(isWhiteTurn ? "WHITE" : "BLACK").append('\n');
+		sb.append("Turn: ").append(test(IS_WHITE_TURN) ? "WHITE" : "BLACK").append('\n');
 		sb.append(" | a  | b  | c  | d  | e  | f  | g  | h  || a  | b  | c  | d  | e  | f  | g  | h  |\n");
 		sb.append(" ==================================================================================\n");
 		for (byte rank = Field.RANKS_COUNT - 1; rank >= 0; rank--) {
@@ -233,18 +251,20 @@ public class State {
 	}
 
 	private boolean isPromotingField(Field field) {
-		return isWhiteTurn ? field.rank == Field.WHITE_PROMOTION_RANK : field.rank == Field.BLACK_PROMOTION_RANK;
+		return test(IS_WHITE_TURN) ? field.rank == Field.WHITE_PROMOTION_RANK
+				: field.rank == Field.BLACK_PROMOTION_RANK;
 	}
 
 	private boolean isInitialFieldOfPawn(Field field) {
-		return isWhiteTurn ? field.rank == Field.WHITE_PAWN_INITIAL_RANK : field.rank == Field.BLACK_PAWN_INITIAL_RANK;
+		return test(IS_WHITE_TURN) ? field.rank == Field.WHITE_PAWN_INITIAL_RANK
+				: field.rank == Field.BLACK_PAWN_INITIAL_RANK;
 	}
 
 	/**
 	 * Tells if Field field is occupied by a piece of color that's currently taking turn.
 	 */
 	boolean isSameColorPieceOn(Field field) {
-		return isWhiteTurn ? isWhitePieceOn(field) : isBlackPieceOn(field);
+		return test(IS_WHITE_TURN) ? isWhitePieceOn(field) : isBlackPieceOn(field);
 	}
 
 	/**
@@ -258,7 +278,7 @@ public class State {
 	 * Tells if Field field is occupied by a piece of color that's currently taking turn.
 	 */
 	boolean isOppositeColorPieceOn(Field field) {
-		return isWhiteTurn ? isBlackPieceOn(field) : isWhitePieceOn(field);
+		return test(IS_WHITE_TURN) ? isBlackPieceOn(field) : isWhitePieceOn(field);
 	}
 
 	/**
@@ -270,18 +290,18 @@ public class State {
 
 	private boolean isWhitePieceOn(Field field) {
 		byte contentAsByte = board[field.ordinal()];
-		return (contentAsByte & IS_WHITE_FLAG) != 0 && (contentAsByte & PIECE_TYPE_MASK) != 0;
+		return (contentAsByte & IS_WHITE_PIECE_FLAG) != 0 && (contentAsByte & PIECE_TYPE_MASK) != 0;
 	}
 
 	private boolean isBlackPieceOn(Field field) {
 		byte contentAsByte = board[field.ordinal()];
-		return (contentAsByte & IS_WHITE_FLAG) == 0 && (contentAsByte & PIECE_TYPE_MASK) != 0;
+		return (contentAsByte & IS_WHITE_PIECE_FLAG) == 0 && (contentAsByte & PIECE_TYPE_MASK) != 0;
 	}
 
 	private void resetFieldsInCheck() {
 		for (int i = 0; i < board.length; i++) {
 			byte contentAsByte = board[i];
-			board[i] = (byte)(contentAsByte & (State.PIECE_TYPE_MASK | State.IS_WHITE_FLAG));
+			board[i] = (byte)(contentAsByte & (State.PIECE_TYPE_MASK | State.IS_WHITE_PIECE_FLAG));
 		}
 	}
 
@@ -569,7 +589,7 @@ public class State {
 		}
 
 		static Content fromByte(byte contentAsByte) {
-			return byteToContents[contentAsByte & (State.PIECE_TYPE_MASK | State.IS_WHITE_FLAG)];
+			return byteToContents[contentAsByte & (State.PIECE_TYPE_MASK | State.IS_WHITE_PIECE_FLAG)];
 		}
 	}
 
@@ -578,8 +598,8 @@ public class State {
 		// TODO generation when king under check
 		List<State> moves = new ArrayList<>();
 
-		int countOfPiecesTakingTurn = isWhiteTurn ? whitesCount : blacksCount;
-		Field[] fieldsWithPiecesTakingTurn = isWhiteTurn ? fieldsWithWhites  : fieldsWithBlacks;
+		int countOfPiecesTakingTurn = test(IS_WHITE_TURN) ? whitesCount : blacksCount;
+		Field[] fieldsWithPiecesTakingTurn = test(IS_WHITE_TURN) ? fieldsWithWhites  : fieldsWithBlacks;
 
 		for (int i = 0; i < countOfPiecesTakingTurn; i++) {
 			Field currField = fieldsWithPiecesTakingTurn[i];
@@ -619,6 +639,7 @@ public class State {
 	private void generateLegalKingMoves(Field from, List<State> outputMoves) {
 		//TODO castlings
 		Field to = Field.fromUnsafeInts(from.file, from.rank + 1);
+		boolean isWhiteTurn = test(IS_WHITE_TURN);
 		if (to != null && !isSameColorPieceOn(to) && isFieldOkForKing(to, isWhiteTurn)) {
 			outputMoves.add(fromLegalMove(from, to));
 		}
@@ -720,8 +741,8 @@ public class State {
 	}
 
 	private void generateLegalPawnMoves(Field from, List<State> outputMoves) {
-		int pawnDisplacement = isWhiteTurn ? 1 : -1;
-		int pawnDoubleDisplacement = isWhiteTurn ? 2 : -2;
+		int pawnDisplacement = test(IS_WHITE_TURN) ? 1 : -1;
+		int pawnDoubleDisplacement = test(IS_WHITE_TURN) ? 2 : -2;
 		Field to = Field.fromInts(from.file, from.rank + pawnDisplacement);
 		// head-on move
 		if (getContent(to) == Content.EMPTY) {

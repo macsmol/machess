@@ -9,9 +9,10 @@ public class Main {
 
 		State ply3 = newGame
 				//king vs king
-				.fromLegalMove(Field.E1, Field.C4)
-				.fromLegalMove(Field.E8, Field.E6)
-				.fromLegalMove(Field.F1, Field.F3);
+				.fromLegalMove(Field.D2, Field.D3)
+				.fromLegalMove(Field.E7, Field.E6)
+				.fromLegalMove(Field.E2, Field.E3);
+//				.fromLegalMove(Field.F1, Field.F3);
 				//test blocking king by normal piece
 //				.fromLegalMove(Field.C2, Field.C3)
 //				.fromLegalMove(Field.E7, Field.E5)
