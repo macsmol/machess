@@ -9,15 +9,10 @@ public class Main {
 
 		State ply3 = newGame
 				//king vs king
-				.fromLegalMove(Field.D2, Field.D3)
-				.fromLegalMove(Field.E7, Field.E6)
-				.fromLegalMove(Field.E2, Field.E3);
+				.fromLegalMove(Field.A2, Field.A3)
+				.fromLegalMove(Field.E7, Field.E6);
+//				.fromLegalMove(Field.E2, Field.E3);
 //				.fromLegalMove(Field.F1, Field.F3);
-				//test blocking king by normal piece
-//				.fromLegalMove(Field.C2, Field.C3)
-//				.fromLegalMove(Field.E7, Field.E5)
-//				.fromLegalMove(Field.C3, Field.C4)
-//				.fromLegalMove(Field.F8, Field.C5);
 		System.out.println("ply3:"+ ply3);
 //
 //

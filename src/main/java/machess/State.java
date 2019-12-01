@@ -28,13 +28,13 @@ public class State {
 
 	// flags
 	private final byte flags;
-	private static final int IS_WHITE_TURN =           0x01;
-	private static final int HAS_WHITE_KING_MOVED =    0x02;
-	private static final int HAS_BLACK_KING_MOVED =    0x04;
-	private static final int HAS_WHITE_KS_ROOK_MOVED = 0x08;
-	private static final int HAS_WHITE_QS_ROOK_MOVED = 0x10;
-	private static final int HAS_BLACK_KS_ROOK_MOVED = 0x20;
-	private static final int HAS_BLACK_QS_ROOK_MOVED = 0x40;
+	private static final int WHITE_TURN =           0x01;
+	private static final int WHITE_KING_MOVED =     0x02;
+	private static final int BLACK_KING_MOVED =     0x04;
+	private static final int WHITE_KS_ROOK_MOVED =  0x08;
+	private static final int WHITE_QS_ROOK_MOVED =  0x10;
+	private static final int BLACK_KS_ROOK_MOVED =  0x20;
+	private static final int BLACK_QS_ROOK_MOVED =  0x40;
 
 	/**
 	 * one byte per field.
@@ -58,35 +58,35 @@ public class State {
 	 * new game
 	 */
 	State() {
-		flags = IS_WHITE_TURN;
+		flags = WHITE_TURN;
 		board = new byte[Field.FILES_COUNT * Field.RANKS_COUNT];
 		for (int file = 0; file < Field.FILES_COUNT; file++) {
-			board[Field.fromInts(file, 1).ordinal()] = Content.WHITE_PAWN.asByte;
-			board[Field.fromInts(file, 6).ordinal()] = Content.BLACK_PAWN.asByte;
+			board[Field.fromLegalInts(file, 1).ordinal()] = Content.WHITE_PAWN.asByte;
+			board[Field.fromLegalInts(file, 6).ordinal()] = Content.BLACK_PAWN.asByte;
 
 			switch (file) {
 				case 0:
 				case 7:
-					board[Field.fromInts(file, 0).ordinal()] = Content.WHITE_ROOK.asByte;
-					board[Field.fromInts(file, 7).ordinal()] = Content.BLACK_ROOK.asByte;
+					board[Field.fromLegalInts(file, 0).ordinal()] = Content.WHITE_ROOK.asByte;
+					board[Field.fromLegalInts(file, 7).ordinal()] = Content.BLACK_ROOK.asByte;
 					break;
 				case 1:
 				case 6:
-					board[Field.fromInts(file, 0).ordinal()] = Content.WHITE_KNIGHT.asByte;
-					board[Field.fromInts(file, 7).ordinal()] = Content.BLACK_KNIGHT.asByte;
+					board[Field.fromLegalInts(file, 0).ordinal()] = Content.WHITE_KNIGHT.asByte;
+					board[Field.fromLegalInts(file, 7).ordinal()] = Content.BLACK_KNIGHT.asByte;
 					break;
 				case 2:
 				case 5:
-					board[Field.fromInts(file, 0).ordinal()] = Content.WHITE_BISHOP.asByte;
-					board[Field.fromInts(file, 7).ordinal()] = Content.BLACK_BISHOP.asByte;
+					board[Field.fromLegalInts(file, 0).ordinal()] = Content.WHITE_BISHOP.asByte;
+					board[Field.fromLegalInts(file, 7).ordinal()] = Content.BLACK_BISHOP.asByte;
 					break;
 				case 3:
-					board[Field.fromInts(file, 0).ordinal()] = Content.WHITE_QUEEN.asByte;
-					board[Field.fromInts(file, 7).ordinal()] = Content.BLACK_QUEEN.asByte;
+					board[Field.fromLegalInts(file, 0).ordinal()] = Content.WHITE_QUEEN.asByte;
+					board[Field.fromLegalInts(file, 7).ordinal()] = Content.BLACK_QUEEN.asByte;
 					break;
 				case 4:
-					board[Field.fromInts(file, 0).ordinal()] = Content.WHITE_KING.asByte;
-					board[Field.fromInts(file, 7).ordinal()] = Content.BLACK_KING.asByte;
+					board[Field.fromLegalInts(file, 0).ordinal()] = Content.WHITE_KING.asByte;
+					board[Field.fromLegalInts(file, 7).ordinal()] = Content.BLACK_KING.asByte;
 					break;
 			}
 		}
@@ -122,26 +122,37 @@ public class State {
 
 	private State fromLegalPawnFirstMove(Field from, Field to, Field enPassantField) {
 		assert enPassantField != null;
-		return fromLegalMove(from, to, null, enPassantField);
+		return fromLegalMove(from, to, null, enPassantField, null);
 	}
 
 	private State fromLegalMoveWithPromotion(Field from, Field to, Content promotion) {
 		assert promotion != null;
-		return fromLegalMove(from, to, promotion, null);
+		return fromLegalMove(from, to, promotion, null, null);
+	}
+
+	private State fromLegalQueensideCastling(Field kingFrom, Field kingTo) {
+		Field rookToCastle = Field.fromLegalInts(0, kingFrom.rank);
+		return fromLegalMove(kingFrom, kingTo, null, null, rookToCastle);
+	}
+
+	private State fromLegalKingsideCastling(Field kingFrom, Field kingTo) {
+		Field rookToCastle = Field.fromLegalInts(7, kingFrom.rank);
+		return fromLegalMove(kingFrom, kingTo, null, null, rookToCastle);
 	}
 
 	/**
 	 * Generates new BoardState based on move. Typical move without special events.
 	 */
 	State fromLegalMove(Field from, Field to) {
-		return fromLegalMove(from, to, null, null);
+		return fromLegalMove(from, to, null, null, null);
 	}
 
 	/**
 	 * Generates new BoardState based on move. It does not verify game rules - assumes input is a legal move.
 	 * This is the root method - it covers all cases. All 'overload' methods should call this one.
 	 */
-	private State fromLegalMove(Field from, Field to, @Nullable Content promotion, @Nullable Field futureEnPassantField) {
+	private State fromLegalMove(Field from, Field to, @Nullable Content promotion, @Nullable Field futureEnPassantField,
+	                            @Nullable Field rookToCastle) {
 		assert from != to : from + "->" + to + " is no move";
 		byte[] boardCopy = board.clone();
 		Field[] fieldsWithWhitesCopy = fieldsWithWhites.clone();
@@ -150,7 +161,7 @@ public class State {
 		//  update boardCopy
 		Content movedPiece = Content.fromByte(boardCopy[from.ordinal()]);
 		assert movedPiece != Content.EMPTY : from + "->" + to + " moves nothing";
-		assert movedPiece.isWhite == test(IS_WHITE_TURN) : "Moved " + movedPiece + " on " + (test(IS_WHITE_TURN) ? "white" : "black" ) + " turn";
+		assert movedPiece.isWhite == test(WHITE_TURN) : "Moved " + movedPiece + " on " + (test(WHITE_TURN) ? "white" : "black" ) + " turn";
 		boardCopy[from.ordinal()] = Content.EMPTY.asByte;
 
 		Content takenPiece = Content.fromByte(boardCopy[to.ordinal()]);
@@ -160,28 +171,35 @@ public class State {
 		Field fieldWithPawnTakenEnPassant = null;
 		if (enPassantField == to) {
 			if (movedPiece == Content.WHITE_PAWN) {
-				fieldWithPawnTakenEnPassant = Field.fromInts(to.file, to.rank - 1);
+				fieldWithPawnTakenEnPassant = Field.fromLegalInts(to.file, to.rank - 1);
 				takenPiece = Content.fromByte(boardCopy[fieldWithPawnTakenEnPassant.ordinal()]);
 				boardCopy[fieldWithPawnTakenEnPassant.ordinal()] = Content.EMPTY.asByte;
 			} else if (movedPiece == Content.BLACK_PAWN) {
-				fieldWithPawnTakenEnPassant = Field.fromInts(to.file, to.rank + 1);
+				fieldWithPawnTakenEnPassant = Field.fromLegalInts(to.file, to.rank + 1);
 				takenPiece = Content.fromByte(boardCopy[fieldWithPawnTakenEnPassant.ordinal()]);
 				boardCopy[fieldWithPawnTakenEnPassant.ordinal()] = Content.EMPTY.asByte;
 			}
+		} else if (rookToCastle != null) {
+			boardCopy[rookToCastle.ordinal()] = Content.EMPTY.asByte;
+			byte rookAsByte = test(WHITE_TURN) ? Content.WHITE_ROOK.asByte : Content.BLACK_ROOK.asByte;
+			Field rookDestination;
+			if (rookToCastle.file == 0) {
+				rookDestination = test(WHITE_TURN) ? Field.D1 : Field.D8;
+				boardCopy[rookDestination.ordinal()] = rookAsByte;
+			} else {
+				rookDestination = test(WHITE_TURN) ? Field.F1 : Field.F8;
+				boardCopy[rookDestination.ordinal()] = rookAsByte;
+			}
+			// update pieces lists
+			movePieceOnPiecesLists(fieldsWithWhitesCopy, fieldsWithBlacksCopy, rookToCastle, rookDestination);
 		}
 
 		// update pieces lists
-		Field[] movingPieces = test(IS_WHITE_TURN) ? fieldsWithWhitesCopy : fieldsWithBlacksCopy;
-		byte movingPiecesCount = test(IS_WHITE_TURN) ? whitesCount : blacksCount;
-		Field[] takenPieces = test(IS_WHITE_TURN) ? fieldsWithBlacksCopy : fieldsWithWhitesCopy;
-		byte takenPiecesCount = test(IS_WHITE_TURN) ? blacksCount : whitesCount;
+		movePieceOnPiecesLists(fieldsWithWhitesCopy, fieldsWithBlacksCopy, from, to);
 
-		for (int i = 0; i < movingPiecesCount; i++) {
-			if (movingPieces[i] == from) {
-				movingPieces[i] = to;
-				break;
-			}
-		}
+		Field[] takenPieces = test(WHITE_TURN) ? fieldsWithBlacksCopy : fieldsWithWhitesCopy;
+		byte takenPiecesCount = test(WHITE_TURN) ? blacksCount : whitesCount;
+
 		if (takenPiece != Content.EMPTY) {
 			assert movedPiece.isWhite != takenPiece.isWhite : from + "->" + to + " is friendly take";
 			for (int i = 0; i < takenPiecesCount; i++) {
@@ -193,10 +211,38 @@ public class State {
 				}
 			}
 		}
-		byte updatedWhitesCount = test(IS_WHITE_TURN) ? whitesCount : takenPiecesCount;
-		byte updatedBlacksCount = test(IS_WHITE_TURN) ? takenPiecesCount : blacksCount;
+
+		int flagsCopy = flags ^ WHITE_TURN;
+		if (from == Field.E1) {
+			flagsCopy |= WHITE_KING_MOVED;
+		} else if (from == Field.E8) {
+			flagsCopy |= BLACK_KING_MOVED;
+		} else if (from == Field.A1) {
+			flagsCopy |= WHITE_QS_ROOK_MOVED;
+		} else if (from == Field.H1) {
+			flagsCopy |= WHITE_KS_ROOK_MOVED;
+		} else if (from == Field.A8) {
+			flagsCopy |= BLACK_QS_ROOK_MOVED;
+		} else if (from == Field.H8) {
+			flagsCopy |= BLACK_KS_ROOK_MOVED;
+		}
+
+		byte updatedWhitesCount = test(WHITE_TURN) ? whitesCount : takenPiecesCount;
+		byte updatedBlacksCount = test(WHITE_TURN) ? takenPiecesCount : blacksCount;
 		return new State(boardCopy, fieldsWithWhitesCopy, updatedWhitesCount, fieldsWithBlacksCopy, updatedBlacksCount,
-				(byte)(flags ^ IS_WHITE_TURN), futureEnPassantField, plyNumber + 1);
+				(byte)flagsCopy, futureEnPassantField, plyNumber + 1);
+	}
+
+	private void movePieceOnPiecesLists(Field[] fieldsWithWhites, Field[] fieldsWithBlacks, Field from, Field to) {
+		Field[] movingPieces = test(WHITE_TURN) ? fieldsWithWhites : fieldsWithBlacks;
+		byte movingPiecesCount = test(WHITE_TURN) ? whitesCount : blacksCount;
+
+		for (int i = 0; i < movingPiecesCount; i++) {
+			if (movingPieces[i] == from) {
+				movingPieces[i] = to;
+				break;
+			}
+		}
 	}
 
 	private byte turnOnFlag(int flagMask) {
@@ -209,8 +255,14 @@ public class State {
 
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		sb.append("Turn: ").append(test(IS_WHITE_TURN) ? "WHITE" : "BLACK").append('\n');
-		sb.append(" | a  | b  | c  | d  | e  | f  | g  | h  || a  | b  | c  | d  | e  | f  | g  | h  |\n");
+		sb.append("Turn: ").append(test(WHITE_TURN) ? "WHITE" : "BLACK");
+		sb.append(test(WHITE_KING_MOVED) ? "; WHITE_KING_MOVED" : "");
+		sb.append(test(WHITE_QS_ROOK_MOVED) ? "; WHITE_QS_ROOK_MOVED" : "");
+		sb.append(test(WHITE_KS_ROOK_MOVED) ? "; WHITE_KS_ROOK_MOVED" : "");
+		sb.append(test(BLACK_KING_MOVED) ? "; BLACK_KING_MOVED" : "");
+		sb.append(test(BLACK_QS_ROOK_MOVED) ? "; BLACK_QS_ROOK_MOVED" : "");
+		sb.append(test(BLACK_KS_ROOK_MOVED) ? "; BLACK_KS_ROOK_MOVED" : "");
+		sb.append("\n | a  | b  | c  | d  | e  | f  | g  | h  || a  | b  | c  | d  | e  | f  | g  | h  |\n");
 		sb.append(" ==================================================================================\n");
 		for (byte rank = Field.RANKS_COUNT - 1; rank >= 0; rank--) {
 			StringBuilder sbCheckFlags = new StringBuilder();
@@ -220,7 +272,7 @@ public class State {
 				sb.append(content.symbol).append(" |");
 
 				if (Config.DEBUG_FIELD_IN_CHECK_FLAGS) {
-					byte contentAsByte = board[Field.fromInts(file, rank).ordinal()];
+					byte contentAsByte = board[Field.fromLegalInts(file, rank).ordinal()];
 					sbCheckFlags.append('|').append(Utils.checkFlagsToString(contentAsByte));
 				}
 			}
@@ -243,7 +295,7 @@ public class State {
 	}
 
 	public Content getContent(int file, int rank) {
-		return getContent(Field.fromInts(file, rank));
+		return getContent(Field.fromLegalInts(file, rank));
 	}
 
 	public Content getContent(Field field) {
@@ -251,12 +303,12 @@ public class State {
 	}
 
 	private boolean isPromotingField(Field field) {
-		return test(IS_WHITE_TURN) ? field.rank == Field.WHITE_PROMOTION_RANK
+		return test(WHITE_TURN) ? field.rank == Field.WHITE_PROMOTION_RANK
 				: field.rank == Field.BLACK_PROMOTION_RANK;
 	}
 
 	private boolean isInitialFieldOfPawn(Field field) {
-		return test(IS_WHITE_TURN) ? field.rank == Field.WHITE_PAWN_INITIAL_RANK
+		return test(WHITE_TURN) ? field.rank == Field.WHITE_PAWN_INITIAL_RANK
 				: field.rank == Field.BLACK_PAWN_INITIAL_RANK;
 	}
 
@@ -264,7 +316,7 @@ public class State {
 	 * Tells if Field field is occupied by a piece of color that's currently taking turn.
 	 */
 	boolean isSameColorPieceOn(Field field) {
-		return test(IS_WHITE_TURN) ? isWhitePieceOn(field) : isBlackPieceOn(field);
+		return test(WHITE_TURN) ? isWhitePieceOn(field) : isBlackPieceOn(field);
 	}
 
 	/**
@@ -278,7 +330,7 @@ public class State {
 	 * Tells if Field field is occupied by a piece of color that's currently taking turn.
 	 */
 	boolean isOppositeColorPieceOn(Field field) {
-		return test(IS_WHITE_TURN) ? isBlackPieceOn(field) : isWhitePieceOn(field);
+		return test(WHITE_TURN) ? isBlackPieceOn(field) : isWhitePieceOn(field);
 	}
 
 	/**
@@ -379,35 +431,35 @@ public class State {
 
 	private Set<Field> getKingNeighbourhood(Field king, boolean isWhiteKing) {
 		Set<Field> neighbourhood = new HashSet<>();
-		Field to = Field.fromUnsafeInts(king.file, king.rank + 1);
+		Field to = Field.fromInts(king.file, king.rank + 1);
 		if (to != null) {
 			neighbourhood.add(to);
 		}
-		to = Field.fromUnsafeInts(king.file + 1, king.rank + 1);
+		to = Field.fromInts(king.file + 1, king.rank + 1);
 		if (to != null) {
 			neighbourhood.add(to);
 		}
-		to = Field.fromUnsafeInts(king.file + 1, king.rank);
+		to = Field.fromInts(king.file + 1, king.rank);
 		if (to != null) {
 			neighbourhood.add(to);
 		}
-		to = Field.fromUnsafeInts(king.file + 1, king.rank - 1);
+		to = Field.fromInts(king.file + 1, king.rank - 1);
 		if (to != null) {
 			neighbourhood.add(to);
 		}
-		to = Field.fromUnsafeInts(king.file, king.rank - 1);
+		to = Field.fromInts(king.file, king.rank - 1);
 		if (to != null) {
 			neighbourhood.add(to);
 		}
-		to = Field.fromUnsafeInts(king.file - 1, king.rank - 1);
+		to = Field.fromInts(king.file - 1, king.rank - 1);
 		if (to != null) {
 			neighbourhood.add(to);
 		}
-		to = Field.fromUnsafeInts(king.file - 1, king.rank);
+		to = Field.fromInts(king.file - 1, king.rank);
 		if (to != null) {
 			neighbourhood.add(to);
 		}
-		to = Field.fromUnsafeInts(king.file - 1, king.rank + 1);
+		to = Field.fromInts(king.file - 1, king.rank + 1);
 		if (to != null) {
 			neighbourhood.add(to);
 		}
@@ -421,25 +473,25 @@ public class State {
 
 	private void initFieldsInCheckByRook(Field rookField, boolean isCheckedByWhite) {
 		for (int i = 1; true; i++) {
-			Field to = Field.fromUnsafeInts(rookField.file + i, rookField.rank);
+			Field to = Field.fromInts(rookField.file + i, rookField.rank);
 			if (setCheckFlagForSlidingPiece(to, isCheckedByWhite)) {
 				break;
 			}
 		}
 		for (int i = 1; true; i++) {
-			Field to = Field.fromUnsafeInts(rookField.file - i, rookField.rank);
+			Field to = Field.fromInts(rookField.file - i, rookField.rank);
 			if (setCheckFlagForSlidingPiece(to, isCheckedByWhite)) {
 				break;
 			}
 		}
 		for (int i = 1; true; i++) {
-			Field to = Field.fromUnsafeInts(rookField.file, rookField.rank + i);
+			Field to = Field.fromInts(rookField.file, rookField.rank + i);
 			if (setCheckFlagForSlidingPiece(to, isCheckedByWhite)) {
 				break;
 			}
 		}
 		for (int i = 1; true; i++) {
-			Field to = Field.fromUnsafeInts(rookField.file, rookField.rank - i);
+			Field to = Field.fromInts(rookField.file, rookField.rank - i);
 			if (setCheckFlagForSlidingPiece(to, isCheckedByWhite)) {
 				break;
 			}
@@ -448,25 +500,25 @@ public class State {
 
 	private void initFieldsInCheckByBishop(Field bishopField, boolean isCheckedByWhite) {
 		for (int i = 1; true; i++) {
-			Field to = Field.fromUnsafeInts(bishopField.file + i, bishopField.rank + i);
+			Field to = Field.fromInts(bishopField.file + i, bishopField.rank + i);
 			if (setCheckFlagForSlidingPiece(to, isCheckedByWhite)) {
 				break;
 			}
 		}
 		for (int i = 1; true; i++) {
-			Field to = Field.fromUnsafeInts(bishopField.file + i, bishopField.rank - i);
+			Field to = Field.fromInts(bishopField.file + i, bishopField.rank - i);
 			if (setCheckFlagForSlidingPiece(to, isCheckedByWhite)) {
 				break;
 			}
 		}
 		for (int i = 1; true; i++) {
-			Field to = Field.fromUnsafeInts(bishopField.file - i, bishopField.rank + i);
+			Field to = Field.fromInts(bishopField.file - i, bishopField.rank + i);
 			if (setCheckFlagForSlidingPiece(to, isCheckedByWhite)) {
 				break;
 			}
 		}
 		for (int i = 1; true; i++) {
-			Field to = Field.fromUnsafeInts(bishopField.file - i, bishopField.rank - i);
+			Field to = Field.fromInts(bishopField.file - i, bishopField.rank - i);
 			if (setCheckFlagForSlidingPiece(to, isCheckedByWhite)) {
 				break;
 			}
@@ -487,47 +539,47 @@ public class State {
 	private void initFieldsInCheckByPawn(Field from, boolean isCheckedByWhite) {
 		int pawnDisplacement = isCheckedByWhite ? 1 : -1;
 		// check to the queen side
-		Field to = Field.fromUnsafeInts(from.file - 1, from.rank + pawnDisplacement);
+		Field to = Field.fromInts(from.file - 1, from.rank + pawnDisplacement);
 		if (to != null) {
 			setCheckFlagOnField(to, isCheckedByWhite);
 		}
 		// check to the king side
-		to = Field.fromUnsafeInts(from.file + 1, from.rank + pawnDisplacement);
+		to = Field.fromInts(from.file + 1, from.rank + pawnDisplacement);
 		if (to != null) {
 			setCheckFlagOnField(to, isCheckedByWhite);
 		}
 	}
 
 	private void initFieldsInCheckByKnight(Field knightField, boolean isCheckedByWhite) {
-		Field to = Field.fromUnsafeInts(knightField.file + 1, knightField.rank + 2);
+		Field to = Field.fromInts(knightField.file + 1, knightField.rank + 2);
 		if (to != null) {
 			setCheckFlagOnField(to, isCheckedByWhite);
 		}
-		to = Field.fromUnsafeInts(knightField.file + 1, knightField.rank - 2);
+		to = Field.fromInts(knightField.file + 1, knightField.rank - 2);
 		if (to != null) {
 			setCheckFlagOnField(to, isCheckedByWhite);
 		}
-		to = Field.fromUnsafeInts(knightField.file - 1, knightField.rank + 2);
+		to = Field.fromInts(knightField.file - 1, knightField.rank + 2);
 		if (to != null) {
 			setCheckFlagOnField(to, isCheckedByWhite);
 		}
-		to = Field.fromUnsafeInts(knightField.file - 1, knightField.rank - 2);
+		to = Field.fromInts(knightField.file - 1, knightField.rank - 2);
 		if (to != null) {
 			setCheckFlagOnField(to, isCheckedByWhite);
 		}
-		to = Field.fromUnsafeInts(knightField.file + 2, knightField.rank + 1);
+		to = Field.fromInts(knightField.file + 2, knightField.rank + 1);
 		if (to != null) {
 			setCheckFlagOnField(to, isCheckedByWhite);
 		}
-		to = Field.fromUnsafeInts(knightField.file + 2, knightField.rank - 1);
+		to = Field.fromInts(knightField.file + 2, knightField.rank - 1);
 		if (to != null) {
 			setCheckFlagOnField(to, isCheckedByWhite);
 		}
-		to = Field.fromUnsafeInts(knightField.file - 2, knightField.rank + 1);
+		to = Field.fromInts(knightField.file - 2, knightField.rank + 1);
 		if (to != null) {
 			setCheckFlagOnField(to, isCheckedByWhite);
 		}
-		to = Field.fromUnsafeInts(knightField.file - 2, knightField.rank - 1);
+		to = Field.fromInts(knightField.file - 2, knightField.rank - 1);
 		if (to != null) {
 			setCheckFlagOnField(to, isCheckedByWhite);
 		}
@@ -598,8 +650,8 @@ public class State {
 		// TODO generation when king under check
 		List<State> moves = new ArrayList<>();
 
-		int countOfPiecesTakingTurn = test(IS_WHITE_TURN) ? whitesCount : blacksCount;
-		Field[] fieldsWithPiecesTakingTurn = test(IS_WHITE_TURN) ? fieldsWithWhites  : fieldsWithBlacks;
+		int countOfPiecesTakingTurn = test(WHITE_TURN) ? whitesCount : blacksCount;
+		Field[] fieldsWithPiecesTakingTurn = test(WHITE_TURN) ? fieldsWithWhites  : fieldsWithBlacks;
 
 		for (int i = 0; i < countOfPiecesTakingTurn; i++) {
 			Field currField = fieldsWithPiecesTakingTurn[i];
@@ -637,40 +689,78 @@ public class State {
 	}
 
 	private void generateLegalKingMoves(Field from, List<State> outputMoves) {
-		//TODO castlings
-		Field to = Field.fromUnsafeInts(from.file, from.rank + 1);
-		boolean isWhiteTurn = test(IS_WHITE_TURN);
+		Field to = Field.fromInts(from.file, from.rank + 1);
+		boolean isWhiteTurn = test(WHITE_TURN);
 		if (to != null && !isSameColorPieceOn(to) && isFieldOkForKing(to, isWhiteTurn)) {
 			outputMoves.add(fromLegalMove(from, to));
 		}
-		to = Field.fromUnsafeInts(from.file + 1, from.rank + 1);
+		to = Field.fromInts(from.file + 1, from.rank + 1);
 		if (to != null && !isSameColorPieceOn(to) && isFieldOkForKing(to, isWhiteTurn)) {
 			outputMoves.add(fromLegalMove(from, to));
 		}
-		to = Field.fromUnsafeInts(from.file + 1, from.rank);
+		to = Field.fromInts(from.file + 1, from.rank);
 		if (to != null && !isSameColorPieceOn(to) && isFieldOkForKing(to, isWhiteTurn)) {
 			outputMoves.add(fromLegalMove(from, to));
 		}
-		to = Field.fromUnsafeInts(from.file + 1, from.rank - 1);
+		to = Field.fromInts(from.file + 1, from.rank - 1);
 		if (to != null && !isSameColorPieceOn(to) && isFieldOkForKing(to, isWhiteTurn)) {
 			outputMoves.add(fromLegalMove(from, to));
 		}
-		to = Field.fromUnsafeInts(from.file, from.rank - 1);
+		to = Field.fromInts(from.file, from.rank - 1);
 		if (to != null && !isSameColorPieceOn(to) && isFieldOkForKing(to, isWhiteTurn)) {
 			outputMoves.add(fromLegalMove(from, to));
 		}
-		to = Field.fromUnsafeInts(from.file - 1, from.rank - 1);
+		to = Field.fromInts(from.file - 1, from.rank - 1);
 		if (to != null && !isSameColorPieceOn(to) && isFieldOkForKing(to, isWhiteTurn)) {
 			outputMoves.add(fromLegalMove(from, to));
 		}
-		to = Field.fromUnsafeInts(from.file - 1, from.rank);
+		to = Field.fromInts(from.file - 1, from.rank);
 		if (to != null && !isSameColorPieceOn(to) && isFieldOkForKing(to, isWhiteTurn)) {
 			outputMoves.add(fromLegalMove(from, to));
 		}
-		to = Field.fromUnsafeInts(from.file - 1, from.rank + 1);
+		to = Field.fromInts(from.file - 1, from.rank + 1);
 		if (to != null && !isSameColorPieceOn(to) && isFieldOkForKing(to, isWhiteTurn)) {
 			outputMoves.add(fromLegalMove(from, to));
 		}
+		if (isWhiteTurn) {
+			if (fieldsOkForQsCastle(isWhiteTurn) &&
+			!test(WHITE_KING_MOVED) && getContent(Field.A1) == Content.WHITE_ROOK && !test(WHITE_QS_ROOK_MOVED)) {
+				outputMoves.add(fromLegalQueensideCastling(Field.E1, Field.C1));
+			}
+			if (fieldsAreOkForKsCastling(isWhiteTurn) &&
+			!test(WHITE_KING_MOVED) && getContent(Field.H1) == Content.WHITE_ROOK && !test(WHITE_KS_ROOK_MOVED)) {
+				outputMoves.add(fromLegalKingsideCastling(Field.E1, Field.G1));
+			}
+		} else {
+			if (fieldsOkForQsCastle(isWhiteTurn) &&
+			!test(BLACK_KING_MOVED) && getContent(Field.A8) == Content.BLACK_ROOK && !test(BLACK_QS_ROOK_MOVED)) {
+				outputMoves.add(fromLegalQueensideCastling(Field.E8, Field.C8));
+			}
+			if (fieldsAreOkForKsCastling(isWhiteTurn) &&
+			!test(BLACK_KING_MOVED) && getContent(Field.H8) == Content.BLACK_ROOK && !test(BLACK_KS_ROOK_MOVED)) {
+				outputMoves.add(fromLegalKingsideCastling(Field.E8, Field.G8));
+			}
+		}
+	}
+
+	private boolean fieldsOkForQsCastle(boolean isWhiteTurn) {
+		for (int file = 5; file >= 3; file--) {
+			Field field = Field.fromLegalInts(file, isWhiteTurn ? 0 : 7);
+			if (getContent(field) != Content.EMPTY || isFieldCheckedBy(field, !isWhiteTurn)){
+				return false;
+			}
+		}
+		return getContent(isWhiteTurn ? Field.B1 : Field.B8) == Content.EMPTY;
+	}
+
+	private boolean fieldsAreOkForKsCastling(boolean isWhiteTurn) {
+		for (int file = 5; file <= 7; file++) {
+			Field field = Field.fromLegalInts(file, isWhiteTurn ? 0 : 7);
+			if (getContent(field) != Content.EMPTY || isFieldCheckedBy(field, !isWhiteTurn)){
+				return false;
+			}
+		}
+		return true;
 	}
 
 	private void generateLegalQueenMoves(Field from, List<State> outputMoves) {
@@ -680,25 +770,25 @@ public class State {
 
 	private void generateLegalRookMoves(Field from, List<State> outputMoves) {
 		for (int i = 1; true; i++) {
-			Field to = Field.fromUnsafeInts(from.file + i, from.rank);
+			Field to = Field.fromInts(from.file + i, from.rank);
 			if (generateSlidingPieceMove(from, to, outputMoves)) {
 				break;
 			}
 		}
 		for (int i = 1; true; i++) {
-			Field to = Field.fromUnsafeInts(from.file - i, from.rank);
+			Field to = Field.fromInts(from.file - i, from.rank);
 			if (generateSlidingPieceMove(from, to, outputMoves)) {
 				break;
 			}
 		}
 		for (int i = 1; true; i++) {
-			Field to = Field.fromUnsafeInts(from.file, from.rank + 1);
+			Field to = Field.fromInts(from.file, from.rank + i);
 			if (generateSlidingPieceMove(from, to, outputMoves)) {
 				break;
 			}
 		}
 		for (int i = 1; true; i++) {
-			Field to = Field.fromUnsafeInts(from.file, from.rank - 1);
+			Field to = Field.fromInts(from.file, from.rank - i);
 			if (generateSlidingPieceMove(from, to, outputMoves)) {
 				break;
 			}
@@ -707,25 +797,25 @@ public class State {
 
 	private void generateLegalBishopMoves(Field from, List<State> outputMoves) {
 		for (int i = 1; true; i++) {
-			Field to = Field.fromUnsafeInts(from.file + i, from.rank + i);
+			Field to = Field.fromInts(from.file + i, from.rank + i);
 			if (generateSlidingPieceMove(from, to, outputMoves)) {
 				break;
 			}
 		}
 		for (int i = 1; true; i++) {
-			Field to = Field.fromUnsafeInts(from.file + i, from.rank - i);
+			Field to = Field.fromInts(from.file + i, from.rank - i);
 			if (generateSlidingPieceMove(from, to, outputMoves)) {
 				break;
 			}
 		}
 		for (int i = 1; true; i++) {
-			Field to = Field.fromUnsafeInts(from.file - i, from.rank + i);
+			Field to = Field.fromInts(from.file - i, from.rank + i);
 			if (generateSlidingPieceMove(from, to, outputMoves)) {
 				break;
 			}
 		}
 		for (int i = 1; true; i++) {
-			Field to = Field.fromUnsafeInts(from.file - i, from.rank - i);
+			Field to = Field.fromInts(from.file - i, from.rank - i);
 			if (generateSlidingPieceMove(from, to, outputMoves)) {
 				break;
 			}
@@ -741,23 +831,23 @@ public class State {
 	}
 
 	private void generateLegalPawnMoves(Field from, List<State> outputMoves) {
-		int pawnDisplacement = test(IS_WHITE_TURN) ? 1 : -1;
-		int pawnDoubleDisplacement = test(IS_WHITE_TURN) ? 2 : -2;
-		Field to = Field.fromInts(from.file, from.rank + pawnDisplacement);
+		int pawnDisplacement = test(WHITE_TURN) ? 1 : -1;
+		int pawnDoubleDisplacement = test(WHITE_TURN) ? 2 : -2;
+		Field to = Field.fromLegalInts(from.file, from.rank + pawnDisplacement);
 		// head-on move
 		if (getContent(to) == Content.EMPTY) {
 			if (isPromotingField(to)) {
 				generatePromotionMoves(from, to, outputMoves);
 			} else {
 				outputMoves.add(fromLegalMove(from, to));
-				to = Field.fromInts(from.file, from.rank + pawnDoubleDisplacement);
+				to = Field.fromLegalInts(from.file, from.rank + pawnDoubleDisplacement);
 				if (isInitialFieldOfPawn(from) && getContent(to) == Content.EMPTY) {
-					outputMoves.add(fromLegalPawnFirstMove(from, to, Field.fromInts(from.file, from.rank + pawnDisplacement)));
+					outputMoves.add(fromLegalPawnFirstMove(from, to, Field.fromLegalInts(from.file, from.rank + pawnDisplacement)));
 				}
 			}
 		}
 		// move with take to the queen-side
-		to = Field.fromUnsafeInts(from.file - 1, from.rank + pawnDisplacement);
+		to = Field.fromInts(from.file - 1, from.rank + pawnDisplacement);
 		if (to != null && (isOppositeColorPieceOn(to) || to == enPassantField)) {
 			if (isPromotingField(to)) {
 				generatePromotionMoves(from, to, outputMoves);
@@ -766,7 +856,7 @@ public class State {
 			}
 		}
 		// move with take to the king side
-		to = Field.fromUnsafeInts(from.file + 1, from.rank + pawnDisplacement);
+		to = Field.fromInts(from.file + 1, from.rank + pawnDisplacement);
 		if (to != null && (isOppositeColorPieceOn(to) || to == enPassantField)) {
 			if (isPromotingField(to)) {
 				generatePromotionMoves(from, to, outputMoves);
@@ -783,37 +873,36 @@ public class State {
 		outputMoves.add(fromLegalMoveWithPromotion(from, to, Content.WHITE_KNIGHT));
 	}
 
-
 	private void generateLegalKnightMoves(Field from, List<State> outputMoves) {
-		Field to = Field.fromUnsafeInts(from.file + 1, from.rank + 2);
+		Field to = Field.fromInts(from.file + 1, from.rank + 2);
 		if (to != null && !isSameColorPieceOn(to)) {
 			outputMoves.add(fromLegalMove(from, to));
 		}
-		to = Field.fromUnsafeInts(from.file + 1, from.rank - 2);
+		to = Field.fromInts(from.file + 1, from.rank - 2);
 		if (to != null && !isSameColorPieceOn(to)) {
 			outputMoves.add(fromLegalMove(from, to));
 		}
-		to = Field.fromUnsafeInts(from.file - 1, from.rank + 2);
+		to = Field.fromInts(from.file - 1, from.rank + 2);
 		if (to != null && !isSameColorPieceOn(to)) {
 			outputMoves.add(fromLegalMove(from, to));
 		}
-		to = Field.fromUnsafeInts(from.file - 1, from.rank - 2);
+		to = Field.fromInts(from.file - 1, from.rank - 2);
 		if (to != null && !isSameColorPieceOn(to)) {
 			outputMoves.add(fromLegalMove(from, to));
 		}
-		to = Field.fromUnsafeInts(from.file + 2, from.rank + 1);
+		to = Field.fromInts(from.file + 2, from.rank + 1);
 		if (to != null && !isSameColorPieceOn(to)) {
 			outputMoves.add(fromLegalMove(from, to));
 		}
-		to = Field.fromUnsafeInts(from.file + 2, from.rank - 1);
+		to = Field.fromInts(from.file + 2, from.rank - 1);
 		if (to != null && !isSameColorPieceOn(to)) {
 			outputMoves.add(fromLegalMove(from, to));
 		}
-		to = Field.fromUnsafeInts(from.file - 2, from.rank + 1);
+		to = Field.fromInts(from.file - 2, from.rank + 1);
 		if (to != null && !isSameColorPieceOn(to)) {
 			outputMoves.add(fromLegalMove(from, to));
 		}
-		to = Field.fromUnsafeInts(from.file - 2, from.rank - 1);
+		to = Field.fromInts(from.file - 2, from.rank - 1);
 		if (to != null && !isSameColorPieceOn(to)) {
 			outputMoves.add(fromLegalMove(from, to));
 		}
