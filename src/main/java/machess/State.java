@@ -2,10 +2,7 @@ package machess;
 
 import com.sun.istack.internal.Nullable;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Game state seen as game board rather than a list of figures.
@@ -362,6 +359,41 @@ public class State {
 		initFieldsInCheck(WHITE);
 		initFieldsInCheckByKings();
 	}
+
+	public void updatePinnedPieces(PinnedPieces output) {
+//		Field whiteKing = fieldsWithWhites[0];
+//		Field blackKing = fieldsWithBlacks[0];
+//		assert getContent(whiteKing) == Content.WHITE_KING : "Corrupted white king position";
+//		assert getContent(blackKing) == Content.BLACK_KING : "Corrupted black king position";
+//
+//		for (Field f : Field.values()) {
+//			output.pinnedWhites[f.ordinal()] = null;
+//			output.pinnedBlacks[f.ordinal()] = null;
+//		}
+//
+//		////
+//		Field perhapsPinned = null;
+//		for (int i = 1; true ; i++) {
+//			Field field = Field.fromInts(whiteKing.file, whiteKing.rank + i);
+//
+//			if (field == null || (isOppositeColorPieceOn(field, WHITE) && perhapsPinned == null)) {
+//				break;
+//			}
+//			if (perhapsPinned==null && isSameColorPieceOn(field, WHITE)) {
+//				perhapsPinned = field;
+//				continue;
+//			}
+//			if (perhapsPinned != null && (getContent(field) == Content.BLACK_QUEEN ||
+//					getContent(field) == Content.BLACK_ROOK)) {
+//				output.pinnedWhites[perhapsPinned.ordinal()] = PinnedPieces.PinnedTo.FILE;
+//				break;
+//			}
+//		}
+//		////
+//		output.pinnedWhites.
+//		fieldsWithWhites[0]
+//		output.pinnedWhitesCount++;
+	}
 	
 	private void initFieldsInCheck(boolean isCheckedByWhite) {
 		int countOfPiecesTakingTurn = isCheckedByWhite ? whitesCount : blacksCount;
@@ -401,6 +433,8 @@ public class State {
 	private void initFieldsInCheckByKings() {
 		Field whiteKing = fieldsWithWhites[0];
 		Field blackKing = fieldsWithBlacks[0];
+		assert getContent(whiteKing) == Content.WHITE_KING : "Corrupted white king position";
+		assert getContent(blackKing) == Content.BLACK_KING : "Corrupted black king position";
 		assert Math.abs(blackKing.rank - whiteKing.rank) > 1
 				|| Math.abs(blackKing.file - whiteKing.file) > 1 : "Kings to close. w: " + whiteKing+ ", b: " + blackKing;
 
