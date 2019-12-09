@@ -754,30 +754,27 @@ public class State {
 		if (to != null && !isSameColorPieceOn(to) && isFieldOkForKing(to, isWhiteTurn)) {
 			outputMoves.add(fromLegalMove(from, to));
 		}
-		Content rook = isWhiteTurn ? Content.WHITE_ROOK : Content.BLACK_ROOK;
 		int kingMovedBitflag = isWhiteTurn ? WHITE_KING_MOVED : BLACK_KING_MOVED;
-		int qsRookMovedBitflag = isWhiteTurn ? WHITE_QS_ROOK_MOVED: BLACK_QS_ROOK_MOVED;
-		int ksRookMovedBitflag = isWhiteTurn ? WHITE_KS_ROOK_MOVED: BLACK_KS_ROOK_MOVED;
-		Field kingFrom = isWhiteTurn ? Field.E1 : Field.E8;
-		Field kingQsTo = isWhiteTurn ? Field.C1 : Field.C8;
-		Field kingKsTo = isWhiteTurn ? Field.G1 : Field.G8;
-		Field qsRook = isWhiteTurn ? Field.A1 : Field.A8;
-		Field ksRook = isWhiteTurn ? Field.H1 : Field.H8;
+		if (!test(kingMovedBitflag) && !isFieldCheckedBy(from, !isWhiteTurn)) {
 
-		if (fieldsOkForQsCastle(isWhiteTurn) &&
-				!test(kingMovedBitflag) && getContent(qsRook) == rook && !test(qsRookMovedBitflag)) {
-			outputMoves.add(fromLegalQueensideCastling(kingFrom, kingQsTo));
-		}
-		if (fieldsAreOkForKsCastling(isWhiteTurn) &&
-				!test(kingMovedBitflag) && getContent(ksRook) == rook && !test(ksRookMovedBitflag)) {
-			outputMoves.add(fromLegalKingsideCastling(kingFrom, kingKsTo));
+			Content rook = isWhiteTurn ? Content.WHITE_ROOK : Content.BLACK_ROOK;
+			int qsRookMovedBitflag = isWhiteTurn ? WHITE_QS_ROOK_MOVED: BLACK_QS_ROOK_MOVED;
+			int ksRookMovedBitflag = isWhiteTurn ? WHITE_KS_ROOK_MOVED: BLACK_KS_ROOK_MOVED;
+			Field kingQsTo = isWhiteTurn ? Field.C1 : Field.C8;
+			Field kingKsTo = isWhiteTurn ? Field.G1 : Field.G8;
+			Field qsRook = isWhiteTurn ? Field.A1 : Field.A8;
+			Field ksRook = isWhiteTurn ? Field.H1 : Field.H8;
+
+			if (fieldsOkForQsCastle(isWhiteTurn) && getContent(qsRook) == rook && !test(qsRookMovedBitflag)) {
+				outputMoves.add(fromLegalQueensideCastling(from, kingQsTo));
+			}
+			if (fieldsAreOkForKsCastling(isWhiteTurn) && getContent(ksRook) == rook && !test(ksRookMovedBitflag)) {
+				outputMoves.add(fromLegalKingsideCastling(from, kingKsTo));
+			}
 		}
 	}
 
 	private boolean fieldsOkForQsCastle(boolean isWhiteKingCastling) {
-		if (isFieldCheckedBy(Field.fromLegalInts(File.E, isWhiteKingCastling ? Rank._1 : Rank._8), !isWhiteKingCastling)) {
-			return false;
-		}
 		for (int file = File.D; file >= File.C; file--) {
 			Field field = Field.fromLegalInts(file, isWhiteKingCastling ? Rank._1 : Rank._8);
 			if (getContent(field) != Content.EMPTY || isFieldCheckedBy(field, !isWhiteKingCastling)) {
@@ -788,9 +785,6 @@ public class State {
 	}
 
 	private boolean fieldsAreOkForKsCastling(boolean isWhiteKingCastling) {
-		if (isFieldCheckedBy(Field.fromLegalInts(File.E, isWhiteKingCastling ? Rank._1 : Rank._8), !isWhiteKingCastling)) {
-			return false;
-		}
 		for (int file = File.F; file <= File.G; file++) {
 			Field field = Field.fromLegalInts(file, isWhiteKingCastling ? Rank._1 : Rank._8);
 			if (getContent(field) != Content.EMPTY || isFieldCheckedBy(field, !isWhiteKingCastling)) {
