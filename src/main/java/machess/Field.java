@@ -15,15 +15,10 @@ public enum Field {
 	public static final byte FILES_COUNT = 8;
 	public static final byte RANKS_COUNT = 8;
 
-	public static final byte WHITE_PROMOTION_RANK = RANKS_COUNT - 1;
-	public static final byte BLACK_PROMOTION_RANK = 0;
-	public static final byte WHITE_PAWN_INITIAL_RANK = 1;
-	public static final byte BLACK_PAWN_INITIAL_RANK = 6;
-
 	public final byte file;
 	public final byte rank;
 
-	private static final Field[] intsToFields = {
+	private static final Field[] INTS_TO_FIELDS = {
 		A1, A2, A3, A4, A5, A6, A7, A8,
 		B1, B2, B3, B4, B5, B6, B7, B8,
 		C1, C2, C3, C4, C5, C6, C7, C8,
@@ -42,7 +37,7 @@ public enum Field {
 	static Field fromLegalInts(int file, int rank) {
 		assert file >= 0 && file < FILES_COUNT : "invalid file in: " + file + ", " + rank;
 		assert rank >= 0 && rank < RANKS_COUNT : "invalid rank in: " + file + ", " + rank;
-		return intsToFields[file * FILES_COUNT + rank];
+		return INTS_TO_FIELDS[file * FILES_COUNT + rank];
 	}
 
 	@Nullable
@@ -50,6 +45,6 @@ public enum Field {
 		if (file < 0 || file >= FILES_COUNT || rank < 0 || rank >= RANKS_COUNT) {
 			return null;
 		}
-		return intsToFields[file * FILES_COUNT + rank];
+		return INTS_TO_FIELDS[file * FILES_COUNT + rank];
 	}
 }

@@ -58,32 +58,32 @@ public class State {
 		flags = WHITE_TURN;
 		board = new byte[Field.FILES_COUNT * Field.RANKS_COUNT];
 		for (int file = 0; file < Field.FILES_COUNT; file++) {
-			board[Field.fromLegalInts(file, 1).ordinal()] = Content.WHITE_PAWN.asByte;
-			board[Field.fromLegalInts(file, 6).ordinal()] = Content.BLACK_PAWN.asByte;
+			board[Field.fromLegalInts(file, Rank._2).ordinal()] = Content.WHITE_PAWN.asByte;
+			board[Field.fromLegalInts(file, Rank._7).ordinal()] = Content.BLACK_PAWN.asByte;
 
 			switch (file) {
 				case 0:
 				case 7:
-					board[Field.fromLegalInts(file, 0).ordinal()] = Content.WHITE_ROOK.asByte;
-					board[Field.fromLegalInts(file, 7).ordinal()] = Content.BLACK_ROOK.asByte;
+					board[Field.fromLegalInts(file, Rank._1).ordinal()] = Content.WHITE_ROOK.asByte;
+					board[Field.fromLegalInts(file, Rank._8).ordinal()] = Content.BLACK_ROOK.asByte;
 					break;
 				case 1:
 				case 6:
-					board[Field.fromLegalInts(file, 0).ordinal()] = Content.WHITE_KNIGHT.asByte;
-					board[Field.fromLegalInts(file, 7).ordinal()] = Content.BLACK_KNIGHT.asByte;
+					board[Field.fromLegalInts(file, Rank._1).ordinal()] = Content.WHITE_KNIGHT.asByte;
+					board[Field.fromLegalInts(file, Rank._8).ordinal()] = Content.BLACK_KNIGHT.asByte;
 					break;
 				case 2:
 				case 5:
-					board[Field.fromLegalInts(file, 0).ordinal()] = Content.WHITE_BISHOP.asByte;
-					board[Field.fromLegalInts(file, 7).ordinal()] = Content.BLACK_BISHOP.asByte;
+					board[Field.fromLegalInts(file, Rank._1).ordinal()] = Content.WHITE_BISHOP.asByte;
+					board[Field.fromLegalInts(file, Rank._8).ordinal()] = Content.BLACK_BISHOP.asByte;
 					break;
 				case 3:
-					board[Field.fromLegalInts(file, 0).ordinal()] = Content.WHITE_QUEEN.asByte;
-					board[Field.fromLegalInts(file, 7).ordinal()] = Content.BLACK_QUEEN.asByte;
+					board[Field.fromLegalInts(file, Rank._1).ordinal()] = Content.WHITE_QUEEN.asByte;
+					board[Field.fromLegalInts(file, Rank._8).ordinal()] = Content.BLACK_QUEEN.asByte;
 					break;
 				case 4:
-					board[Field.fromLegalInts(file, 0).ordinal()] = Content.WHITE_KING.asByte;
-					board[Field.fromLegalInts(file, 7).ordinal()] = Content.BLACK_KING.asByte;
+					board[Field.fromLegalInts(file, Rank._1).ordinal()] = Content.WHITE_KING.asByte;
+					board[Field.fromLegalInts(file, Rank._8).ordinal()] = Content.BLACK_KING.asByte;
 					break;
 			}
 		}
@@ -128,12 +128,12 @@ public class State {
 	}
 
 	private State fromLegalQueensideCastling(Field kingFrom, Field kingTo) {
-		Field rookToCastle = Field.fromLegalInts(0, kingFrom.rank);
+		Field rookToCastle = Field.fromLegalInts(File.A, kingFrom.rank);
 		return fromLegalMove(kingFrom, kingTo, null, null, rookToCastle);
 	}
 
 	private State fromLegalKingsideCastling(Field kingFrom, Field kingTo) {
-		Field rookToCastle = Field.fromLegalInts(7, kingFrom.rank);
+		Field rookToCastle = Field.fromLegalInts(File.H, kingFrom.rank);
 		return fromLegalMove(kingFrom, kingTo, null, null, rookToCastle);
 	}
 
@@ -198,7 +198,7 @@ public class State {
 		byte takenPiecesCount = test(WHITE_TURN) ? blacksCount : whitesCount;
 
 		if (takenPiece != Content.EMPTY) {
-			assert movedPiece.isWhite != takenPiece.isWhite : from + "->" + to + " is friendly take";
+			assert movedPiece.isWhite != takenPiece.isWhite : from + "->" + to + " is a friendly take";
 			for (int i = 0; i < takenPiecesCount; i++) {
 				if (takenPieces[i] == to || takenPieces[i] == fieldWithPawnTakenEnPassant) {
 					// decrement size of alive pieces
@@ -300,13 +300,11 @@ public class State {
 	}
 
 	private boolean isPromotingField(Field field) {
-		return test(WHITE_TURN) ? field.rank == Field.WHITE_PROMOTION_RANK
-				: field.rank == Field.BLACK_PROMOTION_RANK;
+		return test(WHITE_TURN) ? field.rank == Rank.WHITE_PROMOTION_RANK : field.rank == Rank.BLACK_PROMOTION_RANK;
 	}
 
 	private boolean isInitialFieldOfPawn(Field field) {
-		return test(WHITE_TURN) ? field.rank == Field.WHITE_PAWN_INITIAL_RANK
-				: field.rank == Field.BLACK_PAWN_INITIAL_RANK;
+		return test(WHITE_TURN) ? field.rank == Rank.WHITE_PAWN_INITIAL_RANK : field.rank == Rank.BLACK_PAWN_INITIAL_RANK;
 	}
 
 	/**
@@ -756,41 +754,46 @@ public class State {
 		if (to != null && !isSameColorPieceOn(to) && isFieldOkForKing(to, isWhiteTurn)) {
 			outputMoves.add(fromLegalMove(from, to));
 		}
-		if (isWhiteTurn) {
-			if (fieldsOkForQsCastle(isWhiteTurn) &&
-			!test(WHITE_KING_MOVED) && getContent(Field.A1) == Content.WHITE_ROOK && !test(WHITE_QS_ROOK_MOVED)) {
-				outputMoves.add(fromLegalQueensideCastling(Field.E1, Field.C1));
-			}
-			if (fieldsAreOkForKsCastling(isWhiteTurn) &&
-			!test(WHITE_KING_MOVED) && getContent(Field.H1) == Content.WHITE_ROOK && !test(WHITE_KS_ROOK_MOVED)) {
-				outputMoves.add(fromLegalKingsideCastling(Field.E1, Field.G1));
-			}
-		} else {
-			if (fieldsOkForQsCastle(isWhiteTurn) &&
-			!test(BLACK_KING_MOVED) && getContent(Field.A8) == Content.BLACK_ROOK && !test(BLACK_QS_ROOK_MOVED)) {
-				outputMoves.add(fromLegalQueensideCastling(Field.E8, Field.C8));
-			}
-			if (fieldsAreOkForKsCastling(isWhiteTurn) &&
-			!test(BLACK_KING_MOVED) && getContent(Field.H8) == Content.BLACK_ROOK && !test(BLACK_KS_ROOK_MOVED)) {
-				outputMoves.add(fromLegalKingsideCastling(Field.E8, Field.G8));
-			}
+		Content rook = isWhiteTurn ? Content.WHITE_ROOK : Content.BLACK_ROOK;
+		int kingMovedBitflag = isWhiteTurn ? WHITE_KING_MOVED : BLACK_KING_MOVED;
+		int qsRookMovedBitflag = isWhiteTurn ? WHITE_QS_ROOK_MOVED: BLACK_QS_ROOK_MOVED;
+		int ksRookMovedBitflag = isWhiteTurn ? WHITE_KS_ROOK_MOVED: BLACK_KS_ROOK_MOVED;
+		Field kingFrom = isWhiteTurn ? Field.E1 : Field.E8;
+		Field kingQsTo = isWhiteTurn ? Field.C1 : Field.C8;
+		Field kingKsTo = isWhiteTurn ? Field.G1 : Field.G8;
+		Field qsRook = isWhiteTurn ? Field.A1 : Field.A8;
+		Field ksRook = isWhiteTurn ? Field.H1 : Field.H8;
+
+		if (fieldsOkForQsCastle(isWhiteTurn) &&
+				!test(kingMovedBitflag) && getContent(qsRook) == rook && !test(qsRookMovedBitflag)) {
+			outputMoves.add(fromLegalQueensideCastling(kingFrom, kingQsTo));
+		}
+		if (fieldsAreOkForKsCastling(isWhiteTurn) &&
+				!test(kingMovedBitflag) && getContent(ksRook) == rook && !test(ksRookMovedBitflag)) {
+			outputMoves.add(fromLegalKingsideCastling(kingFrom, kingKsTo));
 		}
 	}
 
-	private boolean fieldsOkForQsCastle(boolean isWhiteTurn) {
-		for (int file = 5; file >= 3; file--) {
-			Field field = Field.fromLegalInts(file, isWhiteTurn ? 0 : 7);
-			if (getContent(field) != Content.EMPTY || isFieldCheckedBy(field, !isWhiteTurn)){
+	private boolean fieldsOkForQsCastle(boolean isWhiteKingCastling) {
+		if (isFieldCheckedBy(Field.fromLegalInts(File.E, isWhiteKingCastling ? Rank._1 : Rank._8), !isWhiteKingCastling)) {
+			return false;
+		}
+		for (int file = File.D; file >= File.C; file--) {
+			Field field = Field.fromLegalInts(file, isWhiteKingCastling ? Rank._1 : Rank._8);
+			if (getContent(field) != Content.EMPTY || isFieldCheckedBy(field, !isWhiteKingCastling)) {
 				return false;
 			}
 		}
-		return getContent(isWhiteTurn ? Field.B1 : Field.B8) == Content.EMPTY;
+		return getContent(isWhiteKingCastling ? Field.B1 : Field.B8) == Content.EMPTY;
 	}
 
-	private boolean fieldsAreOkForKsCastling(boolean isWhiteTurn) {
-		for (int file = 5; file <= 7; file++) {
-			Field field = Field.fromLegalInts(file, isWhiteTurn ? 0 : 7);
-			if (getContent(field) != Content.EMPTY || isFieldCheckedBy(field, !isWhiteTurn)){
+	private boolean fieldsAreOkForKsCastling(boolean isWhiteKingCastling) {
+		if (isFieldCheckedBy(Field.fromLegalInts(File.E, isWhiteKingCastling ? Rank._1 : Rank._8), !isWhiteKingCastling)) {
+			return false;
+		}
+		for (int file = File.F; file <= File.G; file++) {
+			Field field = Field.fromLegalInts(file, isWhiteKingCastling ? Rank._1 : Rank._8);
+			if (getContent(field) != Content.EMPTY || isFieldCheckedBy(field, !isWhiteKingCastling)) {
 				return false;
 			}
 		}
