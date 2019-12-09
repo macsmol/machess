@@ -35,14 +35,14 @@ public enum Field {
 	}
 
 	static Field fromLegalInts(int file, int rank) {
-		assert file >= 0 && file < FILES_COUNT : "invalid file in: " + file + ", " + rank;
-		assert rank >= 0 && rank < RANKS_COUNT : "invalid rank in: " + file + ", " + rank;
+		assert file >= File.A && file <=  File.H : "invalid file in: " + file + ", " + rank;
+		assert rank >= Rank._1 && rank <= Rank._8 : "invalid rank in: " + file + ", " + rank;
 		return INTS_TO_FIELDS[file * FILES_COUNT + rank];
 	}
 
 	@Nullable
 	static Field fromInts(int file, int rank) {
-		if (file < 0 || file >= FILES_COUNT || rank < 0 || rank >= RANKS_COUNT) {
+		if (file < File.A || file > File.H || rank < Rank._1 || rank > Rank._8) {
 			return null;
 		}
 		return INTS_TO_FIELDS[file * FILES_COUNT + rank];

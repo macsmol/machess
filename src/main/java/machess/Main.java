@@ -5,22 +5,27 @@ import java.util.List;
 public class Main {
 	public static void main(String[] args) {
 		State newGame = new State();
-		System.out.println(newGame);
+
+		PinnedPieces pins = new PinnedPieces();
 
 		State game = newGame
-				//king vs king
-				.fromLegalMove(Field.B1, Field.B3)
-				.fromLegalMove(Field.B8, Field.B6)
-				.fromLegalMove(Field.C1, Field.C3)
-				.fromLegalMove(Field.C8, Field.C6)
-				.fromLegalMove(Field.D1, Field.D3)
-				.fromLegalMove(Field.D8, Field.D6)
-				.fromLegalMove(Field.F1, Field.F3)
-				.fromLegalMove(Field.F8, Field.F6)
-				.fromLegalMove(Field.G1, Field.G3)
+				// pieces pinned to king
+				.fromLegalMove(Field.C2, Field.C3)
+				.fromLegalMove(Field.A8, Field.E6)
+				.fromLegalMove(Field.A1, Field.E5)
+				.fromLegalMove(Field.A7, Field.A6)
+				.fromLegalMove(Field.E1, Field.E3)
+				.fromLegalMove(Field.A6, Field.A5)
+				.fromLegalMove(Field.H2, Field.H3)
+				.fromLegalMove(Field.H8, Field.A3);
 
-				.fromLegalMove(Field.G8, Field.A3);
-		System.out.println("game :"+ game + "\n\n\n\n");
+				//TODO cut paste this to some test case
+
+
+		System.out.println("game :"+ game + "\n\n\n");
+
+		game.updatePinnedPieces(pins);
+		System.out.println(pins);
 //
 //
 //

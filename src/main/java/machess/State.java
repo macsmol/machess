@@ -15,10 +15,11 @@ public class State {
 	private static final byte PIECE_TYPE_MASK = 0x07;
 	private static final byte IS_WHITE_PIECE_FLAG = 0x08;
 
-	// Field has these flags set to true when a piece of given color can walk on this field on the next move
+	// black king cannot walk onto a field with this flag set
 	private static final byte IN_CHECK_BY_WHITE = 0x10;
+	// white king cannot walk onto a field with this flag set
 	private static final byte IN_CHECK_BY_BLACK = 0x20;
-	// flag for fields adjacent to both kings at once
+	// flag for fields adjacent to both kings at once - neither king can walk onto these fields
 	private static final byte NO_KINGS_FLAG = 0x40;
 
 	private static final int INITIAL_PLAYER_PIECES_COUNT = 16;
@@ -57,7 +58,7 @@ public class State {
 	State() {
 		flags = WHITE_TURN;
 		board = new byte[Field.FILES_COUNT * Field.RANKS_COUNT];
-		for (int file = 0; file < Field.FILES_COUNT; file++) {
+		for (int file = File.A; file <= File.H; file++) {
 			board[Field.fromLegalInts(file, Rank._2).ordinal()] = Content.WHITE_PAWN.asByte;
 			board[Field.fromLegalInts(file, Rank._7).ordinal()] = Content.BLACK_PAWN.asByte;
 
@@ -261,10 +262,10 @@ public class State {
 		sb.append(test(BLACK_KS_ROOK_MOVED) ? "; BLACK_KS_ROOK_MOVED" : "");
 		sb.append("\n | a  | b  | c  | d  | e  | f  | g  | h  || a  | b  | c  | d  | e  | f  | g  | h  |\n");
 		sb.append(" ==================================================================================\n");
-		for (byte rank = Field.RANKS_COUNT - 1; rank >= 0; rank--) {
+		for (byte rank = Rank._8; rank >= Rank._1; rank--) {
 			StringBuilder sbCheckFlags = new StringBuilder();
 			sb.append(rank + 1).append("|");
-			for (byte file = 0; file < Field.FILES_COUNT; file++) {
+			for (byte file = File.A; file <= File.H; file++) {
 				Content content = getContent(file, rank);
 				sb.append(content.symbol).append(" |");
 
@@ -359,45 +360,89 @@ public class State {
 	}
 
 	public void updatePinnedPieces(PinnedPieces output) {
-//		Field whiteKing = fieldsWithWhites[0];
-//		Field blackKing = fieldsWithBlacks[0];
-//		assert getContent(whiteKing) == Content.WHITE_KING : "Corrupted white king position";
-//		assert getContent(blackKing) == Content.BLACK_KING : "Corrupted black king position";
-//
-//		for (Field f : Field.values()) {
-//			output.pinnedWhites[f.ordinal()] = null;
-//			output.pinnedBlacks[f.ordinal()] = null;
-//		}
-//
-//		////
-//		Field perhapsPinned = null;
-//		for (int i = 1; true ; i++) {
-//			Field field = Field.fromInts(whiteKing.file, whiteKing.rank + i);
-//
-//			if (field == null || (isOppositeColorPieceOn(field, WHITE) && perhapsPinned == null)) {
-//				break;
-//			}
-//			if (perhapsPinned==null && isSameColorPieceOn(field, WHITE)) {
-//				perhapsPinned = field;
-//				continue;
-//			}
-//			if (perhapsPinned != null && (getContent(field) == Content.BLACK_QUEEN ||
-//					getContent(field) == Content.BLACK_ROOK)) {
-//				output.pinnedWhites[perhapsPinned.ordinal()] = PinnedPieces.PinnedTo.FILE;
-//				break;
-//			}
-//		}
-//		////
-//		output.pinnedWhites.
-//		fieldsWithWhites[0]
-//		output.pinnedWhitesCount++;
+		Field whiteKing = fieldsWithWhites[0];
+		Field blackKing = fieldsWithBlacks[0];
+		assert getContent(whiteKing) == Content.WHITE_KING : "Corrupted white king position";
+		assert getContent(blackKing) == Content.BLACK_KING : "Corrupted black king position";
+
+		for (Field f : Field.values()) {
+			output.pinnedWhites[f.ordinal()] = null;
+			output.pinnedBlacks[f.ordinal()] = null;
+		}
+
+		// TODO something is wrong..
+		Field perhapsPinned = null;
+		for (int i = 1; true ; i++) {
+			Field field = Field.fromInts(whiteKing.file, whiteKing.rank + i);
+
+			if (field == null || (isOppositeColorPieceOn(field, WHITE) && perhapsPinned == null)) {
+				break;
+			}
+			if (perhapsPinned==null && isSameColorPieceOn(field, WHITE)) {
+				perhapsPinned = field;
+				continue;
+			}
+			if (perhapsPinned != null && (getContent(field) == Content.BLACK_QUEEN ||
+					getContent(field) == Content.BLACK_ROOK)) {
+				output.pinnedWhites[perhapsPinned.ordinal()] = PinnedPieces.PinnedTo.FILE;
+				break;
+			}
+		}
+		for (int i = 1; true ; i++) {
+			Field field = Field.fromInts(whiteKing.file, whiteKing.rank - i);
+
+			if (field == null || (isOppositeColorPieceOn(field, WHITE) && perhapsPinned == null)) {
+				break;
+			}
+			if (perhapsPinned==null && isSameColorPieceOn(field, WHITE)) {
+				perhapsPinned = field;
+				continue;
+			}
+			if (perhapsPinned != null && (getContent(field) == Content.BLACK_QUEEN ||
+					getContent(field) == Content.BLACK_ROOK)) {
+				output.pinnedWhites[perhapsPinned.ordinal()] = PinnedPieces.PinnedTo.FILE;
+				break;
+			}
+		}
+		for (int i = 1; true ; i++) {
+			Field field = Field.fromInts(whiteKing.file + i, whiteKing.rank);
+
+			if (field == null || (isOppositeColorPieceOn(field, WHITE) && perhapsPinned == null)) {
+				break;
+			}
+			if (perhapsPinned==null && isSameColorPieceOn(field, WHITE)) {
+				perhapsPinned = field;
+				continue;
+			}
+			if (perhapsPinned != null && (getContent(field) == Content.BLACK_QUEEN ||
+					getContent(field) == Content.BLACK_ROOK)) {
+				output.pinnedWhites[perhapsPinned.ordinal()] = PinnedPieces.PinnedTo.RANK;
+				break;
+			}
+		}
+		for (int i = 1; true ; i++) {
+			Field field = Field.fromInts(whiteKing.file - i, whiteKing.rank);
+
+			if (field == null || (isOppositeColorPieceOn(field, WHITE) && perhapsPinned == null)) {
+				break;
+			}
+			if (perhapsPinned==null && isSameColorPieceOn(field, WHITE)) {
+				perhapsPinned = field;
+				continue;
+			}
+			if (perhapsPinned != null && (getContent(field) == Content.BLACK_QUEEN ||
+					getContent(field) == Content.BLACK_ROOK)) {
+				output.pinnedWhites[perhapsPinned.ordinal()] = PinnedPieces.PinnedTo.RANK;
+				break;
+			}
+		}
 	}
 	
 	private void initFieldsInCheck(boolean isCheckedByWhite) {
 		int countOfPiecesTakingTurn = isCheckedByWhite ? whitesCount : blacksCount;
 		Field[] fieldsWithPiecesTakingTurn = isCheckedByWhite ? fieldsWithWhites  : fieldsWithBlacks;
 
-		// for every piece except king - skip i == 0
+		// for every piece except king
 		for (int i = countOfPiecesTakingTurn - 1; i > 0; i--) {
 			Field currField = fieldsWithPiecesTakingTurn[i];
 			Content piece = Content.fromByte(board[currField.ordinal()]);
@@ -436,8 +481,8 @@ public class State {
 		assert Math.abs(blackKing.rank - whiteKing.rank) > 1
 				|| Math.abs(blackKing.file - whiteKing.file) > 1 : "Kings to close. w: " + whiteKing+ ", b: " + blackKing;
 
-		Set<Field> whiteNeighbourhood = getKingNeighbourhood(whiteKing, WHITE);
-		Set<Field> blackNeighbourhood = getKingNeighbourhood(blackKing, BLACK);
+		Set<Field> whiteNeighbourhood = getKingNeighbourhood(whiteKing);
+		Set<Field> blackNeighbourhood = getKingNeighbourhood(blackKing);
 
 		Set<Field> noKingsZone = new HashSet<>(whiteNeighbourhood);
 		if (noKingsZone.retainAll(blackNeighbourhood)) {
@@ -461,7 +506,7 @@ public class State {
 		}
 	}
 
-	private Set<Field> getKingNeighbourhood(Field king, boolean isWhiteKing) {
+	private Set<Field> getKingNeighbourhood(Field king) {
 		Set<Field> neighbourhood = new HashSet<>();
 		Field to = Field.fromInts(king.file, king.rank + 1);
 		if (to != null) {
@@ -678,8 +723,8 @@ public class State {
 	}
 
 	List<State> generateLegalMoves() {
-		// TODO pinned pieces movement
-		// TODO generation when king under check
+		// TODO generate legal moves: pinned pieces movement, generation when king under check
+
 		List<State> moves = new ArrayList<>();
 
 		int countOfPiecesTakingTurn = test(WHITE_TURN) ? whitesCount : blacksCount;
