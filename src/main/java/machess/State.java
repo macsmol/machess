@@ -296,7 +296,7 @@ public class State {
 				if (Config.DEBUG_PINNED_PIECES) {
 					PinTo pinnedWhite = pinnedWhites[Field.fromLegalInts(file, rank).ordinal()];
 					PinTo pinnedBlack = pinnedBlacks[Field.fromLegalInts(file, rank).ordinal()];
-					sbPins.append(" ").append(toString(pinnedWhite, pinnedBlack)).append(" |");
+					sbPins.append(" ").append(Utils.toString(pinnedWhite, pinnedBlack)).append(" |");
 				}
 			}
 			sb.append(sbCheckFlags).append(sbPins)
@@ -317,13 +317,6 @@ public class State {
 		sb.append("] count: ").append(blacksCount).append('\n');
 		sb.append("enPassantField: ").append(enPassantField).append('\n');
 		sb.append("plyNumber: ").append(plyNumber).append('\n');
-		return sb.toString();
-	}
-
-	private String toString(PinTo pinnedWhite, PinTo pinnedBlack) {
-		StringBuilder sb = new StringBuilder();
-		sb.append(pinnedBlack != null ? pinnedBlack.symbol : '.');
-		sb.append(pinnedWhite != null ? pinnedWhite.symbol : '.');
 		return sb.toString();
 	}
 
@@ -697,7 +690,6 @@ public class State {
 
 	List<State> generateLegalMoves() {
 		// TODO generate legal moves: pinned pieces movement, generation when king under check
-
 		List<State> moves = new ArrayList<>();
 
 		int countOfPiecesTakingTurn = test(WHITE_TURN) ? whitesCount : blacksCount;
