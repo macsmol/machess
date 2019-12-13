@@ -679,7 +679,7 @@ public class State {
 		return !isFieldCheckedBy(field, !isKingWhite) && (board[field.ordinal()] & NO_KINGS_FLAG) == 0;
 	}
 
-	List<State> generateLegalMoves() {
+	public List<State> generateLegalMoves() {
 		// TODO generate legal moves: pinned pieces movement, generation when king under check
 		List<State> moves = new ArrayList<>();
 
@@ -801,57 +801,48 @@ public class State {
 	}
 
 	private void generateLegalRookMoves(Field from, List<State> outputMoves) {
-		for (int i = 1; true; i++) {
-			Field to = Field.fromInts(from.file + i, from.rank);
-			if (generateSlidingPieceMove(from, to, outputMoves)) {
-				break;
-			}
-		}
-		for (int i = 1; true; i++) {
-			Field to = Field.fromInts(from.file - i, from.rank);
-			if (generateSlidingPieceMove(from, to, outputMoves)) {
-				break;
-			}
-		}
-		for (int i = 1; true; i++) {
-			Field to = Field.fromInts(from.file, from.rank + i);
-			if (generateSlidingPieceMove(from, to, outputMoves)) {
-				break;
-			}
-		}
-		for (int i = 1; true; i++) {
-			Field to = Field.fromInts(from.file, from.rank - i);
-			if (generateSlidingPieceMove(from, to, outputMoves)) {
-				break;
+		int deltaFile;
+		int deltaRank;
+		deltaFile = 1;
+		deltaRank = 0;
+		generateSlidingPieceMove(from, deltaFile, deltaRank, outputMoves);
+		deltaFile = -1;
+		deltaRank = 0;
+		generateSlidingPieceMove(from, deltaFile, deltaRank, outputMoves);
+		deltaFile = 0;
+		deltaRank = 1;
+		generateSlidingPieceMove(from, deltaFile, deltaRank, outputMoves);
+		deltaFile = 0;
+		deltaRank = -1;
+		generateSlidingPieceMove(from, deltaFile, deltaRank, outputMoves);
+	}
+
+	private void generateSlidingPieceMove(Field from, int deltaFile, int deltaRank, List<State> outputMoves) {
+		if (pieceIsFreeToMove(from, Pin.fromDeltas(deltaFile, deltaRank))) {
+			for (int i = 1; true; i++) {
+				Field to = Field.fromInts(from.file + deltaFile * i, from.rank + i * deltaRank);
+				if (generateSlidingPieceMove(from, to, outputMoves)) {
+					break;
+				}
 			}
 		}
 	}
 
 	private void generateLegalBishopMoves(Field from, List<State> outputMoves) {
-		for (int i = 1; true; i++) {
-			Field to = Field.fromInts(from.file + i, from.rank + i);
-			if (generateSlidingPieceMove(from, to, outputMoves)) {
-				break;
-			}
-		}
-		for (int i = 1; true; i++) {
-			Field to = Field.fromInts(from.file + i, from.rank - i);
-			if (generateSlidingPieceMove(from, to, outputMoves)) {
-				break;
-			}
-		}
-		for (int i = 1; true; i++) {
-			Field to = Field.fromInts(from.file - i, from.rank + i);
-			if (generateSlidingPieceMove(from, to, outputMoves)) {
-				break;
-			}
-		}
-		for (int i = 1; true; i++) {
-			Field to = Field.fromInts(from.file - i, from.rank - i);
-			if (generateSlidingPieceMove(from, to, outputMoves)) {
-				break;
-			}
-		}
+		int deltaFile;
+		int deltaRank;
+		deltaFile = 1;
+		deltaRank = 1;
+		generateSlidingPieceMove(from, deltaFile, deltaRank, outputMoves);
+		deltaFile = 1;
+		deltaRank = -1;
+		generateSlidingPieceMove(from, deltaFile, deltaRank, outputMoves);
+		deltaFile = -1;
+		deltaRank = 1;
+		generateSlidingPieceMove(from, deltaFile, deltaRank, outputMoves);
+		deltaFile = -1;
+		deltaRank = -1;
+		generateSlidingPieceMove(from, deltaFile, deltaRank, outputMoves);
 	}
 
 	private boolean generateSlidingPieceMove(Field from, Field to, List<State> outputMoves) {
@@ -867,7 +858,7 @@ public class State {
 		int pawnDoubleDisplacement = test(WHITE_TURN) ? 2 : -2;
 		Field to = Field.fromLegalInts(from.file, from.rank + pawnDisplacement);
 		// head-on move
-		if (getContent(to) == Content.EMPTY) {
+		if (getContent(to) == Content.EMPTY && pieceIsFreeToMove(from, Pin.FILE)) {
 			if (isPromotingField(to)) {
 				generatePromotionMoves(from, to, outputMoves);
 			} else {
@@ -879,8 +870,11 @@ public class State {
 			}
 		}
 		// move with take to the queen-side
-		to = Field.fromInts(from.file - 1, from.rank + pawnDisplacement);
-		if (to != null && (isOppositeColorPieceOn(to) || to == enPassantField)) {
+		int deltaFile = -1;
+		to = Field.fromInts(from.file + deltaFile, from.rank + pawnDisplacement);
+
+		if (to != null && (isOppositeColorPieceOn(to) || to == enPassantField)
+				&& pieceIsFreeToMove(from, Pin.fromDeltas(deltaFile, pawnDisplacement))) {
 			if (isPromotingField(to)) {
 				generatePromotionMoves(from, to, outputMoves);
 			} else {
@@ -888,8 +882,10 @@ public class State {
 			}
 		}
 		// move with take to the king side
-		to = Field.fromInts(from.file + 1, from.rank + pawnDisplacement);
-		if (to != null && (isOppositeColorPieceOn(to) || to == enPassantField)) {
+		deltaFile = 1;
+		to = Field.fromInts(from.file + deltaFile, from.rank + pawnDisplacement);
+		if (to != null && (isOppositeColorPieceOn(to) || to == enPassantField)
+				&& pieceIsFreeToMove(from, Pin.fromDeltas(deltaFile, pawnDisplacement))) {
 			if (isPromotingField(to)) {
 				generatePromotionMoves(from, to, outputMoves);
 			} else {
@@ -938,5 +934,10 @@ public class State {
 		if (to != null && !isSameColorPieceOn(to)) {
 			outputMoves.add(fromLegalMove(from, to));
 		}
+	}
+	
+	private boolean pieceIsFreeToMove(Field pieceLocation, Pin movementDirection) {
+		Pin pin = pinnedPieces[pieceLocation.ordinal()];
+		return pin == null || pin == movementDirection;
 	}
 }
