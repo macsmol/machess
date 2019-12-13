@@ -759,23 +759,23 @@ public class State {
 		if (!test(kingMovedBitflag) && !isFieldCheckedBy(from, !isWhiteTurn)) {
 
 			Content rook = isWhiteTurn ? Content.WHITE_ROOK : Content.BLACK_ROOK;
-			int qsRookMovedBitflag = isWhiteTurn ? WHITE_QS_ROOK_MOVED: BLACK_QS_ROOK_MOVED;
-			int ksRookMovedBitflag = isWhiteTurn ? WHITE_KS_ROOK_MOVED: BLACK_KS_ROOK_MOVED;
+			int qsRookMovedBitflag = isWhiteTurn ? WHITE_QS_ROOK_MOVED : BLACK_QS_ROOK_MOVED;
+			int ksRookMovedBitflag = isWhiteTurn ? WHITE_KS_ROOK_MOVED : BLACK_KS_ROOK_MOVED;
 			Field kingQsTo = isWhiteTurn ? Field.C1 : Field.C8;
 			Field kingKsTo = isWhiteTurn ? Field.G1 : Field.G8;
 			Field qsRook = isWhiteTurn ? Field.A1 : Field.A8;
 			Field ksRook = isWhiteTurn ? Field.H1 : Field.H8;
 
-			if (fieldsOkForQsCastle(isWhiteTurn) && getContent(qsRook) == rook && !test(qsRookMovedBitflag)) {
+			if (fieldsOkForQsCastling(isWhiteTurn) && getContent(qsRook) == rook && !test(qsRookMovedBitflag)) {
 				outputMoves.add(fromLegalQueensideCastling(from, kingQsTo));
 			}
-			if (fieldsAreOkForKsCastling(isWhiteTurn) && getContent(ksRook) == rook && !test(ksRookMovedBitflag)) {
+			if (fieldsOkForKsCastling(isWhiteTurn) && getContent(ksRook) == rook && !test(ksRookMovedBitflag)) {
 				outputMoves.add(fromLegalKingsideCastling(from, kingKsTo));
 			}
 		}
 	}
 
-	private boolean fieldsOkForQsCastle(boolean isWhiteKingCastling) {
+	private boolean fieldsOkForQsCastling(boolean isWhiteKingCastling) {
 		for (int file = File.D; file >= File.C; file--) {
 			Field field = Field.fromLegalInts(file, isWhiteKingCastling ? Rank._1 : Rank._8);
 			if (getContent(field) != Content.EMPTY || isFieldCheckedBy(field, !isWhiteKingCastling)) {
@@ -785,7 +785,7 @@ public class State {
 		return getContent(isWhiteKingCastling ? Field.B1 : Field.B8) == Content.EMPTY;
 	}
 
-	private boolean fieldsAreOkForKsCastling(boolean isWhiteKingCastling) {
+	private boolean fieldsOkForKsCastling(boolean isWhiteKingCastling) {
 		for (int file = File.F; file <= File.G; file++) {
 			Field field = Field.fromLegalInts(file, isWhiteKingCastling ? Rank._1 : Rank._8);
 			if (getContent(field) != Content.EMPTY || isFieldCheckedBy(field, !isWhiteKingCastling)) {
@@ -878,6 +878,9 @@ public class State {
 	}
 
 	private void generateLegalKnightMoves(Field from, List<State> outputMoves) {
+		if (pieceIsFreeToMove(from, null)) {
+			return;
+		}
 		Field to = Field.fromInts(from.file + 1, from.rank + 2);
 		if (to != null && !isSameColorPieceOn(to)) {
 			outputMoves.add(fromLegalMove(from, to));
@@ -911,7 +914,11 @@ public class State {
 			outputMoves.add(fromLegalMove(from, to));
 		}
 	}
-	
+
+	/**
+	 * Returns true if piece at pieceLocation can move along the movementDirection line (is not absolutely pinned).
+	 * @param movementDirection - leave this null in case of knight at pieceLocation
+	 */
 	private boolean pieceIsFreeToMove(Field pieceLocation, Pin movementDirection) {
 		Pin pin = pinnedPieces[pieceLocation.ordinal()];
 		return pin == null || pin == movementDirection;

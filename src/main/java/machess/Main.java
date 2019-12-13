@@ -20,7 +20,7 @@ public class Main {
 				.fromLegalMove(Field.B2, Field.F4)
 				.fromLegalMove(Field.H8, Field.A3)
 
-				.fromLegalMove(Field.G2, Field.G3)
+				.fromLegalMove(Field.G1, Field.G3)
 				.fromLegalMove(Field.A8, Field.H3);
 
 
