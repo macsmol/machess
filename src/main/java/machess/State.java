@@ -801,56 +801,32 @@ public class State {
 	}
 
 	private void generateLegalRookMoves(Field from, List<State> outputMoves) {
-		int deltaFile;
-		int deltaRank;
-		deltaFile = 1;
-		deltaRank = 0;
-		generateSlidingPieceMove(from, deltaFile, deltaRank, outputMoves);
-		deltaFile = -1;
-		deltaRank = 0;
-		generateSlidingPieceMove(from, deltaFile, deltaRank, outputMoves);
-		deltaFile = 0;
-		deltaRank = 1;
-		generateSlidingPieceMove(from, deltaFile, deltaRank, outputMoves);
-		deltaFile = 0;
-		deltaRank = -1;
-		generateSlidingPieceMove(from, deltaFile, deltaRank, outputMoves);
+		generateSlidingPieceMoves(from, 1, 0, outputMoves);
+		generateSlidingPieceMoves(from, -1, 0, outputMoves);
+		generateSlidingPieceMoves(from, 0, 1, outputMoves);
+		generateSlidingPieceMoves(from, 0, -1, outputMoves);
 	}
 
-	private void generateSlidingPieceMove(Field from, int deltaFile, int deltaRank, List<State> outputMoves) {
+	private void generateLegalBishopMoves(Field from, List<State> outputMoves) {
+		generateSlidingPieceMoves(from, 1, 1, outputMoves);
+		generateSlidingPieceMoves(from, 1, -1, outputMoves);
+		generateSlidingPieceMoves(from, -1, 1, outputMoves);
+		generateSlidingPieceMoves(from, -1, -1, outputMoves);
+	}
+
+	private void generateSlidingPieceMoves(Field from, int deltaFile, int deltaRank, List<State> outputMoves) {
 		if (pieceIsFreeToMove(from, Pin.fromDeltas(deltaFile, deltaRank))) {
 			for (int i = 1; true; i++) {
 				Field to = Field.fromInts(from.file + deltaFile * i, from.rank + i * deltaRank);
-				if (generateSlidingPieceMove(from, to, outputMoves)) {
+				if (to == null || isSameColorPieceOn(to)) {
+					break;
+				}
+				outputMoves.add(fromLegalMove(from, to));
+				if (isOppositeColorPieceOn(to)) {
 					break;
 				}
 			}
 		}
-	}
-
-	private void generateLegalBishopMoves(Field from, List<State> outputMoves) {
-		int deltaFile;
-		int deltaRank;
-		deltaFile = 1;
-		deltaRank = 1;
-		generateSlidingPieceMove(from, deltaFile, deltaRank, outputMoves);
-		deltaFile = 1;
-		deltaRank = -1;
-		generateSlidingPieceMove(from, deltaFile, deltaRank, outputMoves);
-		deltaFile = -1;
-		deltaRank = 1;
-		generateSlidingPieceMove(from, deltaFile, deltaRank, outputMoves);
-		deltaFile = -1;
-		deltaRank = -1;
-		generateSlidingPieceMove(from, deltaFile, deltaRank, outputMoves);
-	}
-
-	private boolean generateSlidingPieceMove(Field from, Field to, List<State> outputMoves) {
-		if (to == null || isSameColorPieceOn(to)) {
-			return true;
-		}
-		outputMoves.add(fromLegalMove(from, to));
-		return isOppositeColorPieceOn(to);
 	}
 
 	private void generateLegalPawnMoves(Field from, List<State> outputMoves) {
