@@ -53,14 +53,9 @@ public class State {
 	private final int plyNumber;
 
 	/**
-	 * This is indexed byt Field.ordinal
+	 * Board with absolutely pinned pieces. It's indexed by Field.ordinal()
 	 */
-	private final Pin[] pinnedWhites;
-
-	/**
-	 * This is indexed byt Field.ordinal
-	 */
-	private final Pin[] pinnedBlacks;
+	private final Pin[] pinnedPieces;
 
 	/**
 	 * new game
@@ -112,8 +107,7 @@ public class State {
 		enPassantField = null;
 		plyNumber = 1;
 
-		pinnedWhites = new Pin[Field.values().length];
-		pinnedBlacks = new Pin[Field.values().length];
+		pinnedPieces = new Pin[Field.values().length];
 		initFieldsInCheck();
 	}
 
@@ -130,8 +124,7 @@ public class State {
 		resetFieldsInCheck();
 		initFieldsInCheck();
 
-		pinnedWhites = new Pin[Field.values().length];
-		pinnedBlacks = new Pin[Field.values().length];
+		pinnedPieces = new Pin[Field.values().length];
 		initPinnedPieces();
 	}
 
@@ -294,9 +287,8 @@ public class State {
 					sbCheckFlags.append(Utils.checkFlagsToString(contentAsByte)).append('|');
 				}
 				if (Config.DEBUG_PINNED_PIECES) {
-					Pin pinnedWhite = pinnedWhites[Field.fromLegalInts(file, rank).ordinal()];
-					Pin pinnedBlack = pinnedBlacks[Field.fromLegalInts(file, rank).ordinal()];
-					sbPins.append(" ").append(Utils.toString(pinnedWhite, pinnedBlack)).append(" |");
+					Pin pinType = pinnedPieces[Field.fromLegalInts(file, rank).ordinal()];
+					sbPins.append(" ").append(pinType != null ? pinType.symbol : ' ').append("  |");
 				}
 			}
 			sb.append(sbCheckFlags).append(sbPins)
@@ -394,8 +386,7 @@ public class State {
 		assert getContent(blackKing) == Content.BLACK_KING : "Corrupted black king position";
 
 		for (Field f : Field.values()) {
-			pinnedWhites[f.ordinal()] = null;
-			pinnedBlacks[f.ordinal()] = null;
+			pinnedPieces[f.ordinal()] = null;
 		}
 
 		initPinnedPieces(whiteKing, WHITE);
@@ -434,7 +425,6 @@ public class State {
 				Content enemyQueen = isPinnedToWhiteKing ? Content.BLACK_QUEEN : Content.WHITE_QUEEN;
 				Content enemySlider = Content.rookOrBishop(!isPinnedToWhiteKing, deltaFile, deltaRank);
 				if (afterCandidate == enemyQueen || afterCandidate == enemySlider) {
-					Pin[] pinnedPieces = isPinnedToWhiteKing ? pinnedWhites : pinnedBlacks;
 					pinnedPieces[candidate.ordinal()] = Pin.fromDeltas(deltaFile, deltaRank);
 					return;
 				} else if (afterCandidate != Content.EMPTY) {
