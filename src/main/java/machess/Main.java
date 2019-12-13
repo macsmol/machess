@@ -15,7 +15,7 @@ public class Main {
 				.fromLegalMove(Field.A7, Field.A6)
 
 				.fromLegalMove(Field.E1, Field.E3)
-				.fromLegalMove(Field.A6, Field.G5)
+				.fromLegalMove(Field.C8, Field.G5)
 
 				.fromLegalMove(Field.B2, Field.F4)
 				.fromLegalMove(Field.H8, Field.A3)

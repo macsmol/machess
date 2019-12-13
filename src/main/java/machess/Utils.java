@@ -14,7 +14,7 @@ public class Utils {
 		return result.toString();
 	}
 
-	public static String toString(PinTo pinnedWhite, PinTo pinnedBlack) {
+	public static String toString(Pin pinnedWhite, Pin pinnedBlack) {
 		StringBuilder sb = new StringBuilder();
 		sb.append(pinnedBlack != null ? pinnedBlack.symbol : '.');
 		sb.append(pinnedWhite != null ? pinnedWhite.symbol : '.');

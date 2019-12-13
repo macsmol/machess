@@ -15,9 +15,16 @@ public enum Content {
     WHITE_QUEEN(0x0D,   " Q_", State.WHITE),
     WHITE_KING(0x0E,    " K_", State.WHITE);
 
-    private static final Content[] byteToContents = {
+    private static final Content[] BYTE_TO_CONTENT = {
             EMPTY, BLACK_PAWN, BLACK_KNIGHT, BLACK_BISHOP, BLACK_ROOK, BLACK_QUEEN, BLACK_KING, EMPTY,
             EMPTY, WHITE_PAWN, WHITE_KNIGHT, WHITE_BISHOP, WHITE_ROOK, WHITE_QUEEN, WHITE_KING, EMPTY,
+    };
+
+    private static final Content[] DELTAS_TO_BLACK_CONTENT = {
+            BLACK_BISHOP, BLACK_ROOK, BLACK_BISHOP, BLACK_ROOK, null, BLACK_ROOK, BLACK_BISHOP, BLACK_ROOK, BLACK_BISHOP
+    };
+    private static final Content[] DELTAS_TO_WHITE_CONTENT = {
+            WHITE_BISHOP, WHITE_ROOK, WHITE_BISHOP, WHITE_ROOK, null, WHITE_ROOK, WHITE_BISHOP, WHITE_ROOK, WHITE_BISHOP
     };
 
     final byte asByte;
@@ -35,6 +42,15 @@ public enum Content {
     }
 
     static Content fromByte(byte contentAsByte) {
-        return byteToContents[contentAsByte & (State.PIECE_TYPE_MASK | State.IS_WHITE_PIECE_FLAG)];
+        return BYTE_TO_CONTENT[contentAsByte & (State.PIECE_TYPE_MASK | State.IS_WHITE_PIECE_FLAG)];
+    }
+
+    static Content rookOrBishop(boolean isWhite, int deltaFile, int deltaRank) {
+        assert (deltaFile != 0 || deltaRank != 0) 	: "Zero deltas";
+        assert Math.abs(deltaFile) <= 1 			: "Invalid deltaFile: " + deltaFile;
+        assert Math.abs(deltaRank) <= 1 			: "Invalid deltaRank: " + deltaRank;
+
+        Content[] lut = isWhite ? DELTAS_TO_WHITE_CONTENT : DELTAS_TO_BLACK_CONTENT;
+        return lut[(deltaFile + 1)  + (deltaRank + 1) * 3];
     }
 }

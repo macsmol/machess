@@ -55,12 +55,12 @@ public class State {
 	/**
 	 * This is indexed byt Field.ordinal
 	 */
-	private final PinTo[] pinnedWhites;
+	private final Pin[] pinnedWhites;
 
 	/**
 	 * This is indexed byt Field.ordinal
 	 */
-	private final PinTo[] pinnedBlacks;
+	private final Pin[] pinnedBlacks;
 
 	/**
 	 * new game
@@ -112,8 +112,8 @@ public class State {
 		enPassantField = null;
 		plyNumber = 1;
 
-		pinnedWhites = new PinTo[Field.values().length];
-		pinnedBlacks = new PinTo[Field.values().length];
+		pinnedWhites = new Pin[Field.values().length];
+		pinnedBlacks = new Pin[Field.values().length];
 		initFieldsInCheck();
 	}
 
@@ -130,9 +130,9 @@ public class State {
 		resetFieldsInCheck();
 		initFieldsInCheck();
 
-		pinnedWhites = new PinTo[Field.values().length];
-		pinnedBlacks = new PinTo[Field.values().length];
-		updatePinnedPieces();
+		pinnedWhites = new Pin[Field.values().length];
+		pinnedBlacks = new Pin[Field.values().length];
+		initPinnedPieces();
 	}
 
 	private State fromLegalPawnFirstMove(Field from, Field to, Field enPassantField) {
@@ -294,8 +294,8 @@ public class State {
 					sbCheckFlags.append(Utils.checkFlagsToString(contentAsByte)).append('|');
 				}
 				if (Config.DEBUG_PINNED_PIECES) {
-					PinTo pinnedWhite = pinnedWhites[Field.fromLegalInts(file, rank).ordinal()];
-					PinTo pinnedBlack = pinnedBlacks[Field.fromLegalInts(file, rank).ordinal()];
+					Pin pinnedWhite = pinnedWhites[Field.fromLegalInts(file, rank).ordinal()];
+					Pin pinnedBlack = pinnedBlacks[Field.fromLegalInts(file, rank).ordinal()];
 					sbPins.append(" ").append(Utils.toString(pinnedWhite, pinnedBlack)).append(" |");
 				}
 			}
@@ -387,7 +387,7 @@ public class State {
 		initFieldsInCheckByKings();
 	}
 
-	private void updatePinnedPieces() {
+	private void initPinnedPieces() {
 		Field whiteKing = fieldsWithWhites[0];
 		Field blackKing = fieldsWithBlacks[0];
 		assert getContent(whiteKing) == Content.WHITE_KING : "Corrupted white king position";
@@ -398,30 +398,30 @@ public class State {
 			pinnedBlacks[f.ordinal()] = null;
 		}
 
-		updatePinnedPieces(whiteKing, WHITE, pinnedWhites);
-		updatePinnedPieces(blackKing, BLACK, pinnedBlacks);
+		initPinnedPieces(whiteKing, WHITE);
+		initPinnedPieces(blackKing, BLACK);
 	}
 
-	private void updatePinnedPieces(Field king, boolean isPinnedToWhiteKing, PinTo[] output) {
-		initPinInOneDirection(king, isPinnedToWhiteKing, -1, -1, output);
-		initPinInOneDirection(king, isPinnedToWhiteKing, -1, 0, output);
-		initPinInOneDirection(king, isPinnedToWhiteKing, -1, 1, output);
-		initPinInOneDirection(king, isPinnedToWhiteKing, 0, -1, output);
-		initPinInOneDirection(king, isPinnedToWhiteKing, 0, 1, output);
-		initPinInOneDirection(king, isPinnedToWhiteKing, 1, -1, output);
-		initPinInOneDirection(king, isPinnedToWhiteKing, 1, 0, output);
-		initPinInOneDirection(king, isPinnedToWhiteKing, 1, 1, output);
+	private void initPinnedPieces(Field king, boolean isPinnedToWhiteKing) {
+		initPinInOneDirection(king, isPinnedToWhiteKing, -1, -1);
+		initPinInOneDirection(king, isPinnedToWhiteKing, -1, 0);
+		initPinInOneDirection(king, isPinnedToWhiteKing, -1, 1);
+		initPinInOneDirection(king, isPinnedToWhiteKing, 0, -1);
+		initPinInOneDirection(king, isPinnedToWhiteKing, 0, 1);
+		initPinInOneDirection(king, isPinnedToWhiteKing, 1, -1);
+		initPinInOneDirection(king, isPinnedToWhiteKing, 1, 0);
+		initPinInOneDirection(king, isPinnedToWhiteKing, 1, 1);
 	}
 
-	private void initPinInOneDirection(Field king, boolean isKingWhite, int deltaFile, int deltaRank, PinTo[] output) {
+	private void initPinInOneDirection(Field king, boolean isPinnedToWhiteKing, int deltaFile, int deltaRank) {
 		Field candidate = null;
 		for (int i = 1; true ; i++) {
 			Field field = Field.fromInts(king.file + i * deltaFile, king.rank + i * deltaRank);
 
-			if (field == null || (isOppositeColorPieceOn(field, isKingWhite) && candidate == null)) {
+			if (field == null || (isOppositeColorPieceOn(field, isPinnedToWhiteKing) && candidate == null)) {
 				return;
 			}
-			if (isSameColorPieceOn(field, isKingWhite)) {
+			if (isSameColorPieceOn(field, isPinnedToWhiteKing)) {
 				if (candidate == null) {
 					candidate = field;
 					continue;
@@ -431,10 +431,11 @@ public class State {
 			}
 			if (candidate != null) {
 				Content afterCandidate = getContent(field);
-				Content enemyQueen = isKingWhite ? Content.BLACK_QUEEN : Content.WHITE_QUEEN;
-				Content enemyRook = isKingWhite ? Content.BLACK_ROOK : Content.WHITE_ROOK;
-				if (afterCandidate == enemyQueen || afterCandidate == enemyRook) {
-					output[candidate.ordinal()] = PinTo.fromDeltas(deltaFile, deltaRank);
+				Content enemyQueen = isPinnedToWhiteKing ? Content.BLACK_QUEEN : Content.WHITE_QUEEN;
+				Content enemySlider = Content.rookOrBishop(!isPinnedToWhiteKing, deltaFile, deltaRank);
+				if (afterCandidate == enemyQueen || afterCandidate == enemySlider) {
+					Pin[] pinnedPieces = isPinnedToWhiteKing ? pinnedWhites : pinnedBlacks;
+					pinnedPieces[candidate.ordinal()] = Pin.fromDeltas(deltaFile, deltaRank);
 					return;
 				} else if (afterCandidate != Content.EMPTY) {
 					return;
