@@ -545,68 +545,33 @@ public class State {
 	}
 
 	private void initFieldsInCheckByRook(Field rookField, boolean isCheckedByWhite) {
-		for (int i = 1; true; i++) {
-			Field to = Field.fromInts(rookField.file + i, rookField.rank);
-			if (setCheckFlagForSlidingPiece(to, isCheckedByWhite)) {
-				break;
-			}
-		}
-		for (int i = 1; true; i++) {
-			Field to = Field.fromInts(rookField.file - i, rookField.rank);
-			if (setCheckFlagForSlidingPiece(to, isCheckedByWhite)) {
-				break;
-			}
-		}
-		for (int i = 1; true; i++) {
-			Field to = Field.fromInts(rookField.file, rookField.rank + i);
-			if (setCheckFlagForSlidingPiece(to, isCheckedByWhite)) {
-				break;
-			}
-		}
-		for (int i = 1; true; i++) {
-			Field to = Field.fromInts(rookField.file, rookField.rank - i);
-			if (setCheckFlagForSlidingPiece(to, isCheckedByWhite)) {
-				break;
-			}
-		}
+		initCheckFlagsBySlidingPiece(rookField, isCheckedByWhite, 1, 0);
+		initCheckFlagsBySlidingPiece(rookField, isCheckedByWhite, -1, 0);
+		initCheckFlagsBySlidingPiece(rookField, isCheckedByWhite, 0, 1);
+		initCheckFlagsBySlidingPiece(rookField, isCheckedByWhite, 0, -1);
 	}
 
 	private void initFieldsInCheckByBishop(Field bishopField, boolean isCheckedByWhite) {
-		for (int i = 1; true; i++) {
-			Field to = Field.fromInts(bishopField.file + i, bishopField.rank + i);
-			if (setCheckFlagForSlidingPiece(to, isCheckedByWhite)) {
-				break;
-			}
-		}
-		for (int i = 1; true; i++) {
-			Field to = Field.fromInts(bishopField.file + i, bishopField.rank - i);
-			if (setCheckFlagForSlidingPiece(to, isCheckedByWhite)) {
-				break;
-			}
-		}
-		for (int i = 1; true; i++) {
-			Field to = Field.fromInts(bishopField.file - i, bishopField.rank + i);
-			if (setCheckFlagForSlidingPiece(to, isCheckedByWhite)) {
-				break;
-			}
-		}
-		for (int i = 1; true; i++) {
-			Field to = Field.fromInts(bishopField.file - i, bishopField.rank - i);
-			if (setCheckFlagForSlidingPiece(to, isCheckedByWhite)) {
-				break;
-			}
-		}
+		initCheckFlagsBySlidingPiece(bishopField, isCheckedByWhite, 1, 1);
+		initCheckFlagsBySlidingPiece(bishopField, isCheckedByWhite, 1, -1);
+		initCheckFlagsBySlidingPiece(bishopField, isCheckedByWhite, -1, 1);
+		initCheckFlagsBySlidingPiece(bishopField, isCheckedByWhite, -1, -1);
 	}
 
-	private boolean setCheckFlagForSlidingPiece(Field underCheck, boolean isCheckedByWhite) {
-		if (underCheck == null) {
-			return true;
-		} else if (isSameColorPieceOn(underCheck, isCheckedByWhite)) {
+	private void initCheckFlagsBySlidingPiece(Field from, boolean isCheckedByWhite, int deltaFile, int deltaRank) {
+		for (int i = 1; true; i++) {
+			Field underCheck = Field.fromInts(from.file + deltaFile * i, from.rank + i * deltaRank);
+			if (underCheck == null) {
+				break;
+			} else if (isSameColorPieceOn(underCheck, isCheckedByWhite)) {
+				setCheckFlagOnField(underCheck, isCheckedByWhite);
+				break;
+			}
 			setCheckFlagOnField(underCheck, isCheckedByWhite);
-			return true;
+			if (isOppositeColorPieceOn(underCheck, isCheckedByWhite)) {
+				break;
+			}
 		}
-		setCheckFlagOnField(underCheck, isCheckedByWhite);
-		return isOppositeColorPieceOn(underCheck, isCheckedByWhite);
 	}
 
 	private void initFieldsInCheckByPawn(Field from, boolean isCheckedByWhite) {
