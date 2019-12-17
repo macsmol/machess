@@ -41,8 +41,8 @@ public enum Content {
         this.isWhite = isWhite;
     }
 
-    static Content fromByte(byte contentAsByte) {
-        return BYTE_TO_CONTENT[contentAsByte & (State.PIECE_TYPE_MASK | State.IS_WHITE_PIECE_FLAG)];
+    static Content fromShort(short contentAsShort) {
+        return BYTE_TO_CONTENT[contentAsShort & (State.PIECE_TYPE_MASK | State.IS_WHITE_PIECE_FLAG)];
     }
 
     static Content rookOrBishop(boolean isWhite, int deltaFile, int deltaRank) {

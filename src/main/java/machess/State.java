@@ -37,7 +37,7 @@ public class State {
 	/**
 	 * one byte per square.
 	 */
-	private final byte[] board;
+	private final short[] board;
 
 	// king, queen, rooks and knights, pawns
 	private final Square[] squaresWithWhites;
@@ -62,7 +62,7 @@ public class State {
 	 */
 	State() {
 		flags = WHITE_TURN;
-		board = new byte[Square.values().length];
+		board = new short[Square.values().length];
 		for (int file = File.A; file <= File.H; file++) {
 			board[Square.fromLegalInts(file, Rank._2).ordinal()] = Content.WHITE_PAWN.asByte;
 			board[Square.fromLegalInts(file, Rank._7).ordinal()] = Content.BLACK_PAWN.asByte;
@@ -111,7 +111,7 @@ public class State {
 		initSquaresInCheck();
 	}
 
-	private State(byte[] board, Square[] squaresWithWhites, byte whitesCount, Square[] squaresWithBlacks, byte blacksCount,
+	private State(short[] board, Square[] squaresWithWhites, byte whitesCount, Square[] squaresWithBlacks, byte blacksCount,
 				  byte flags, @Nullable Square enPassantSquare, int plyNumber) {
 		this.board = board;
 		this.squaresWithWhites = squaresWithWhites;
@@ -162,17 +162,17 @@ public class State {
 	private State fromLegalMove(Square from, Square to, @Nullable Content promotion, @Nullable Square futureEnPassantSquare,
 								@Nullable Square rookToCastle) {
 		assert from != to : from + "->" + to + " is no move";
-		byte[] boardCopy = board.clone();
+		short[] boardCopy = board.clone();
 		Square[] squaresWithWhitesCopy = squaresWithWhites.clone();
 		Square[] squaresWithBlacksCopy = squaresWithBlacks.clone();
 
 		//  update boardCopy
-		Content movedPiece = Content.fromByte(boardCopy[from.ordinal()]);
+		Content movedPiece = Content.fromShort(boardCopy[from.ordinal()]);
 		assert movedPiece != Content.EMPTY : from + "->" + to + " moves nothing";
 		assert movedPiece.isWhite == test(WHITE_TURN) : "Moved " + movedPiece + " on " + (test(WHITE_TURN) ? "white" : "black" ) + " turn";
 		boardCopy[from.ordinal()] = Content.EMPTY.asByte;
 
-		Content takenPiece = Content.fromByte(boardCopy[to.ordinal()]);
+		Content takenPiece = Content.fromShort(boardCopy[to.ordinal()]);
 		assert takenPiece != Content.BLACK_KING && takenPiece != Content.WHITE_KING : from + "->" + to + " is taking king";
 		boardCopy[to.ordinal()] = promotion != null ? promotion.asByte : movedPiece.asByte;
 
@@ -180,11 +180,11 @@ public class State {
 		if (enPassantSquare == to) {
 			if (movedPiece == Content.WHITE_PAWN) {
 				squareWithPawnTakenEnPassant = Square.fromLegalInts(to.file, to.rank - 1);
-				takenPiece = Content.fromByte(boardCopy[squareWithPawnTakenEnPassant.ordinal()]);
+				takenPiece = Content.fromShort(boardCopy[squareWithPawnTakenEnPassant.ordinal()]);
 				boardCopy[squareWithPawnTakenEnPassant.ordinal()] = Content.EMPTY.asByte;
 			} else if (movedPiece == Content.BLACK_PAWN) {
 				squareWithPawnTakenEnPassant = Square.fromLegalInts(to.file, to.rank + 1);
-				takenPiece = Content.fromByte(boardCopy[squareWithPawnTakenEnPassant.ordinal()]);
+				takenPiece = Content.fromShort(boardCopy[squareWithPawnTakenEnPassant.ordinal()]);
 				boardCopy[squareWithPawnTakenEnPassant.ordinal()] = Content.EMPTY.asByte;
 			}
 		} else if (rookToCastle != null) {
@@ -283,7 +283,7 @@ public class State {
 				sb.append(content.symbol).append(" |");
 
 				if (Config.DEBUG_FIELD_IN_CHECK_FLAGS) {
-					byte contentAsByte = board[Square.fromLegalInts(file, rank).ordinal()];
+					short contentAsByte = board[Square.fromLegalInts(file, rank).ordinal()];
 					sbCheckFlags.append(Utils.checkFlagsToString(contentAsByte)).append('|');
 				}
 				if (Config.DEBUG_PINNED_PIECES) {
@@ -317,7 +317,7 @@ public class State {
 	}
 
 	public Content getContent(Square square) {
-		return Content.fromByte(board[square.ordinal()]);
+		return Content.fromShort(board[square.ordinal()]);
 	}
 
 	private boolean isPromotingSquare(Square square) {
@@ -357,19 +357,19 @@ public class State {
 	}
 
 	private boolean isWhitePieceOn(Square square) {
-		byte contentAsByte = board[square.ordinal()];
-		return (contentAsByte & IS_WHITE_PIECE_FLAG) != 0 && (contentAsByte & PIECE_TYPE_MASK) != 0;
+		short contentAsShort = board[square.ordinal()];
+		return (contentAsShort & IS_WHITE_PIECE_FLAG) != 0 && (contentAsShort & PIECE_TYPE_MASK) != 0;
 	}
 
 	private boolean isBlackPieceOn(Square square) {
-		byte contentAsByte = board[square.ordinal()];
-		return (contentAsByte & IS_WHITE_PIECE_FLAG) == 0 && (contentAsByte & PIECE_TYPE_MASK) != 0;
+		short contentAsShort = board[square.ordinal()];
+		return (contentAsShort & IS_WHITE_PIECE_FLAG) == 0 && (contentAsShort & PIECE_TYPE_MASK) != 0;
 	}
 
 	private void resetSquaresInCheck() {
 		for (int i = 0; i < board.length; i++) {
-			byte contentAsByte = board[i];
-			board[i] = (byte)(contentAsByte & (State.PIECE_TYPE_MASK | State.IS_WHITE_PIECE_FLAG));
+			short contentAsShort = board[i];
+			board[i] = (byte)(contentAsShort & (State.PIECE_TYPE_MASK | State.IS_WHITE_PIECE_FLAG));
 		}
 	}
 
@@ -441,7 +441,7 @@ public class State {
 		// for every piece except king
 		for (int i = countOfPiecesTakingTurn - 1; i > 0; i--) {
 			Square currSquare = squaresWithPiecesTakingTurn[i];
-			Content piece = Content.fromByte(board[currSquare.ordinal()]);
+			Content piece = Content.fromShort(board[currSquare.ordinal()]);
 			switch (piece) {
 				case WHITE_PAWN:
 				case BLACK_PAWN:
@@ -625,19 +625,19 @@ public class State {
 	
 	private void setCheckFlagOnSquare(Square square, boolean isCheckedByWhite) {
 		int checkFlag = isCheckedByWhite ? IN_CHECK_BY_WHITE : IN_CHECK_BY_BLACK;
-		byte contentAsByte = board[square.ordinal()];
-		board[square.ordinal()] = (byte)(contentAsByte | checkFlag);
+		short contentAsShort = board[square.ordinal()];
+		board[square.ordinal()] = (byte)(contentAsShort | checkFlag);
 	}
 
 	private void setNoKingFlagOnSquare(Square square) {
-		byte contentAsByte = board[square.ordinal()];
-		board[square.ordinal()] = (byte)(contentAsByte | NO_KINGS_FLAG);
+		short contentAsShort = board[square.ordinal()];
+		board[square.ordinal()] = (byte)(contentAsShort | NO_KINGS_FLAG);
 	}
 
 	private boolean isSquareCheckedBy(Square square, boolean testChecksByWhite) {
 		int checkFlag = testChecksByWhite ? IN_CHECK_BY_WHITE : IN_CHECK_BY_BLACK;
-		byte contentAsByte = board[square.ordinal()];
-		return (contentAsByte & checkFlag) != 0;
+		short contentAsShort = board[square.ordinal()];
+		return (contentAsShort & checkFlag) != 0;
 	}
 
 	private boolean isSquareOkForKing(Square square, boolean isKingWhite) {
@@ -658,7 +658,7 @@ public class State {
 
 		for (int i = 0; i < countOfPiecesTakingTurn; i++) {
 			Square currSquare = squaresWithPiecesTakingTurn[i];
-			Content piece = Content.fromByte(board[currSquare.ordinal()]);
+			Content piece = Content.fromShort(board[currSquare.ordinal()]);
 			switch (piece) {
 				case WHITE_PAWN:
 				case BLACK_PAWN:
@@ -895,6 +895,10 @@ public class State {
 	}
 
 	private void generateLegalMovesWhenKingInCheck(List<State> moves) {
+		//if (is doubly checked) {
+//		move king
+
+		// TODO count checks/square/color rather than flag them
 		return;
 	}
 }
