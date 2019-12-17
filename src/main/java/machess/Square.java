@@ -2,7 +2,7 @@ package machess;
 
 import com.sun.istack.internal.Nullable;
 
-public enum Field {
+public enum Square {
 	A1(0, 0), A2(0, 1), A3(0, 2), A4(0, 3), A5(0, 4), A6(0, 5), A7(0, 6), A8(0, 7),
 	B1(1, 0), B2(1, 1), B3(1, 2), B4(1, 3), B5(1, 4), B6(1, 5), B7(1, 6), B8(1, 7),
 	C1(2, 0), C2(2, 1), C3(2, 2), C4(2, 3), C5(2, 4), C6(2, 5), C7(2, 6), C8(2, 7),
@@ -17,7 +17,7 @@ public enum Field {
 	public final byte file;
 	public final byte rank;
 
-	private static final Field[] INTS_TO_FIELDS = {
+	private static final Square[] INTS_TO_SQUARES = {
 		A1, A2, A3, A4, A5, A6, A7, A8,
 		B1, B2, B3, B4, B5, B6, B7, B8,
 		C1, C2, C3, C4, C5, C6, C7, C8,
@@ -28,22 +28,22 @@ public enum Field {
 		H1, H2, H3, H4, H5, H6, H7, H8
 	};
 
-	Field(int file, int rank) {
+	Square(int file, int rank) {
 		this.file = (byte) file;
 		this.rank = (byte) rank;
 	}
 
-	static Field fromLegalInts(int file, int rank) {
+	static Square fromLegalInts(int file, int rank) {
 		assert file >= File.A && file <=  File.H : "invalid file in: " + file + ", " + rank;
 		assert rank >= Rank._1 && rank <= Rank._8 : "invalid rank in: " + file + ", " + rank;
-		return INTS_TO_FIELDS[file * FILES_COUNT + rank];
+		return INTS_TO_SQUARES[file * FILES_COUNT + rank];
 	}
 
 	@Nullable
-	static Field fromInts(int file, int rank) {
+	static Square fromInts(int file, int rank) {
 		if (file < File.A || file > File.H || rank < Rank._1 || rank > Rank._8) {
 			return null;
 		}
-		return INTS_TO_FIELDS[file * FILES_COUNT + rank];
+		return INTS_TO_SQUARES[file * FILES_COUNT + rank];
 	}
 }
