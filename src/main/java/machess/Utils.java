@@ -7,7 +7,7 @@ public class Utils {
 		sb.append(isNoKing ? '1' : '0');
 		number = (short)(number >>> 8);
 
-		sb.append(String.format("_%02X", number));
+		sb.append(String.format(" %02X", number).replace('0','_'));
 		return sb.toString();
 	}
 }
