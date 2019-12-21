@@ -42,7 +42,7 @@ public enum Content {
     }
 
     static Content fromShort(short contentAsShort) {
-        return BYTE_TO_CONTENT[contentAsShort & (State.PIECE_TYPE_MASK | State.IS_WHITE_PIECE_FLAG)];
+        return BYTE_TO_CONTENT[contentAsShort & (State.SquareFormat.PIECE_TYPE_MASK | State.SquareFormat.IS_WHITE_PIECE_FLAG)];
     }
 
     static Content rookOrBishop(boolean isWhite, int deltaFile, int deltaRank) {

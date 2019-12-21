@@ -12,17 +12,26 @@ public class State {
 	public static final boolean WHITE = true;
 	public static final boolean BLACK = false;
 
-	static final byte PIECE_TYPE_MASK = 0x07;
-	static final byte IS_WHITE_PIECE_FLAG = 0x08;
-
-	// mask to get checks count by black or white. Four MSBits are checks by black, next 4 bits are checks by white.
-	private static final byte CHECKS_COUNT = 0x0F;
-	// Tells how many pieces check this square at the moment. Black king cannow walk on a square where these bits are non zero.
-	private static final byte CHECKS_BY_WHITE_BIT_OFFSET = 8;
-	private static final byte CHECKS_BY_BLACK_BIT_OFFSET = 12;
-
-	// neither king can walk onto a square with this flag set - squares adjacent to both kings at once
-	static final byte NO_KINGS_FLAG = 0x40;
+	/**
+	 * Bit layout of each square is
+	 * bbbbwwww---ncppp
+	 *
+	 * p - piece type
+	 * c - is piece white flag
+	 * n - no kings flag (for squares adjacent to two kings at once)
+	 * w - checks by white count
+	 * b - checks by black count
+	 */
+	public static final class SquareFormat {
+		static final byte PIECE_TYPE_MASK = 0x07;
+		static final byte IS_WHITE_PIECE_FLAG = 0x08;
+		// neither king can walk onto a square with this flag set - squares adjacent to both kings at once
+		static final byte NO_KINGS_FLAG = 0x10;
+		// mask to get checks count by black or white. Four MSBits are checks by black, next 4 bits are checks by white.
+		private static final byte CHECKS_COUNT_MASK = 0x0F;
+		private static final byte CHECKS_BY_WHITE_BIT_OFFSET = 8;
+		private static final byte CHECKS_BY_BLACK_BIT_OFFSET = 12;
+	}
 
 	private static final int INITIAL_PLAYER_PIECES_COUNT = 16;
 
@@ -360,18 +369,18 @@ public class State {
 
 	private boolean isWhitePieceOn(Square square) {
 		short contentAsShort = board[square.ordinal()];
-		return (contentAsShort & IS_WHITE_PIECE_FLAG) != 0 && (contentAsShort & PIECE_TYPE_MASK) != 0;
+		return (contentAsShort & SquareFormat.IS_WHITE_PIECE_FLAG) != 0 && (contentAsShort & SquareFormat.PIECE_TYPE_MASK) != 0;
 	}
 
 	private boolean isBlackPieceOn(Square square) {
 		short contentAsShort = board[square.ordinal()];
-		return (contentAsShort & IS_WHITE_PIECE_FLAG) == 0 && (contentAsShort & PIECE_TYPE_MASK) != 0;
+		return (contentAsShort & SquareFormat.IS_WHITE_PIECE_FLAG) == 0 && (contentAsShort & SquareFormat.PIECE_TYPE_MASK) != 0;
 	}
 
 	private void resetSquaresInCheck() {
 		for (int i = 0; i < board.length; i++) {
 			short contentAsShort = board[i];
-			board[i] = (byte)(contentAsShort & (State.PIECE_TYPE_MASK | State.IS_WHITE_PIECE_FLAG));
+			board[i] = (byte)(contentAsShort & (SquareFormat.PIECE_TYPE_MASK | SquareFormat.IS_WHITE_PIECE_FLAG));
 		}
 	}
 
@@ -627,12 +636,12 @@ public class State {
 	
 	private void incrementChecksOnSquare(Square square, boolean isCheckedByWhite) {
 		short contentAsShort = board[square.ordinal()];
-		byte bitOffset = isCheckedByWhite ? CHECKS_BY_WHITE_BIT_OFFSET : CHECKS_BY_BLACK_BIT_OFFSET;
-		short checksCount =  (short)((contentAsShort >>> bitOffset) & CHECKS_COUNT);
+		byte bitOffset = isCheckedByWhite ? SquareFormat.CHECKS_BY_WHITE_BIT_OFFSET : SquareFormat.CHECKS_BY_BLACK_BIT_OFFSET;
+		short checksCount =  (short)((contentAsShort >>> bitOffset) & SquareFormat.CHECKS_COUNT_MASK);
 		checksCount++;
 		checksCount <<= bitOffset;
 
-		short resettingMask = (short)~(CHECKS_COUNT << bitOffset);
+		short resettingMask = (short)~(SquareFormat.CHECKS_COUNT_MASK << bitOffset);
 		contentAsShort = (short)(contentAsShort & resettingMask);
 
 		board[square.ordinal()] = (short)(contentAsShort | checksCount);
@@ -640,7 +649,7 @@ public class State {
 
 	private void setNoKingFlagOnSquare(Square square) {
 		short contentAsShort = board[square.ordinal()];
-		board[square.ordinal()] = (byte)(contentAsShort | NO_KINGS_FLAG);
+		board[square.ordinal()] = (byte)(contentAsShort | SquareFormat.NO_KINGS_FLAG);
 	}
 
 	private boolean isSquareCheckedBy(Square square, boolean testChecksByWhite) {
@@ -648,12 +657,12 @@ public class State {
 	}
 
 	private byte getChecksCount(Square square, boolean checksByWhite) {
-		byte bitOffset = checksByWhite ? CHECKS_BY_WHITE_BIT_OFFSET : CHECKS_BY_BLACK_BIT_OFFSET;
-		return (byte)((board[square.ordinal()] >> bitOffset) & CHECKS_COUNT);
+		byte bitOffset = checksByWhite ? SquareFormat.CHECKS_BY_WHITE_BIT_OFFSET : SquareFormat.CHECKS_BY_BLACK_BIT_OFFSET;
+		return (byte)((board[square.ordinal()] >> bitOffset) & SquareFormat.CHECKS_COUNT_MASK);
 	}
 
 	private boolean isSquareOkForKing(Square square, boolean isKingWhite) {
-		return !isSquareCheckedBy(square, !isKingWhite) && (board[square.ordinal()] & NO_KINGS_FLAG) == 0;
+		return !isSquareCheckedBy(square, !isKingWhite) && (board[square.ordinal()] & SquareFormat.NO_KINGS_FLAG) == 0;
 	}
 
 	public List<State> generateLegalMoves() {
