@@ -11,16 +11,18 @@ import java.util.*;
 public class State {
 	public static final boolean WHITE = true;
 	public static final boolean BLACK = false;
-	
+
 	static final byte PIECE_TYPE_MASK = 0x07;
 	static final byte IS_WHITE_PIECE_FLAG = 0x08;
 
-	// black king cannot walk onto a square with this flag set
-	private static final byte IN_CHECK_BY_WHITE = 0x10;
-	// white king cannot walk onto a square with this flag set
-	private static final byte IN_CHECK_BY_BLACK = 0x20;
+	// mask to get checks count by black or white. Four MSBits are checks by black, next 4 bits are checks by white.
+	private static final byte CHECKS_COUNT = 0x0F;
+	// Tells how many pieces check this square at the moment. Black king cannow walk on a square where these bits are non zero.
+	private static final byte CHECKS_BY_WHITE_BIT_OFFSET = 8;
+	private static final byte CHECKS_BY_BLACK_BIT_OFFSET = 12;
+
 	// neither king can walk onto a square with this flag set - squares adjacent to both kings at once
-	private static final byte NO_KINGS_FLAG = 0x40;
+	static final byte NO_KINGS_FLAG = 0x40;
 
 	private static final int INITIAL_PLAYER_PIECES_COUNT = 16;
 
@@ -283,8 +285,8 @@ public class State {
 				sb.append(content.symbol).append(" |");
 
 				if (Config.DEBUG_FIELD_IN_CHECK_FLAGS) {
-					short contentAsByte = board[Square.fromLegalInts(file, rank).ordinal()];
-					sbCheckFlags.append(Utils.checkFlagsToString(contentAsByte)).append('|');
+					short contentAsShort = board[Square.fromLegalInts(file, rank).ordinal()];
+					sbCheckFlags.append(Utils.checkCountsToString(contentAsShort)).append('|');
 				}
 				if (Config.DEBUG_PINNED_PIECES) {
 					Pin pinType = pinnedPieces[Square.fromLegalInts(file, rank).ordinal()];
@@ -498,7 +500,7 @@ public class State {
 
 	private void setCheckFlagOnSquareByKing(Square square, boolean isKingWhite) {
 		if (!isSquareCheckedBy(square, !isKingWhite)) {
-			setCheckFlagOnSquare(square, isKingWhite);
+			incrementChecksOnSquare(square, isKingWhite);
 		}
 	}
 
@@ -564,10 +566,10 @@ public class State {
 			if (underCheck == null) {
 				break;
 			} else if (isSameColorPieceOn(underCheck, isCheckedByWhite)) {
-				setCheckFlagOnSquare(underCheck, isCheckedByWhite);
+				incrementChecksOnSquare(underCheck, isCheckedByWhite);
 				break;
 			}
-			setCheckFlagOnSquare(underCheck, isCheckedByWhite);
+			incrementChecksOnSquare(underCheck, isCheckedByWhite);
 			if (isOppositeColorPieceOn(underCheck, isCheckedByWhite)) {
 				break;
 			}
@@ -579,54 +581,61 @@ public class State {
 		// check to the queen side
 		Square to = Square.fromInts(from.file - 1, from.rank + pawnDisplacement);
 		if (to != null) {
-			setCheckFlagOnSquare(to, isCheckedByWhite);
+			incrementChecksOnSquare(to, isCheckedByWhite);
 		}
 		// check to the king side
 		to = Square.fromInts(from.file + 1, from.rank + pawnDisplacement);
 		if (to != null) {
-			setCheckFlagOnSquare(to, isCheckedByWhite);
+			incrementChecksOnSquare(to, isCheckedByWhite);
 		}
 	}
 
 	private void initSquaresInCheckByKnight(Square knightSquare, boolean isCheckedByWhite) {
 		Square to = Square.fromInts(knightSquare.file + 1, knightSquare.rank + 2);
 		if (to != null) {
-			setCheckFlagOnSquare(to, isCheckedByWhite);
+			incrementChecksOnSquare(to, isCheckedByWhite);
 		}
 		to = Square.fromInts(knightSquare.file + 1, knightSquare.rank - 2);
 		if (to != null) {
-			setCheckFlagOnSquare(to, isCheckedByWhite);
+			incrementChecksOnSquare(to, isCheckedByWhite);
 		}
 		to = Square.fromInts(knightSquare.file - 1, knightSquare.rank + 2);
 		if (to != null) {
-			setCheckFlagOnSquare(to, isCheckedByWhite);
+			incrementChecksOnSquare(to, isCheckedByWhite);
 		}
 		to = Square.fromInts(knightSquare.file - 1, knightSquare.rank - 2);
 		if (to != null) {
-			setCheckFlagOnSquare(to, isCheckedByWhite);
+			incrementChecksOnSquare(to, isCheckedByWhite);
 		}
 		to = Square.fromInts(knightSquare.file + 2, knightSquare.rank + 1);
 		if (to != null) {
-			setCheckFlagOnSquare(to, isCheckedByWhite);
+			incrementChecksOnSquare(to, isCheckedByWhite);
 		}
 		to = Square.fromInts(knightSquare.file + 2, knightSquare.rank - 1);
 		if (to != null) {
-			setCheckFlagOnSquare(to, isCheckedByWhite);
+			incrementChecksOnSquare(to, isCheckedByWhite);
 		}
 		to = Square.fromInts(knightSquare.file - 2, knightSquare.rank + 1);
 		if (to != null) {
-			setCheckFlagOnSquare(to, isCheckedByWhite);
+			incrementChecksOnSquare(to, isCheckedByWhite);
 		}
 		to = Square.fromInts(knightSquare.file - 2, knightSquare.rank - 1);
 		if (to != null) {
-			setCheckFlagOnSquare(to, isCheckedByWhite);
+			incrementChecksOnSquare(to, isCheckedByWhite);
 		}
 	}
 	
-	private void setCheckFlagOnSquare(Square square, boolean isCheckedByWhite) {
-		int checkFlag = isCheckedByWhite ? IN_CHECK_BY_WHITE : IN_CHECK_BY_BLACK;
+	private void incrementChecksOnSquare(Square square, boolean isCheckedByWhite) {
 		short contentAsShort = board[square.ordinal()];
-		board[square.ordinal()] = (byte)(contentAsShort | checkFlag);
+		byte bitOffset = isCheckedByWhite ? CHECKS_BY_WHITE_BIT_OFFSET : CHECKS_BY_BLACK_BIT_OFFSET;
+		short checksCount =  (short)((contentAsShort >>> bitOffset) & CHECKS_COUNT);
+		checksCount++;
+		checksCount <<= bitOffset;
+
+		short resettingMask = (short)~(CHECKS_COUNT << bitOffset);
+		contentAsShort = (short)(contentAsShort & resettingMask);
+
+		board[square.ordinal()] = (short)(contentAsShort | checksCount);
 	}
 
 	private void setNoKingFlagOnSquare(Square square) {
@@ -635,9 +644,12 @@ public class State {
 	}
 
 	private boolean isSquareCheckedBy(Square square, boolean testChecksByWhite) {
-		int checkFlag = testChecksByWhite ? IN_CHECK_BY_WHITE : IN_CHECK_BY_BLACK;
-		short contentAsShort = board[square.ordinal()];
-		return (contentAsShort & checkFlag) != 0;
+		return getChecksCount(square, testChecksByWhite) > 0;
+	}
+
+	private byte getChecksCount(Square square, boolean checksByWhite) {
+		byte bitOffset = checksByWhite ? CHECKS_BY_WHITE_BIT_OFFSET : CHECKS_BY_BLACK_BIT_OFFSET;
+		return (byte)((board[square.ordinal()] >> bitOffset) & CHECKS_COUNT);
 	}
 
 	private boolean isSquareOkForKing(Square square, boolean isKingWhite) {

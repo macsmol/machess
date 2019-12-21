@@ -5,7 +5,7 @@ import java.util.List;
 public class Main {
 	public static void main(String[] args) {
 		State newGame = new State();
-
+		System.out.println("new game \n" + newGame);
 		State game = newGame
 				// pieces pinned to king
 				.fromLegalMove(Square.C2, Square.C3)
