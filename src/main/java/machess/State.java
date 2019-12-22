@@ -68,6 +68,8 @@ public class State {
 	 */
 	private final Pin[] pinnedPieces;
 
+	private Square kingAttacker;
+
 	/**
 	 * new game
 	 */
@@ -320,6 +322,7 @@ public class State {
 		sb.append("] count: ").append(blacksCount).append('\n');
 		sb.append("enPassantSquare: ").append(enPassantSquare).append('\n');
 		sb.append("plyNumber: ").append(plyNumber).append('\n');
+		sb.append("kingAttacker: ").append(kingAttacker).append('\n');
 		return sb.toString();
 	}
 
@@ -578,7 +581,7 @@ public class State {
 				incrementChecksOnSquare(underCheck, isCheckedByWhite);
 				break;
 			}
-			incrementChecksOnSquare(underCheck, isCheckedByWhite);
+			incrementChecksAndRefreshKingAttacker(from, underCheck, isCheckedByWhite);
 			if (isOppositeColorPieceOn(underCheck, isCheckedByWhite)) {
 				break;
 			}
@@ -590,50 +593,58 @@ public class State {
 		// check to the queen side
 		Square to = Square.fromInts(from.file - 1, from.rank + pawnDisplacement);
 		if (to != null) {
-			incrementChecksOnSquare(to, isCheckedByWhite);
+			incrementChecksAndRefreshKingAttacker(from, to, isCheckedByWhite);
 		}
 		// check to the king side
 		to = Square.fromInts(from.file + 1, from.rank + pawnDisplacement);
 		if (to != null) {
-			incrementChecksOnSquare(to, isCheckedByWhite);
+			incrementChecksAndRefreshKingAttacker(from, to, isCheckedByWhite);
 		}
 	}
 
 	private void initSquaresInCheckByKnight(Square knightSquare, boolean isCheckedByWhite) {
 		Square to = Square.fromInts(knightSquare.file + 1, knightSquare.rank + 2);
 		if (to != null) {
-			incrementChecksOnSquare(to, isCheckedByWhite);
+			incrementChecksAndRefreshKingAttacker(knightSquare, to, isCheckedByWhite);
 		}
 		to = Square.fromInts(knightSquare.file + 1, knightSquare.rank - 2);
 		if (to != null) {
-			incrementChecksOnSquare(to, isCheckedByWhite);
+			incrementChecksAndRefreshKingAttacker(knightSquare, to, isCheckedByWhite);
 		}
 		to = Square.fromInts(knightSquare.file - 1, knightSquare.rank + 2);
 		if (to != null) {
-			incrementChecksOnSquare(to, isCheckedByWhite);
+			incrementChecksAndRefreshKingAttacker(knightSquare, to, isCheckedByWhite);
 		}
 		to = Square.fromInts(knightSquare.file - 1, knightSquare.rank - 2);
 		if (to != null) {
-			incrementChecksOnSquare(to, isCheckedByWhite);
+			incrementChecksAndRefreshKingAttacker(knightSquare, to, isCheckedByWhite);
 		}
 		to = Square.fromInts(knightSquare.file + 2, knightSquare.rank + 1);
 		if (to != null) {
-			incrementChecksOnSquare(to, isCheckedByWhite);
+			incrementChecksAndRefreshKingAttacker(knightSquare, to, isCheckedByWhite);
 		}
 		to = Square.fromInts(knightSquare.file + 2, knightSquare.rank - 1);
 		if (to != null) {
-			incrementChecksOnSquare(to, isCheckedByWhite);
+			incrementChecksAndRefreshKingAttacker(knightSquare, to, isCheckedByWhite);
 		}
 		to = Square.fromInts(knightSquare.file - 2, knightSquare.rank + 1);
 		if (to != null) {
-			incrementChecksOnSquare(to, isCheckedByWhite);
+			incrementChecksAndRefreshKingAttacker(knightSquare, to, isCheckedByWhite);
 		}
 		to = Square.fromInts(knightSquare.file - 2, knightSquare.rank - 1);
 		if (to != null) {
-			incrementChecksOnSquare(to, isCheckedByWhite);
+			incrementChecksAndRefreshKingAttacker(knightSquare, to, isCheckedByWhite);
 		}
 	}
-	
+
+	private void incrementChecksAndRefreshKingAttacker(Square attacker, Square checkedSquare, boolean isCheckedByWhite) {
+		Square possiblyCheckedKing = isCheckedByWhite ? squaresWithBlacks[0] : squaresWithWhites[0];
+		if (possiblyCheckedKing == checkedSquare) {
+			kingAttacker = attacker;
+		}
+		incrementChecksOnSquare(checkedSquare, isCheckedByWhite);
+	}
+
 	private void incrementChecksOnSquare(Square square, boolean isCheckedByWhite) {
 		short contentAsShort = board[square.ordinal()];
 		byte bitOffset = isCheckedByWhite ? SquareFormat.CHECKS_BY_WHITE_BIT_OFFSET : SquareFormat.CHECKS_BY_BLACK_BIT_OFFSET;
@@ -672,8 +683,7 @@ public class State {
 		Square[] squaresWithPiecesTakingTurn = test(WHITE_TURN) ? squaresWithWhites : squaresWithBlacks;
 
 		if (isSquareCheckedBy(squaresWithPiecesTakingTurn[0], !test(WHITE_TURN))) {
-			// TODO generate legal moves: generation when king under check
-			generateLegalMovesWhenKingInCheck(moves);
+			generateLegalMovesWhenKingInCheck(squaresWithPiecesTakingTurn[0], moves);
 			return moves;
 		}
 
@@ -747,7 +757,10 @@ public class State {
 			outputMoves.add(fromLegalMove(from, to));
 		}
 		int kingMovedBitflag = isWhiteTurn ? WHITE_KING_MOVED : BLACK_KING_MOVED;
-		if (!test(kingMovedBitflag) && !isSquareCheckedBy(from, !isWhiteTurn)) {
+
+		if (!test(kingMovedBitflag) &&
+		// TODO check below goes away?
+				!isSquareCheckedBy(from, !isWhiteTurn)) {
 
 			Content rook = isWhiteTurn ? Content.WHITE_ROOK : Content.BLACK_ROOK;
 			int qsRookMovedBitflag = isWhiteTurn ? WHITE_QS_ROOK_MOVED : BLACK_QS_ROOK_MOVED;
@@ -915,11 +928,35 @@ public class State {
 		return pin == null || pin == movementDirection;
 	}
 
-	private void generateLegalMovesWhenKingInCheck(List<State> moves) {
-		//if (is doubly checked) {
+	private void generateLegalMovesWhenKingInCheck(Square checkedKing, List<State> moves) {
+		boolean isWhiteTurn = test(WHITE_TURN);
+
+		if (getChecksCount(checkedKing, !isWhiteTurn) >= 2) {
+			generateLegalKingMoves(checkedKing, moves);
+		} else {
+			switch (getContent(kingAttacker)) {
+				case WHITE_PAWN:
+				case BLACK_PAWN:
+					break;
+				case WHITE_KNIGHT:
+				case BLACK_KNIGHT:
+					break;
+				case WHITE_BISHOP:
+				case BLACK_BISHOP:
+					break;
+				case WHITE_ROOK:
+				case BLACK_ROOK:
+					break;
+				case WHITE_QUEEN:
+				case BLACK_QUEEN:
+					break;
+				default:
+					assert false: "Invalid king attacker: " + getContent(kingAttacker);
+			}
+			// take or shield from attacker
+		}
 //		move king
 
-		// TODO count checks/square/color rather than flag them
 		return;
 	}
 }
