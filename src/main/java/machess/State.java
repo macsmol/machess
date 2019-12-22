@@ -869,7 +869,7 @@ public class State {
 	}
 
 	private void generateLegalKnightMoves(Square from, List<State> outputMoves) {
-		if (pieceIsFreeToMove(from, null)) {
+		if (!pieceIsFreeToMove(from, null)) {
 			return;
 		}
 		Square to = Square.fromInts(from.file + 1, from.rank + 2);
