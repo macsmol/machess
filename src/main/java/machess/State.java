@@ -935,6 +935,17 @@ public class State {
 			generateLegalKingMoves(checkedKing, moves);
 		} else {
 			switch (getContent(kingAttacker)) {
+				/*
+				if (checkedByKnight) {
+					legalMoves.add(killKnight) // possible if knight is in check. (truly in check - now could be in check by a pinned piece)
+				}else{
+					//trying to find killing/shielding move may require more time than normal move generation + don't have
+					legalMoves.add(killAttacker())
+					legalMoves.add(shieldFromAttacker())
+
+					legalMoves.add(moveKing)
+				}
+				*/
 				case WHITE_PAWN:
 				case BLACK_PAWN:
 					break;
