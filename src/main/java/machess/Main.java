@@ -7,9 +7,11 @@ public class Main {
 		State newGame = new State();
 		System.out.println("new game \n" + newGame);
 		State game = newGame
-				.fromLegalMove(Square.E1, Square.E4)
-				.fromLegalMove(Square.D7, Square.D5);
-
+				.fromLegalMove(Square.F2, Square.F4)
+				.fromLegalMove(Square.E7, Square.E5)
+				.fromLegalMove(Square.G1, Square.F3)
+				.fromLegalMove(Square.D8, Square.H4)
+;
 
 
 		System.out.println("game :"+ game + "\n");
