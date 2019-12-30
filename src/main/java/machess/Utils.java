@@ -10,4 +10,8 @@ public class Utils {
 		sb.append(String.format(" %02X", number).replace('0','.'));
 		return sb.toString();
 	}
+
+	static Content getContent(Square square, short[] board) {
+		return Content.fromShort(board[square.ordinal()]);
+	}
 }

@@ -28,16 +28,16 @@ public class State {
 		// neither king can walk onto a square with this flag set - squares adjacent to both kings at once
 		static final byte NO_KINGS_FLAG = 0x10;
 		// mask to get checks count by black or white. Four MSBits are checks by black, next 4 bits are checks by white.
-		private static final byte CHECKS_COUNT_MASK = 0x0F;
-		private static final byte CHECKS_BY_WHITE_BIT_OFFSET = 8;
-		private static final byte CHECKS_BY_BLACK_BIT_OFFSET = 12;
+		static final byte CHECKS_COUNT_MASK = 0x0F;
+		static final byte CHECKS_BY_WHITE_BIT_OFFSET = 8;
+		static final byte CHECKS_BY_BLACK_BIT_OFFSET = 12;
 	}
 
 	private static final int INITIAL_PLAYER_PIECES_COUNT = 16;
 
 	// flags
 	private final byte flags;
-	private static final int WHITE_TURN =           0x01;
+	static final int WHITE_TURN 		=           0x01;
 	private static final int WHITE_KING_MOVED =     0x02;
 	private static final int BLACK_KING_MOVED =     0x04;
 	private static final int WHITE_KS_ROOK_MOVED =  0x08;
@@ -48,14 +48,14 @@ public class State {
 	/**
 	 * one byte per square.
 	 */
-	private final short[] board;
+	final short[] board;
 
 	// king, queen, rooks and knights, pawns
-	private final Square[] squaresWithWhites;
-	private final byte whitesCount;
+	final Square[] squaresWithWhites;
+	final byte whitesCount;
 
-	private final Square[] squaresWithBlacks;
-	private final byte blacksCount;
+	final Square[] squaresWithBlacks;
+	final byte blacksCount;
 	/**
 	 * If not null it means there is a possibility to en-passant on this square
 	 */
@@ -267,7 +267,7 @@ public class State {
 		}
 	}
 
-	private boolean test(int flagMask) {
+	boolean test(int flagMask) {
 		return (flags & flagMask) != 0;
 	}
 
@@ -327,12 +327,12 @@ public class State {
 		return sb.toString();
 	}
 
-	public Content getContent(int file, int rank) {
+	private Content getContent(int file, int rank) {
 		return getContent(Square.fromLegalInts(file, rank));
 	}
 
 	public Content getContent(Square square) {
-		return Content.fromShort(board[square.ordinal()]);
+		return Utils.getContent(square, board);
 	}
 
 	private boolean isPromotingSquare(Square square) {
