@@ -4,29 +4,30 @@ import java.util.List;
 
 public class Main {
 	public static void main(String[] args) {
-		State newGame = new State();
-		System.out.println("new game \n" + newGame);
-		State game = newGame
-				.fromLegalMove(Square.F2, Square.F4)
-				.fromLegalMove(Square.E7, Square.E5)
-				.fromLegalMove(Square.G1, Square.F3)
-				.fromLegalMove(Square.D8, Square.H4)
+		State game = new State();
+		System.out.println("new game \n" + game);
+		System.out.println(NegaMaxScorer.evaluate(game));
+
+		game = game.fromLegalMove(Square.F2, Square.F4);
+		System.out.println("game \n" + game);
+		System.out.println(NegaMaxScorer.evaluate(game));
+
+
+		game = game.fromLegalMove(Square.E7, Square.E5);
+		System.out.println("game \n" + game);
+		System.out.println(NegaMaxScorer.evaluate(game));
+
+		game = game.fromLegalMove(Square.G1, Square.F3);
+		System.out.println("game \n" + game);
+		System.out.println(NegaMaxScorer.evaluate(game));
+
+		game = game.fromLegalMove(Square.D8, Square.H4);
+		System.out.println("game :"+ game);
+		System.out.println(NegaMaxScorer.evaluate(game));
+
+		game = game.fromLegalMove(Square.F3, Square.H4);
+		System.out.println("game :"+ game);
+		System.out.println(NegaMaxScorer.evaluate(game));
 ;
-
-
-		System.out.println("game :"+ game + "\n");
-
-		long before = System.currentTimeMillis();
-		List<State> legalMovesThirdPly = game.generateLegalMoves();
-		System.out.println(" elapsed ms: " + (System.currentTimeMillis() - before));
-
-		System.out.println(" generated moves count: " + legalMovesThirdPly.size());
-		for (State thirdPly : legalMovesThirdPly) {
-			System.out.println(thirdPly);
-//			List<State> legalMovesFourthPly = thirdPly.generateLegalMoves();
-//			for (State fourhPly : legalMovesFourthPly) {
-//				System.out.println(fourhPly);
-//			}
-		}
 	}
 }

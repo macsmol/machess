@@ -11,7 +11,6 @@ public class NegaMaxScorer {
 	private static final int MATERIAL_BISHOP 	= 300;
 	private static final int MATERIAL_ROOK		= 500;
 	private static final int MATERIAL_QUEEN		= 900;
-//	private static final int MATERIAL_KING 		= 20000; // this could give incentivize to cause absolute pins
 
 	private static final float FACTOR_DEFENDED_PIECE 		= 1.0f;
 	private static final float FACTOR_LOOSE_PIECE 			= 0.9f;
@@ -20,20 +19,24 @@ public class NegaMaxScorer {
 
 	private static final int CHECKED_SQUARE_SCORE = 5;
 
-	private int WHITE2MOVE = 1;
-	private int BLACK2MOVE = -1;
+	private static final int WHITE2MOVE = 1;
+	private static final int BLACK2MOVE = -1;
 
-	public int evaluate(State state) {
+	public static int evaluate(State state) {
 		int whiteMaterialScore = evaluateMaterialScore(state.squaresWithWhites, state.whitesCount, state.board);
 		int blackMaterialScore = evaluateMaterialScore(state.squaresWithBlacks, state.blacksCount, state.board);
 
 		int who2Move = state.test(State.WHITE_TURN) ? WHITE2MOVE : BLACK2MOVE;
+
+		System.out.println("	whiteMaterialScore: " + whiteMaterialScore);
+		System.out.println("	blackMaterialScore: " + blackMaterialScore);
+		System.out.println("	who2Move: " + who2Move);
 		return (whiteMaterialScore - blackMaterialScore) * who2Move;
 	}
 
-	private int evaluateMaterialScore(Square[] pieces, int piecesCount, short[] board) {
+	private static int evaluateMaterialScore(Square[] pieces, int piecesCount, short[] board) {
 		int score = 0;
-		for (int i = piecesCount; i >= 1; i--) {
+		for (int i = piecesCount - 1; i >= 1; i--) {
 			Square square = pieces[i];
 
 			Content piece = Utils.getContent(square, board);
@@ -42,7 +45,7 @@ public class NegaMaxScorer {
 		return score;
 	}
 
-	private int getMaterialScore(Content piece) {
+	private static int getMaterialScore(Content piece) {
 		switch (piece) {
 		case WHITE_PAWN:
 		case BLACK_PAWN:
@@ -72,9 +75,9 @@ public class NegaMaxScorer {
 	 * https://www.chessprogramming.org/Hanging_Piece
 	 * https://www.chessprogramming.org/Static_Exchange_Evaluation
 	 */
-	static float getSafetyFactor(Content piece, Square square, short[] board) {
+	private static float getSafetyFactor(Content piece, Square square, short[] board) {
 		byte checksByWhite = (byte)((board[square.ordinal()] >> State.SquareFormat.CHECKS_BY_WHITE_BIT_OFFSET) & State.SquareFormat.CHECKS_COUNT_MASK);
-		byte checksByBlack = (byte)((board[square.ordinal()] >> State.SquareFormat.CHECKS_BY_WHITE_BIT_OFFSET) & State.SquareFormat.CHECKS_COUNT_MASK);
+		byte checksByBlack = (byte)((board[square.ordinal()] >> State.SquareFormat.CHECKS_BY_BLACK_BIT_OFFSET) & State.SquareFormat.CHECKS_COUNT_MASK);
 
 		byte selfChecks = piece.isWhite ? checksByWhite : checksByBlack;
 		byte checksByEnemy = piece.isWhite ? checksByBlack : checksByWhite;
