@@ -2,8 +2,8 @@ package machess;
 
 
 public class NegaMaxScorer {
-	private static final int WIN = Integer.MAX_VALUE;
-	private static final int LOSE = Integer.MIN_VALUE;
+	private static final int WIN = 1_000_000;
+	private static final int LOSE = -1_000_000;
 	private static final int DRAW = 0;
 
 	private static final int MATERIAL_PAWN 		= 100;
@@ -23,24 +23,33 @@ public class NegaMaxScorer {
 	private static final int BLACK2MOVE = -1;
 
 	public static int evaluate(State state) {
-		int whiteMaterialScore = evaluateMaterialScore(state.squaresWithWhites, state.whitesCount, state.board);
-		int blackMaterialScore = evaluateMaterialScore(state.squaresWithBlacks, state.blacksCount, state.board);
+		int materialScore = evaluateMaterialScore(state);
+		System.out.println("	materialScore: " + materialScore);
+
+		int checkedSquaresScore = evaluateCheckedSquaresScore(state);
+		System.out.println("	checkedSquaresScore: " + checkedSquaresScore);
 
 		int who2Move = state.test(State.WHITE_TURN) ? WHITE2MOVE : BLACK2MOVE;
-
-		System.out.println("	whiteMaterialScore: " + whiteMaterialScore);
-		System.out.println("	blackMaterialScore: " + blackMaterialScore);
 		System.out.println("	who2Move: " + who2Move);
-		return (whiteMaterialScore - blackMaterialScore) * who2Move;
+		return  (materialScore + checkedSquaresScore) * who2Move;
 	}
 
-	private static int evaluateMaterialScore(Square[] pieces, int piecesCount, short[] board) {
+	private static int evaluateMaterialScore(State state) {
+		int whiteMaterialScore = evaluateMaterialScore(state.squaresWithWhites, state.whitesCount, state);
+		int blackMaterialScore = evaluateMaterialScore(state.squaresWithBlacks, state.blacksCount, state);
+
+		System.out.println("		whiteMaterialScore: " + whiteMaterialScore);
+		System.out.println("		blackMaterialScore: " + blackMaterialScore);
+		return whiteMaterialScore - blackMaterialScore;
+	}
+
+	private static int evaluateMaterialScore(Square[] piecesOfOneColor, int piecesCount, State state) {
 		int score = 0;
 		for (int i = piecesCount - 1; i >= 1; i--) {
-			Square square = pieces[i];
+			Square square = piecesOfOneColor[i];
 
-			Content piece = Utils.getContent(square, board);
-			score += getMaterialScore(piece) * getSafetyFactor(piece, square, board);
+			Content piece = state.getContent(square);
+			score += getMaterialScore(piece) * getSafetyFactor(piece.isWhite, square, state);
 		}
 		return score;
 	}
@@ -75,17 +84,35 @@ public class NegaMaxScorer {
 	 * https://www.chessprogramming.org/Hanging_Piece
 	 * https://www.chessprogramming.org/Static_Exchange_Evaluation
 	 */
-	private static float getSafetyFactor(Content piece, Square square, short[] board) {
-		byte checksByWhite = (byte)((board[square.ordinal()] >> State.SquareFormat.CHECKS_BY_WHITE_BIT_OFFSET) & State.SquareFormat.CHECKS_COUNT_MASK);
-		byte checksByBlack = (byte)((board[square.ordinal()] >> State.SquareFormat.CHECKS_BY_BLACK_BIT_OFFSET) & State.SquareFormat.CHECKS_COUNT_MASK);
+	private static float getSafetyFactor(boolean isPieceWhite, Square square, State state) {
+		boolean isCheckedByWhite = state.isSquareCheckedBy(square, State.WHITE);
+		boolean isCheckedByBlack = state.isSquareCheckedBy(square, State.BLACK);
 
-		byte selfChecks = piece.isWhite ? checksByWhite : checksByBlack;
-		byte checksByEnemy = piece.isWhite ? checksByBlack : checksByWhite;
+		boolean checkedByFriend = isPieceWhite ? isCheckedByWhite : isCheckedByBlack;
+		boolean checkedByEnemy = isPieceWhite ? isCheckedByBlack : isCheckedByWhite;
 
-		if (selfChecks > 0) {
-			return checksByEnemy > 0 ? FACTOR_ATTACKED_AND_DEFENDED : FACTOR_DEFENDED_PIECE;
+		if (checkedByFriend) {
+			return checkedByEnemy ? FACTOR_ATTACKED_AND_DEFENDED : FACTOR_DEFENDED_PIECE;
 		} else {
-			return checksByEnemy > 0 ? FACTOR_HANGING_PIECE : FACTOR_LOOSE_PIECE;
+			return checkedByEnemy ? FACTOR_HANGING_PIECE : FACTOR_LOOSE_PIECE;
 		}
+	}
+
+	private static int evaluateCheckedSquaresScore(State state) {
+		int squaresCheckedByWhite = countSquaresCheckedBy(State.WHITE, state);
+		int squaresCheckedByBlack = countSquaresCheckedBy(State.BLACK, state);
+		System.out.println("		squaresCheckedByWhite: " + squaresCheckedByWhite);
+		System.out.println("		squaresCheckedByBlack: " + squaresCheckedByBlack);
+		return (squaresCheckedByWhite - squaresCheckedByBlack) * CHECKED_SQUARE_SCORE;
+	}
+
+	private static int countSquaresCheckedBy(boolean checksByWhite, State state) {
+		int checksCount = 0;
+		for (Square square : Square.values()) {
+			if (state.isSquareCheckedBy(square, checksByWhite)) {
+				checksCount++;
+			}
+		}
+		return checksCount;
 	}
 }

@@ -8,7 +8,7 @@ public class Main {
 		System.out.println("new game \n" + game);
 		System.out.println(NegaMaxScorer.evaluate(game));
 
-		game = game.fromLegalMove(Square.F2, Square.F4);
+		game = game.fromLegalMove(Square.E2, Square.E4);
 		System.out.println("game \n" + game);
 		System.out.println(NegaMaxScorer.evaluate(game));
 
@@ -28,6 +28,6 @@ public class Main {
 		game = game.fromLegalMove(Square.F3, Square.H4);
 		System.out.println("game :"+ game);
 		System.out.println(NegaMaxScorer.evaluate(game));
-;
+
 	}
 }

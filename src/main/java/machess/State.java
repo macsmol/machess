@@ -331,8 +331,8 @@ public class State {
 		return getContent(Square.fromLegalInts(file, rank));
 	}
 
-	public Content getContent(Square square) {
-		return Utils.getContent(square, board);
+	Content getContent(Square square) {
+		return Content.fromShort(board[square.ordinal()]);
 	}
 
 	private boolean isPromotingSquare(Square square) {
@@ -664,7 +664,7 @@ public class State {
 		board[square.ordinal()] = (byte)(contentAsShort | SquareFormat.NO_KINGS_FLAG);
 	}
 
-	private boolean isSquareCheckedBy(Square square, boolean testChecksByWhite) {
+	boolean isSquareCheckedBy(Square square, boolean testChecksByWhite) {
 		return getChecksCount(square, testChecksByWhite) > 0;
 	}
 
