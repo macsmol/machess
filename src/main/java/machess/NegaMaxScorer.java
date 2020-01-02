@@ -1,9 +1,11 @@
 package machess;
 
 
+import java.util.List;
+
 public class NegaMaxScorer {
 	private static final int WIN = 1_000_000;
-	private static final int LOSE = -1_000_000;
+	private static final int LOSS = -1_000_000;
 	private static final int DRAW = 0;
 
 	private static final int MATERIAL_PAWN 		= 100;
@@ -22,15 +24,74 @@ public class NegaMaxScorer {
 	private static final int WHITE2MOVE = 1;
 	private static final int BLACK2MOVE = -1;
 
+	private static int movesEvaluated = 0;
+
+	public static MoveScore negamax(State rootState) {
+		movesEvaluated = 0 ;
+		List<State> moves = rootState.generateLegalMoves();
+		int max = Integer.MIN_VALUE;
+		int indexOfMax = -1;
+		for (int i = 0; i < moves.size(); i++) {
+			int score = -negamax(moves.get(i), Config.SEARCH_DEPTH - 1);
+			if (score > max) {
+				max = score;
+				indexOfMax = i;
+			}
+		}
+		System.out.println("Moves evaluated: " + movesEvaluated);
+		return new MoveScore(max, indexOfMax);
+	}
+
+	public static int negamax(State state, int depth) {
+//		System.out.println("depth: "+ depth);
+		if (depth == 0) {
+			return evaluate(state);
+		}
+		int max = Integer.MIN_VALUE;
+		List<State> moves = state.generateLegalMoves();
+		for (State move : moves) {
+			int score = -negamax(move, depth - 1);
+			if (score > max) {
+				max = score;
+			}
+		}
+		return max;
+	}
+
+	public static class MoveScore {
+		public final int score;
+		public final int moveIndex;
+
+		public MoveScore(int score, int moveIndex) {
+			this.score = score;
+			this.moveIndex = moveIndex;
+		}
+
+		@Override
+		public String toString() {
+			return "MoveScore{" +
+					"score=" + score +
+					", moveIndex=" + moveIndex +
+					'}';
+		}
+	}
+
 	public static int evaluate(State state) {
+		movesEvaluated++;
+		boolean isWhiteTurn = state.test(State.WHITE_TURN);
+
+		if (state.generateLegalMoves().isEmpty()) {
+			if (state.isKingInCheck()) {
+				return LOSS;
+			} else {
+				return DRAW;
+			}
+		}
 		int materialScore = evaluateMaterialScore(state);
-		System.out.println("	materialScore: " + materialScore);
 
 		int checkedSquaresScore = evaluateCheckedSquaresScore(state);
-		System.out.println("	checkedSquaresScore: " + checkedSquaresScore);
 
-		int who2Move = state.test(State.WHITE_TURN) ? WHITE2MOVE : BLACK2MOVE;
-		System.out.println("	who2Move: " + who2Move);
+		int who2Move = isWhiteTurn ? WHITE2MOVE : BLACK2MOVE;
 		return  (materialScore + checkedSquaresScore) * who2Move;
 	}
 
@@ -38,8 +99,6 @@ public class NegaMaxScorer {
 		int whiteMaterialScore = evaluateMaterialScore(state.squaresWithWhites, state.whitesCount, state);
 		int blackMaterialScore = evaluateMaterialScore(state.squaresWithBlacks, state.blacksCount, state);
 
-		System.out.println("		whiteMaterialScore: " + whiteMaterialScore);
-		System.out.println("		blackMaterialScore: " + blackMaterialScore);
 		return whiteMaterialScore - blackMaterialScore;
 	}
 
@@ -101,8 +160,6 @@ public class NegaMaxScorer {
 	private static int evaluateCheckedSquaresScore(State state) {
 		int squaresCheckedByWhite = countSquaresCheckedBy(State.WHITE, state);
 		int squaresCheckedByBlack = countSquaresCheckedBy(State.BLACK, state);
-		System.out.println("		squaresCheckedByWhite: " + squaresCheckedByWhite);
-		System.out.println("		squaresCheckedByBlack: " + squaresCheckedByBlack);
 		return (squaresCheckedByWhite - squaresCheckedByBlack) * CHECKED_SQUARE_SCORE;
 	}
 

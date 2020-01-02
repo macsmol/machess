@@ -518,6 +518,7 @@ public class State {
 	}
 
 	private Set<Square> getKingNeighbourhood(Square king) {
+		// TODO use spare flags in SquareFormat to find NO_KING_SQUARES
 		Set<Square> neighbourhood = new HashSet<>();
 		Square to = Square.fromInts(king.file, king.rank + 1);
 		if (to != null) {
@@ -677,21 +678,35 @@ public class State {
 		return !isSquareCheckedBy(square, !isKingWhite) && (board[square.ordinal()] & SquareFormat.NO_KINGS_FLAG) == 0;
 	}
 
+	public State makeMove(int moveIndex) {
+		return generateLegalMoves().get(moveIndex);
+	}
+
 	public List<State> generateLegalMoves() {
-		List<State> moves = new ArrayList<>(Config.DEFAULT_MOVES_LIST_CAPACITY);
+		try {
+			List<State> moves = new ArrayList<>(Config.DEFAULT_MOVES_LIST_CAPACITY);
 
-		int countOfPiecesTakingTurn = test(WHITE_TURN) ? whitesCount : blacksCount;
-		Square[] squaresWithPiecesTakingTurn = test(WHITE_TURN) ? squaresWithWhites : squaresWithBlacks;
+			int countOfPiecesTakingTurn = test(WHITE_TURN) ? whitesCount : blacksCount;
+			Square[] squaresWithPiecesTakingTurn = test(WHITE_TURN) ? squaresWithWhites : squaresWithBlacks;
 
-		if (isSquareCheckedBy(squaresWithPiecesTakingTurn[0], !test(WHITE_TURN))) {
-			generateLegalMovesWhenKingInCheck(moves, squaresWithPiecesTakingTurn[0], countOfPiecesTakingTurn,
-					squaresWithPiecesTakingTurn);
+			if (isKingInCheck()) {
+				generateLegalMovesWhenKingInCheck(moves, squaresWithPiecesTakingTurn[0], countOfPiecesTakingTurn,
+						squaresWithPiecesTakingTurn);
+				return moves;
+			}
+
+			generatePseudoLegalMovesExcludingKing(moves, countOfPiecesTakingTurn, squaresWithPiecesTakingTurn);
+			generateLegalKingMoves(squaresWithPiecesTakingTurn[0], moves);
 			return moves;
+		} catch(AssertionError assertionError) {
+			System.out.println("Failed move generation from this position: " + this);
+			throw assertionError;
 		}
+	}
 
-		generatePseudoLegalMovesExcludingKing(moves, countOfPiecesTakingTurn, squaresWithPiecesTakingTurn);
-		generateLegalKingMoves(squaresWithPiecesTakingTurn[0], moves);
-		return moves;
+	boolean isKingInCheck() {
+		Square[] squaresWithPiecesTakingTurn = test(WHITE_TURN) ? squaresWithWhites : squaresWithBlacks;
+		return isSquareCheckedBy(squaresWithPiecesTakingTurn[0], !test(WHITE_TURN));
 	}
 
 	/**

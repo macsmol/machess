@@ -1,33 +1,18 @@
 package machess;
 
-import java.util.List;
-
 public class Main {
-	public static void main(String[] args) {
-		State game = new State();
-		System.out.println("new game \n" + game);
-		System.out.println(NegaMaxScorer.evaluate(game));
+    public static void main(String[] args) {
+        State game = new State();
+        System.out.println("new game \n" + game);
 
-		game = game.fromLegalMove(Square.E2, Square.E4);
-		System.out.println("game \n" + game);
-		System.out.println(NegaMaxScorer.evaluate(game));
+        for (int i = 0; i < 30; i++) {
+            long before = System.currentTimeMillis();
+            NegaMaxScorer.MoveScore bestMove = NegaMaxScorer.negamax(game);
+            long after = System.currentTimeMillis();
+            System.out.println(bestMove + " time elapsed: " + (after - before));
 
-
-		game = game.fromLegalMove(Square.E7, Square.E5);
-		System.out.println("game \n" + game);
-		System.out.println(NegaMaxScorer.evaluate(game));
-
-		game = game.fromLegalMove(Square.G1, Square.F3);
-		System.out.println("game \n" + game);
-		System.out.println(NegaMaxScorer.evaluate(game));
-
-		game = game.fromLegalMove(Square.D8, Square.H4);
-		System.out.println("game :"+ game);
-		System.out.println(NegaMaxScorer.evaluate(game));
-
-		game = game.fromLegalMove(Square.F3, Square.H4);
-		System.out.println("game :"+ game);
-		System.out.println(NegaMaxScorer.evaluate(game));
-
-	}
+            game = game.makeMove(bestMove.moveIndex);
+            System.out.println(game);
+        }
+    }
 }
