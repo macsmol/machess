@@ -6,10 +6,7 @@ public class Main {
         System.out.println("new game \n" + game);
 
         for (int i = 0; i < 110; i++) {
-            long before = System.currentTimeMillis();
             NegaMaxScorer.MoveScore bestMove = NegaMaxScorer.negamax(game);
-            long after = System.currentTimeMillis();
-            System.out.println(bestMove + " time elapsed: " + (after - before));
 
             game = game.makeMove(bestMove.moveIndex);
             System.out.println(game);

@@ -28,6 +28,7 @@ public class NegaMaxScorer {
 
 	public static MoveScore negamax(State rootState) {
 		movesEvaluated = 0 ;
+		long before = System.currentTimeMillis();
 		List<State> moves = rootState.generateLegalMoves();
 		int max = Integer.MIN_VALUE;
 		int indexOfMax = -1;
@@ -39,7 +40,11 @@ public class NegaMaxScorer {
 			}
 		}
 		System.out.println("Moves evaluated: " + movesEvaluated);
-		return new MoveScore(max, indexOfMax);
+		long after = System.currentTimeMillis();
+		MoveScore bestMove = new MoveScore(max, indexOfMax);
+		long elapsedMillis = after - before;
+		System.out.println(bestMove + "; time elapsed: " + elapsedMillis + "; Moves/sec: " + (movesEvaluated * 1000 / elapsedMillis));
+		return bestMove;
 	}
 
 	public static int negamax(State state, int depth) {
