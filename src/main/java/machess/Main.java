@@ -5,7 +5,7 @@ public class Main {
         State game = new State();
         System.out.println("new game \n" + game);
 
-        for (int i = 0; i < 30; i++) {
+        for (int i = 0; i < 90; i++) {
             long before = System.currentTimeMillis();
             NegaMaxScorer.MoveScore bestMove = NegaMaxScorer.negamax(game);
             long after = System.currentTimeMillis();

@@ -6,5 +6,5 @@ public class Config {
 
 	public static final int DEFAULT_MOVES_LIST_CAPACITY = 60;
 
-	public static final int SEARCH_DEPTH = 2;
+	public static final int SEARCH_DEPTH = 3;
 }
