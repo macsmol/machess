@@ -671,24 +671,19 @@ public class State {
 	}
 
 	public List<State> generateLegalMoves() {
-		try {
-			List<State> moves = new ArrayList<>(Config.DEFAULT_MOVES_LIST_CAPACITY);
+		List<State> moves = new ArrayList<>(Config.DEFAULT_MOVES_LIST_CAPACITY);
 
-			int countOfPiecesTakingTurn = test(WHITE_TURN) ? whitesCount : blacksCount;
-			Square[] squaresWithPiecesTakingTurn = test(WHITE_TURN) ? squaresWithWhites : squaresWithBlacks;
+		int countOfPiecesTakingTurn = test(WHITE_TURN) ? whitesCount : blacksCount;
+		Square[] squaresWithPiecesTakingTurn = test(WHITE_TURN) ? squaresWithWhites : squaresWithBlacks;
 
-			if (isKingInCheck()) {
-				generateLegalMovesWhenKingInCheck(moves, squaresWithPiecesTakingTurn[0], countOfPiecesTakingTurn,
-						squaresWithPiecesTakingTurn);
-				return moves;
-			}
-
-			generatePseudoLegalMoves(moves, countOfPiecesTakingTurn, squaresWithPiecesTakingTurn);
+		if (isKingInCheck()) {
+			generateLegalMovesWhenKingInCheck(moves, squaresWithPiecesTakingTurn[0], countOfPiecesTakingTurn,
+					squaresWithPiecesTakingTurn);
 			return moves;
-		} catch(AssertionError assertionError) {
-			System.out.println("Failed move generation from this position: " + this);
-			throw assertionError;
 		}
+
+		generatePseudoLegalMoves(moves, countOfPiecesTakingTurn, squaresWithPiecesTakingTurn);
+		return moves;
 	}
 
 	boolean isKingInCheck() {
