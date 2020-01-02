@@ -898,10 +898,10 @@ public class State {
 	}
 
 	private void generatePromotionMoves(Square from, Square to, List<State> outputMoves) {
-		outputMoves.add(fromLegalMoveWithPromotion(from, to, Content.WHITE_QUEEN));
-		outputMoves.add(fromLegalMoveWithPromotion(from, to, Content.WHITE_ROOK));
-		outputMoves.add(fromLegalMoveWithPromotion(from, to, Content.WHITE_BISHOP));
-		outputMoves.add(fromLegalMoveWithPromotion(from, to, Content.WHITE_KNIGHT));
+		outputMoves.add(fromLegalMoveWithPromotion(from, to, test(WHITE_TURN) ? Content.WHITE_QUEEN : Content.BLACK_QUEEN));
+		outputMoves.add(fromLegalMoveWithPromotion(from, to, test(WHITE_TURN) ? Content.WHITE_ROOK : Content.BLACK_QUEEN));
+		outputMoves.add(fromLegalMoveWithPromotion(from, to, test(WHITE_TURN) ? Content.WHITE_BISHOP : Content.BLACK_QUEEN));
+		outputMoves.add(fromLegalMoveWithPromotion(from, to, test(WHITE_TURN) ? Content.WHITE_KNIGHT : Content.BLACK_QUEEN));
 	}
 
 	private void generatePseudoLegalKnightMoves(Square from, List<State> outputMoves) {
