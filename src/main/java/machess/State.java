@@ -68,9 +68,6 @@ public class State {
 	 */
 	private final Pin[] pinnedPieces;
 
-	// unused - remove it?
-	private Square kingAttacker;
-
 	/**
 	 * new game
 	 */
@@ -323,7 +320,6 @@ public class State {
 		sb.append("] count: ").append(blacksCount).append('\n');
 		sb.append("enPassantSquare: ").append(enPassantSquare).append('\n');
 		sb.append("plyNumber: ").append(plyNumber).append('\n');
-		sb.append("kingAttacker: ").append(kingAttacker).append('\n');
 		return sb.toString();
 	}
 
@@ -573,7 +569,7 @@ public class State {
 		initCheckFlagsBySlidingPiece(bishopSquare, isCheckedByWhite, -1, 1);
 		initCheckFlagsBySlidingPiece(bishopSquare, isCheckedByWhite, -1, -1);
 	}
-
+// TODO this is a hot method
 	private void initCheckFlagsBySlidingPiece(Square from, boolean isCheckedByWhite, int deltaFile, int deltaRank) {
 		for (int i = 1; true; i++) {
 			Square underCheck = Square.fromInts(from.file + deltaFile * i, from.rank + i * deltaRank);
@@ -583,7 +579,7 @@ public class State {
 				incrementChecksOnSquare(underCheck, isCheckedByWhite);
 				break;
 			}
-			incrementChecksAndRefreshKingAttacker(from, underCheck, isCheckedByWhite);
+			incrementChecksOnSquare(underCheck, isCheckedByWhite);
 			if (isOppositeColorPieceOn(underCheck, isCheckedByWhite)) {
 				break;
 			}
@@ -595,56 +591,48 @@ public class State {
 		// check to the queen side
 		Square to = Square.fromInts(from.file - 1, from.rank + pawnDisplacement);
 		if (to != null) {
-			incrementChecksAndRefreshKingAttacker(from, to, isCheckedByWhite);
+			incrementChecksOnSquare(to, isCheckedByWhite);
 		}
 		// check to the king side
 		to = Square.fromInts(from.file + 1, from.rank + pawnDisplacement);
 		if (to != null) {
-			incrementChecksAndRefreshKingAttacker(from, to, isCheckedByWhite);
+			incrementChecksOnSquare(to, isCheckedByWhite);
 		}
 	}
 
 	private void initSquaresInCheckByKnight(Square knightSquare, boolean isCheckedByWhite) {
 		Square to = Square.fromInts(knightSquare.file + 1, knightSquare.rank + 2);
 		if (to != null) {
-			incrementChecksAndRefreshKingAttacker(knightSquare, to, isCheckedByWhite);
+			incrementChecksOnSquare(to, isCheckedByWhite);
 		}
 		to = Square.fromInts(knightSquare.file + 1, knightSquare.rank - 2);
 		if (to != null) {
-			incrementChecksAndRefreshKingAttacker(knightSquare, to, isCheckedByWhite);
+			incrementChecksOnSquare(to, isCheckedByWhite);
 		}
 		to = Square.fromInts(knightSquare.file - 1, knightSquare.rank + 2);
 		if (to != null) {
-			incrementChecksAndRefreshKingAttacker(knightSquare, to, isCheckedByWhite);
+			incrementChecksOnSquare(to, isCheckedByWhite);
 		}
 		to = Square.fromInts(knightSquare.file - 1, knightSquare.rank - 2);
 		if (to != null) {
-			incrementChecksAndRefreshKingAttacker(knightSquare, to, isCheckedByWhite);
+			incrementChecksOnSquare(to, isCheckedByWhite);
 		}
 		to = Square.fromInts(knightSquare.file + 2, knightSquare.rank + 1);
 		if (to != null) {
-			incrementChecksAndRefreshKingAttacker(knightSquare, to, isCheckedByWhite);
+			incrementChecksOnSquare(to, isCheckedByWhite);
 		}
 		to = Square.fromInts(knightSquare.file + 2, knightSquare.rank - 1);
 		if (to != null) {
-			incrementChecksAndRefreshKingAttacker(knightSquare, to, isCheckedByWhite);
+			incrementChecksOnSquare(to, isCheckedByWhite);
 		}
 		to = Square.fromInts(knightSquare.file - 2, knightSquare.rank + 1);
 		if (to != null) {
-			incrementChecksAndRefreshKingAttacker(knightSquare, to, isCheckedByWhite);
+			incrementChecksOnSquare(to, isCheckedByWhite);
 		}
 		to = Square.fromInts(knightSquare.file - 2, knightSquare.rank - 1);
 		if (to != null) {
-			incrementChecksAndRefreshKingAttacker(knightSquare, to, isCheckedByWhite);
+			incrementChecksOnSquare(to, isCheckedByWhite);
 		}
-	}
-
-	private void incrementChecksAndRefreshKingAttacker(Square attacker, Square checkedSquare, boolean isCheckedByWhite) {
-		Square possiblyCheckedKing = isCheckedByWhite ? squaresWithBlacks[0] : squaresWithWhites[0];
-		if (possiblyCheckedKing == checkedSquare) {
-			kingAttacker = attacker;
-		}
-		incrementChecksOnSquare(checkedSquare, isCheckedByWhite);
 	}
 
 	private void incrementChecksOnSquare(Square square, boolean isCheckedByWhite) {
