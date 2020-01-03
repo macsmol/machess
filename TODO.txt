@@ -1,0 +1,4 @@
+-bug: can't checkmate? + some moves seem really bad..
+-oscillation when playing against itself
+-move object - don't copy whole state
+-0x88 array

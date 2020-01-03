@@ -26,14 +26,15 @@ public class NegaMaxScorer {
 
 	private static int movesEvaluated = 0;
 
-	public static MoveScore negamax(State rootState) {
+
+	public static MoveScore negamax(State rootState, boolean poorPlayer) {
 		movesEvaluated = 0 ;
 		long before = System.currentTimeMillis();
 		List<State> moves = rootState.generateLegalMoves();
 		int max = Integer.MIN_VALUE;
 		int indexOfMax = -1;
 		for (int i = 0; i < moves.size(); i++) {
-			int score = -negamax(moves.get(i), Config.SEARCH_DEPTH - 1);
+			int score = -negamax(moves.get(i), poorPlayer ? Config.SEARCH_DEPTH - 2 : Config.SEARCH_DEPTH - 1);
 			if (score > max) {
 				max = score;
 				indexOfMax = i;
@@ -41,6 +42,7 @@ public class NegaMaxScorer {
 		}
 		System.out.println("Moves evaluated: " + movesEvaluated);
 		long after = System.currentTimeMillis();
+		// if indexOfMax == -1 then we lost
 		MoveScore bestMove = new MoveScore(max, indexOfMax);
 		long elapsedMillis = after - before;
 		System.out.println(bestMove + "; time elapsed: " + elapsedMillis + "; Moves/sec: " + (movesEvaluated * 1000 / elapsedMillis));
@@ -54,8 +56,17 @@ public class NegaMaxScorer {
 		}
 		int max = Integer.MIN_VALUE;
 		List<State> moves = state.generateLegalMoves();
+		if (moves.isEmpty()) {
+			movesEvaluated++;
+			if (state.isKingInCheck()) {
+				return LOSS;
+			} else {
+				return DRAW;
+			}
+		}
 		for (State move : moves) {
-			int score = -negamax(move, depth - 1);
+			// decrement child score by one to make later wins less good
+			int score = -(negamax(move, depth - 1) - 1);
 			if (score > max) {
 				max = score;
 			}
@@ -113,7 +124,9 @@ public class NegaMaxScorer {
 			Square square = piecesOfOneColor[i];
 
 			Content piece = state.getContent(square);
-			score += getMaterialScore(piece) * getSafetyFactor(piece.isWhite, square, state);
+			score += getMaterialScore(piece)
+//					* getSafetyFactor(piece.isWhite, square, state)
+			;
 		}
 		return score;
 	}
@@ -142,6 +155,7 @@ public class NegaMaxScorer {
 	}
 
 	/**
+	 * TODO this factor seems to have detrimental effect on play. Remove it? improve it?
 	 // multiply material score by appropriate factor
 	 * This model seems too simplistic. Will have to implement SEE..?
 	 * https://www.chessprogramming.org/Loose_Piece
