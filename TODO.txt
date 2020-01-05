@@ -1,4 +1,4 @@
--bug: can't checkmate? + some moves seem really bad..
+-false checkmate by white with 	SEARCH_DEPTH = 3;  WHITE_PLY_HANDICAP = 0; BLACK_PLY_HANDICAP = 1;
 -oscillation when playing against itself
 -move object - don't copy whole state
 -0x88 array

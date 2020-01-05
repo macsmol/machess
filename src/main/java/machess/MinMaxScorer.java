@@ -3,9 +3,9 @@ package machess;
 
 import java.util.List;
 
-public class NegaMaxScorer {
-	private static final int WIN = 1_000_000;
-	private static final int LOSS = -1_000_000;
+public class MinMaxScorer {
+	private static final int MAXIMIZING_WIN = 1_000_000;
+	private static final int MINIMIZING_WIN = -1_000_000;
 	private static final int DRAW = 0;
 
 	private static final int MATERIAL_PAWN 		= 100;
@@ -21,57 +21,70 @@ public class NegaMaxScorer {
 
 	private static final int CHECKED_SQUARE_SCORE = 5;
 
-	private static final int WHITE2MOVE = 1;
-	private static final int BLACK2MOVE = -1;
-
 	private static int movesEvaluated = 0;
 
 
-	public static MoveScore negamax(State rootState, boolean poorPlayer) {
+	public static MoveScore minMax(State rootState) {
+		boolean maximizing = rootState.test(State.WHITE_TURN);
 		movesEvaluated = 0 ;
 		long before = System.currentTimeMillis();
 		List<State> moves = rootState.generateLegalMoves();
-		int max = Integer.MIN_VALUE;
-		int indexOfMax = -1;
+		int resultScore = maximizing ? Integer.MIN_VALUE : Integer.MAX_VALUE;
+		int indexOfResultScore = -1;
+		if (moves.isEmpty()) {
+			return new MoveScore(terminalNodeScore(rootState), -1);
+		}
 		for (int i = 0; i < moves.size(); i++) {
-			int score = -negamax(moves.get(i), poorPlayer ? Config.SEARCH_DEPTH - 2 : Config.SEARCH_DEPTH - 1);
-			if (score > max) {
-				max = score;
-				indexOfMax = i;
+			int depth = Config.SEARCH_DEPTH - 1;
+			depth -=  maximizing ? Config.WHITE_PLY_HANDICAP : Config.BLACK_PLY_HANDICAP;
+
+			int currScore = minMax(moves.get(i), depth);
+			if (maximizing) {
+				if (currScore > resultScore) {
+					resultScore = currScore;
+					indexOfResultScore = i;
+				}
+			} else {
+				if (currScore < resultScore) {
+					resultScore = currScore;
+					indexOfResultScore = i;
+				}
 			}
 		}
 		System.out.println("Moves evaluated: " + movesEvaluated);
 		long after = System.currentTimeMillis();
-		// if indexOfMax == -1 then we lost
-		MoveScore bestMove = new MoveScore(max, indexOfMax);
+		MoveScore bestMove = new MoveScore(resultScore, indexOfResultScore);
 		long elapsedMillis = after - before;
-		System.out.println(bestMove + "; time elapsed: " + elapsedMillis + "; Moves/sec: " + (movesEvaluated * 1000 / elapsedMillis));
+		System.out.println(bestMove + "; time elapsed: " + elapsedMillis + "; Moves/sec: " + (movesEvaluated * 1000 / (elapsedMillis+1)));
 		return bestMove;
 	}
 
-	public static int negamax(State state, int depth) {
-//		System.out.println("depth: "+ depth);
-		if (depth == 0) {
+	private static int minMax(State state, int depth) {
+		boolean maximizingTurn = state.test(State.WHITE_TURN);
+		if (depth <= 0) {
 			return evaluate(state);
 		}
-		int max = Integer.MIN_VALUE;
+		int resultScore = maximizingTurn ? Integer.MIN_VALUE : Integer.MAX_VALUE;
 		List<State> moves = state.generateLegalMoves();
 		if (moves.isEmpty()) {
 			movesEvaluated++;
-			if (state.isKingInCheck()) {
-				return LOSS;
-			} else {
-				return DRAW;
-			}
+			return terminalNodeScore(state);
 		}
 		for (State move : moves) {
 			// decrement child score by one to make later wins less good
-			int score = -(negamax(move, depth - 1) - 1);
-			if (score > max) {
-				max = score;
+			int laterWinPenalty = maximizingTurn ? -1 : 1;
+			int currScore = minMax(move, depth - 1) + laterWinPenalty;
+			if (maximizingTurn) {
+				if (currScore > resultScore) {
+					resultScore = currScore;
+				}
+			} else {
+				if (currScore < resultScore) {
+					resultScore = currScore;
+				}
 			}
 		}
-		return max;
+		return resultScore;
 	}
 
 	public static class MoveScore {
@@ -94,21 +107,13 @@ public class NegaMaxScorer {
 
 	public static int evaluate(State state) {
 		movesEvaluated++;
-		boolean isWhiteTurn = state.test(State.WHITE_TURN);
-
-		if (state.generateLegalMoves().isEmpty()) {
-			if (state.isKingInCheck()) {
-				return LOSS;
-			} else {
-				return DRAW;
-			}
+		if (state.countLegalMoves() == 0) {
+			return terminalNodeScore(state);
 		}
 		int materialScore = evaluateMaterialScore(state);
-
 		int checkedSquaresScore = evaluateCheckedSquaresScore(state);
 
-		int who2Move = isWhiteTurn ? WHITE2MOVE : BLACK2MOVE;
-		return  (materialScore + checkedSquaresScore) * who2Move;
+		return materialScore + checkedSquaresScore;
 	}
 
 	private static int evaluateMaterialScore(State state) {
@@ -190,5 +195,22 @@ public class NegaMaxScorer {
 			}
 		}
 		return checksCount;
+	}
+
+	private static int terminalNodeScore(State state) {
+		boolean maximizingTurn = state.test(State.WHITE_TURN);
+		if (maximizingTurn) {
+			if (state.isKingInCheck()) {
+				return MINIMIZING_WIN;
+			} else {
+				return DRAW;
+			}
+		} else {
+			if (state.isKingInCheck()) {
+				return MAXIMIZING_WIN;
+			} else {
+				return DRAW;
+			}
+		}
 	}
 }

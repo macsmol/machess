@@ -6,9 +6,13 @@ public class Main {
         System.out.println("new game \n" + game);
 
         for (int i = 0; i < 150; i++) {
-            // TODO bug: at ply 65 queen rather than checkmate does a very bad move...
-            NegaMaxScorer.MoveScore bestMove = NegaMaxScorer.negamax(game, i % 2 != 0);
+            MinMaxScorer.MoveScore bestMove = MinMaxScorer.minMax(game);
 
+            if(bestMove.moveIndex==-1) {
+                String winMessage = bestMove.score > 0 ? "white win!" : "black win!";
+                System.out.println("Game over: " + winMessage);
+                break;
+            }
             game = game.makeMove(bestMove.moveIndex);
             System.out.println(game);
         }
