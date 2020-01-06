@@ -71,9 +71,7 @@ public class MinMaxScorer {
 			return terminalNodeScore(state);
 		}
 		for (State move : moves) {
-			// decrement child score by one to make later wins less good
-			int laterWinPenalty = maximizingTurn ? -1 : 1;
-			int currScore = minMax(move, depth - 1) + laterWinPenalty;
+			int currScore = discourageLaterWin(minMax(move, depth - 1));
 			if (maximizingTurn) {
 				if (currScore > resultScore) {
 					resultScore = currScore;
@@ -85,6 +83,15 @@ public class MinMaxScorer {
 			}
 		}
 		return resultScore;
+	}
+
+	/**
+	 * call this on child nodes to encourage choosing earlier wins
+	 * @param score
+	 */
+	private static int discourageLaterWin(int score) {
+		return (int)(score * 0.999f);
+//		return score * 1023 / 1024; // faster that floating point arithmetic?
 	}
 
 	public static class MoveScore {

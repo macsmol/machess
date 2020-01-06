@@ -1,5 +1,3 @@
--BUG: false checkmate by white with 	SEARCH_DEPTH = 3;  WHITE_PLY_HANDICAP = 0; BLACK_PLY_HANDICAP = 1;
-
 -move generation - introduce Move object,makeMove(), unmakeMove(). Keep State objects only for played plies + tree depth.
     States in the tree need to be mutable (to save allocations)
 
