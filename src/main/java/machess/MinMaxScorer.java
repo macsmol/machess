@@ -21,17 +21,21 @@ public class MinMaxScorer {
 
 	private static final int CHECKED_SQUARE_SCORE = 5;
 
-	private static int movesEvaluated = 0;
+	private static int movesEvaluatedInPly = 0;
+	private static long totalMovesEvaluated = 0;
+	private static long totalNanosElapsed = 0;
 
 
 	public static MoveScore minMax(State rootState) {
 		boolean maximizing = rootState.test(State.WHITE_TURN);
-		movesEvaluated = 0 ;
-		long before = System.currentTimeMillis();
+		movesEvaluatedInPly = 0 ;
+		long before = System.nanoTime();
 		List<State> moves = rootState.generateLegalMoves();
 		int resultScore = maximizing ? Integer.MIN_VALUE : Integer.MAX_VALUE;
 		int indexOfResultScore = -1;
 		if (moves.isEmpty()) {
+			System.out.println("Total seconds elapsed: " + totalNanosElapsed / 1000_000_000
+					+ "; Moves/sec: " + Utils.calcMovesPerSecond(totalMovesEvaluated, totalNanosElapsed));
 			return new MoveScore(terminalNodeScore(rootState), -1);
 		}
 		for (int i = 0; i < moves.size(); i++) {
@@ -51,11 +55,14 @@ public class MinMaxScorer {
 				}
 			}
 		}
-		System.out.println("Moves evaluated: " + movesEvaluated);
-		long after = System.currentTimeMillis();
+		System.out.println("Moves evaluated: " + movesEvaluatedInPly);
+		long after = System.nanoTime();
 		MoveScore bestMove = new MoveScore(resultScore, indexOfResultScore);
-		long elapsedMillis = after - before;
-		System.out.println(bestMove + "; time elapsed: " + elapsedMillis + "; Moves/sec: " + (movesEvaluated * 1000 / (elapsedMillis+1)));
+		long elapsedNanos = after - before;
+		totalMovesEvaluated += movesEvaluatedInPly;
+		totalNanosElapsed += elapsedNanos;
+
+		System.out.println(bestMove + "; millis elapsed: " + elapsedNanos / 1000_000 + "; Moves/sec: " + Utils.calcMovesPerSecond(movesEvaluatedInPly, elapsedNanos));
 		return bestMove;
 	}
 
@@ -67,7 +74,6 @@ public class MinMaxScorer {
 		int resultScore = maximizingTurn ? Integer.MIN_VALUE : Integer.MAX_VALUE;
 		List<State> moves = state.generateLegalMoves();
 		if (moves.isEmpty()) {
-			movesEvaluated++;
 			return terminalNodeScore(state);
 		}
 		for (State move : moves) {
@@ -90,8 +96,7 @@ public class MinMaxScorer {
 	 * @param score
 	 */
 	private static int discourageLaterWin(int score) {
-		return (int)(score * 0.999f);
-//		return score * 1023 / 1024; // faster that floating point arithmetic?
+		return score * 1023 / 1024;
 	}
 
 	public static class MoveScore {
@@ -113,10 +118,10 @@ public class MinMaxScorer {
 	}
 
 	public static int evaluate(State state) {
-		movesEvaluated++;
 		if (state.countLegalMoves() == 0) {
 			return terminalNodeScore(state);
 		}
+		movesEvaluatedInPly++;
 		int materialScore = evaluateMaterialScore(state);
 		int checkedSquaresScore = evaluateCheckedSquaresScore(state);
 
@@ -205,6 +210,7 @@ public class MinMaxScorer {
 	}
 
 	private static int terminalNodeScore(State state) {
+		movesEvaluatedInPly++;
 		boolean maximizingTurn = state.test(State.WHITE_TURN);
 		if (maximizingTurn) {
 			if (state.isKingInCheck()) {
