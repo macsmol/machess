@@ -6,7 +6,7 @@ public class Main {
         System.out.println("new game \n" + game);
 
         for (int i = 0; i < 150; i++) {
-            MinMaxScorer.MoveScore bestMove = MinMaxScorer.minMax(game);
+            Scorer.MoveScore bestMove = Scorer.minMax(game);
 
             if(bestMove.moveIndex==-1) {
                 String winMessage = bestMove.score > 0 ? "white win!" : "black win!";

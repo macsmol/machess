@@ -3,7 +3,7 @@ package machess;
 
 import java.util.List;
 
-public class MinMaxScorer {
+public class Scorer {
 	private static final int MAXIMIZING_WIN = 1_000_000;
 	private static final int MINIMIZING_WIN = -1_000_000;
 	private static final int DRAW = 0;
