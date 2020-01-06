@@ -41,6 +41,22 @@ public enum Content {
         this.isWhite = isWhite;
     }
 
+    /**
+     * MSB           LSB
+     * 87654321 87654321
+     * ________ ____wccc
+     *
+     *  ccc - piece code , eg:
+     *      000 - empty square
+     *      001 - pawn
+     *      010 - knight
+     *      011 - bishop
+     *      100 - rook
+     *      101 - queen
+     *      110 - king
+     *
+     *  w - is white bit
+     */
     static Content fromShort(short contentAsShort) {
         return BYTE_TO_CONTENT[contentAsShort & (State.SquareFormat.PIECE_TYPE_MASK | State.SquareFormat.IS_WHITE_PIECE_FLAG)];
     }

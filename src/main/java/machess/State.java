@@ -37,13 +37,13 @@ public class State {
 
 	// flags
 	private final byte flags;
-	static final int WHITE_TURN 		=           0x01;
-	private static final int WHITE_KING_MOVED =     0x02;
-	private static final int BLACK_KING_MOVED =     0x04;
-	private static final int WHITE_KS_ROOK_MOVED =  0x08;
-	private static final int WHITE_QS_ROOK_MOVED =  0x10;
-	private static final int BLACK_KS_ROOK_MOVED =  0x20;
-	private static final int BLACK_QS_ROOK_MOVED =  0x40;
+	static final int WHITE_TURN 			= 0x01;
+	static final int WHITE_KING_MOVED 		= 0x02;
+	static final int BLACK_KING_MOVED 		= 0x04;
+	static final int WHITE_KS_ROOK_MOVED 	= 0x08;
+	static final int WHITE_QS_ROOK_MOVED 	= 0x10;
+	static final int BLACK_KS_ROOK_MOVED 	= 0x20;
+	static final int BLACK_QS_ROOK_MOVED 	= 0x40;
 
 	/**
 	 * one byte per square.
@@ -139,12 +139,12 @@ public class State {
 		initPinnedPieces();
 	}
 
-	private State fromLegalPawnFirstMove(Square from, Square to, Square enPassantSquare) {
+	private State fromPseudoLegalPawnDoublePush(Square from, Square to, Square enPassantSquare) {
 		assert enPassantSquare != null;
 		return fromPseudoLegalMove(from, to, null, enPassantSquare, null);
 	}
 
-	private State fromLegalMoveWithPromotion(Square from, Square to, Content promotion) {
+	private State fromPseudoLegalMoveWithPromotion(Square from, Square to, Content promotion) {
 		assert promotion != null;
 		return fromPseudoLegalMove(from, to, promotion, null, null);
 	}
@@ -396,8 +396,8 @@ public class State {
 		assert getContent(whiteKing) == Content.WHITE_KING : "Corrupted white king position";
 		assert getContent(blackKing) == Content.BLACK_KING : "Corrupted black king position";
 
-		for (Square f : Square.values()) {
-			pinnedPieces[f.ordinal()] = null;
+		for (Square sq : Square.values()) {
+			pinnedPieces[sq.ordinal()] = null;
 		}
 
 		initPinnedPieces(whiteKing, WHITE);
@@ -885,7 +885,7 @@ public class State {
 				to = Square.fromLegalInts(from.file, from.rank + pawnDoubleDisplacement);
 				if (isInitialSquareOfPawn(from) && getContent(to) == Content.EMPTY) {
 					if (outputMoves != null) {
-						outputMoves.add(fromLegalPawnFirstMove(from, to, Square.fromLegalInts(from.file, from.rank + pawnDisplacement)));
+						outputMoves.add(fromPseudoLegalPawnDoublePush(from, to, Square.fromLegalInts(from.file, from.rank + pawnDisplacement)));
 					} else {
 						movesCount++;
 					}
@@ -922,10 +922,10 @@ public class State {
 		if (outputMoves == null) {
 			return 4;
 		}
-		outputMoves.add(fromLegalMoveWithPromotion(from, to, test(WHITE_TURN) ? Content.WHITE_QUEEN : Content.BLACK_QUEEN));
-		outputMoves.add(fromLegalMoveWithPromotion(from, to, test(WHITE_TURN) ? Content.WHITE_ROOK : Content.BLACK_QUEEN));
-		outputMoves.add(fromLegalMoveWithPromotion(from, to, test(WHITE_TURN) ? Content.WHITE_BISHOP : Content.BLACK_QUEEN));
-		outputMoves.add(fromLegalMoveWithPromotion(from, to, test(WHITE_TURN) ? Content.WHITE_KNIGHT : Content.BLACK_QUEEN));
+		outputMoves.add(fromPseudoLegalMoveWithPromotion(from, to, test(WHITE_TURN) ? Content.WHITE_QUEEN : Content.BLACK_QUEEN));
+		outputMoves.add(fromPseudoLegalMoveWithPromotion(from, to, test(WHITE_TURN) ? Content.WHITE_ROOK : Content.BLACK_QUEEN));
+		outputMoves.add(fromPseudoLegalMoveWithPromotion(from, to, test(WHITE_TURN) ? Content.WHITE_BISHOP : Content.BLACK_QUEEN));
+		outputMoves.add(fromPseudoLegalMoveWithPromotion(from, to, test(WHITE_TURN) ? Content.WHITE_KNIGHT : Content.BLACK_QUEEN));
 		return 4;
 	}
 
