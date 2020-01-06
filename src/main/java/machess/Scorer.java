@@ -26,7 +26,7 @@ public class Scorer {
 	private static long totalNanosElapsed = 0;
 
 
-	public static MoveScore minMax(State rootState) {
+	public static MoveScore miniMax(State rootState) {
 		boolean maximizing = rootState.test(State.WHITE_TURN);
 		movesEvaluatedInPly = 0 ;
 		long before = System.nanoTime();
@@ -42,7 +42,7 @@ public class Scorer {
 			int depth = Config.SEARCH_DEPTH - 1;
 			depth -=  maximizing ? Config.WHITE_PLY_HANDICAP : Config.BLACK_PLY_HANDICAP;
 
-			int currScore = minMax(moves.get(i), depth);
+			int currScore = miniMax(moves.get(i), depth);
 			if (maximizing) {
 				if (currScore > resultScore) {
 					resultScore = currScore;
@@ -66,7 +66,7 @@ public class Scorer {
 		return bestMove;
 	}
 
-	private static int minMax(State state, int depth) {
+	private static int miniMax(State state, int depth) {
 		boolean maximizingTurn = state.test(State.WHITE_TURN);
 		if (depth <= 0) {
 			return evaluate(state);
@@ -77,7 +77,7 @@ public class Scorer {
 			return terminalNodeScore(state);
 		}
 		for (State move : moves) {
-			int currScore = discourageLaterWin(minMax(move, depth - 1));
+			int currScore = discourageLaterWin(miniMax(move, depth - 1));
 			if (maximizingTurn) {
 				if (currScore > resultScore) {
 					resultScore = currScore;
