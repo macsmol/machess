@@ -1,8 +1,22 @@
--move generation - introduce Move object,makeMove(), unmakeMove(). Keep State objects only for played plies + tree depth.
-    States in the tree need to be mutable (to save allocations)
+Release 1:
+
+-move generation -
+    -introduce Move object
+    -makeMove()
+    -unmakeMove()
+    -Keep State objects only for played plies + tree depth.
+    -States in the tree need to be mutable (to save allocations)
+
+-white at terminal node with SEARCH_DEPTH = 4; WHITE_PLY_HANDICAP = 1; BLACK_PLY_HANDICAP = 0
+evaluated 27166 moves to realize it lost?!?!?
+
+-check flags are only used for king
+
+-0x88 array
+
+-alpha-beta-pruning
 
 -oscillation when playing against itself
 
--move object - don't copy whole state
 
--0x88 array
+
