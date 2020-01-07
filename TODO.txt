@@ -10,7 +10,7 @@ Release 1:
 -white at terminal node with SEARCH_DEPTH = 4; WHITE_PLY_HANDICAP = 1; BLACK_PLY_HANDICAP = 0
 evaluated 27166 moves to realize it lost?!?!?
 
--check flags are only used for king
+-check flags are only used for king (initialize them only for fields adjacent to the king)
 
 -0x88 array
 
