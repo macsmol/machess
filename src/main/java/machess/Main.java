@@ -13,7 +13,7 @@ public class Main {
                 System.out.println("Game over: " + winMessage);
                 break;
             }
-            game = game.makeMove(bestMove.moveIndex);
+            game = game.chooseMove(bestMove.moveIndex);
             System.out.println(game);
         }
     }
