@@ -6,7 +6,12 @@ import static machess.State.*;
  * Used to make and unmake moves from given State.
  * MSB                             LSB
  * 87654321 87654321 87654321 87654321
- * ssssssss ssmm mRRR FFFrrrff flllllll
+ * ssssssss ssmmmRRR FFFrrrff flllllll
+ * ssssssss ss000RRR FFFrrrff flllllll - normal
+ * ssssssss ss001RRR FFFrrrff flllllll - castling
+ * ssssssss ss010RRR FFFrrrff flllllll - Double push
+ * ssssssss ss011RRR FFFrrrff flllllll - en passant take
+ * ssssssss ss100RRR FFFrrrff flllllll - promotion
  *
  * lllllll - game state flags before this move (encoded as in State.flags except shifted left)
  *
@@ -77,9 +82,8 @@ public class Move {
     public static final int FLAGS_BITCOUNT = 7;
     public static final int TAKEN_PIECE_BITCOUNT = 4;
     public static final int BITSHIFT_TO_SQUARE = 13;
-    public static final int BITSHIFT_TAKEN_PIECE = 22;
-    public static final int BITSHIFT_EN_PASSANT_SQUARE = 22;
-    public static final int BITSHIFT_ROOK_FROM_FILE = 22;
+    public static final int BITSHIFT_SPECIAL_BITS = 22;
+    public static final int BITSHIFT_MOVE_SELECTOR = 19;
 
     public static final int BITSHIFT_RANK_OR_FILE = 3;
 
@@ -88,7 +92,7 @@ public class Move {
      * Encodes normal move from 'from' and 'to' square. Set takenPiece to Content.EMPTY if nothing was taken.
      */
     public static int encodePseudoLegalMove(Square from, Square to, Content takenPiece, int flags) {
-        int move = takenPiece.asByte << (MODE_SELECTOR_BITCOUNT + BITSHIFT_RANK_OR_FILE);
+        int move = takenPiece.asByte << MODE_SELECTOR_BITCOUNT;
         return encodeCommonPartInMove(move, from, to, flags);
     }
 
@@ -96,20 +100,23 @@ public class Move {
         int rookFromFile = kingTo.file == File.C ? File.A : File.H;
         int rookToFile = kingTo.file == File.C ? File.D : File.F;
         int move = rookToFile << BITSHIFT_RANK_OR_FILE;
-        move = (move | rookFromFile) << BITSHIFT_RANK_OR_FILE;
+        move = (move | rookFromFile) << MODE_SELECTOR_BITCOUNT;
+        move = move | (CODE_CASTLING_MOVE >> BITSHIFT_MOVE_SELECTOR);
+
         return encodeCommonPartInMove(move, kingFrom, kingTo, flags);
     }
 
     public static int encodePseudoLegalDoublePush(Square from, Square to, Square epSquare, int flags) {
         int move = epSquare.rank << BITSHIFT_RANK_OR_FILE;
-        move = (move | epSquare.file) << BITSHIFT_RANK_OR_FILE;
+        move = (move | epSquare.file) << MODE_SELECTOR_BITCOUNT;
+        move = move | (CODE_DOUBLE_PUSH_MOVE >> BITSHIFT_MOVE_SELECTOR);
         return encodeCommonPartInMove(move, from, to, flags);
     }
 
     public static int encodePseudoLegalEnPassantMove(Square from, Square to, int flags) {
         byte pawnCode = (flags & WHITE_TURN) == 0 ? Content.WHITE_PAWN.asByte : Content.BLACK_PAWN.asByte;
         int move = pawnCode << MODE_SELECTOR_BITCOUNT;
-        move = (move | CODE_EN_PASSANT_MOVE) << BITSHIFT_RANK_OR_FILE;
+        move = move | (CODE_EN_PASSANT_MOVE >> BITSHIFT_MOVE_SELECTOR);
         return encodeCommonPartInMove(move, from, to, flags);
     }
 
@@ -136,11 +143,12 @@ public class Move {
         }
         move <<= TAKEN_PIECE_BITCOUNT;
         move = (move | takenPiece.asByte) << MODE_SELECTOR_BITCOUNT;
-        move = (move | CODE_PROMOTION_MOVE) << BITSHIFT_RANK_OR_FILE;
+        move = move | (CODE_PROMOTION_MOVE >> BITSHIFT_MOVE_SELECTOR);
         return encodeCommonPartInMove(move, from, to, flags);
     }
 
     private static int encodeCommonPartInMove(int move, Square from, Square to, int flags) {
+        move <<= BITSHIFT_RANK_OR_FILE;
         move = (move | to.rank) << BITSHIFT_RANK_OR_FILE;
         move = (move | to.file) << BITSHIFT_RANK_OR_FILE;
         move = (move | from.rank) << BITSHIFT_RANK_OR_FILE;
@@ -155,12 +163,12 @@ public class Move {
         return moveSelector;
     }
 
-    public static Square getRookFromSquare(int move) {
+    public static Square getRookCastlingFrom(int move) {
         assert (move & MASK_MOVE_SELECTOR) == CODE_CASTLING_MOVE
                 : "Trying to get rook from square from non castling move: " + Integer.toHexString(move);
 
         int rank = getRankFromSquare(getSquare(move, FLAGS_BITCOUNT));
-        int rookFromFile = (move >> BITSHIFT_ROOK_FROM_FILE) & MASK_FILE;
+        int rookFromFile = (move >> BITSHIFT_SPECIAL_BITS) & MASK_FILE;
         return Square.fromInts(rookFromFile, rank);
     }
 
@@ -189,7 +197,10 @@ public class Move {
         assert (move & MASK_MOVE_SELECTOR) == CODE_EN_PASSANT_MOVE || (move & MASK_MOVE_SELECTOR) != CODE_NORMAL_MOVE
                 || (move & MASK_MOVE_SELECTOR) != CODE_PROMOTION_MOVE
                 : "Trying to get taken piece from non taking move: " + Integer.toHexString(move);
-        return Content.fromShort((short)((move >> BITSHIFT_TAKEN_PIECE) & MASK_TAKEN_PIECE));
+        Content takenPiece = Content.fromShort((short)((move >> BITSHIFT_SPECIAL_BITS) & MASK_TAKEN_PIECE));
+        assert takenPiece != Content.WHITE_KING && takenPiece != Content.BLACK_KING
+                : "move took king: " + Utils.asHexWithTrailingZeros(move);
+        return takenPiece;
     }
 
     public static Square getFrom(int move) {
@@ -203,10 +214,41 @@ public class Move {
     }
 
     public static Square getEnPassantSquare(int move) {
-        assert (move & MASK_MOVE_SELECTOR) != CODE_DOUBLE_PUSH_MOVE
+        assert (move & MASK_MOVE_SELECTOR) == CODE_DOUBLE_PUSH_MOVE
                 : "En-passant square is initialized only double-push move: " + Integer.toHexString(move);
-        int sq = getSquare(move, BITSHIFT_EN_PASSANT_SQUARE);
+        int sq = getSquare(move, BITSHIFT_SPECIAL_BITS);
         return Square.fromLegalInts(getFileFromSquare(sq), getRankFromSquare(sq));
+    }
+
+    public static String toString(int move) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("from: ").append(Move.getFrom(move));
+        sb.append(";  to: ").append(Move.getTo(move)).append(";  ");
+        int moveSelector = move & MASK_MOVE_SELECTOR;
+        switch (moveSelector) {
+            case CODE_NORMAL_MOVE:
+                if (getTakenPiece(move) != Content.EMPTY) {
+                    sb.append("taken: ").append(getTakenPiece(move));
+                }
+                break;
+            case CODE_CASTLING_MOVE:
+                sb.append("castling rook from: ").append(getRookCastlingFrom(move));
+                break;
+            case CODE_DOUBLE_PUSH_MOVE:
+                sb.append("double pushed over: ").append(getEnPassantSquare(move));
+                break;
+            case CODE_EN_PASSANT_MOVE:
+                sb.append("taken ep: ").append(getTakenPiece(move));
+                break;
+            case CODE_PROMOTION_MOVE:
+                sb.append("taken piece: ").append(getTakenPiece(move));
+                sb.append(";  promote to: ").append(getPromotion(move));
+                break;
+            default:
+                assert false : "invalid move selector in " + Integer.toHexString(move);
+        }
+        sb.append("     ").append(Utils.flagsToString(move));
+        return sb.toString();
     }
 
     private static int getFileFromSquare(int square) {

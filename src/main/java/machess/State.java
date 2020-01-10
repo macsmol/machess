@@ -138,22 +138,23 @@ public class State {
 		pinnedPieces = new Pin[Square.values().length];
 		initPinnedPieces();
 	}
-
-	private State fromPseudoLegalPawnDoublePush(Square from, Square to, Square enPassantSquare) {
+	@Deprecated
+	State fromPseudoLegalPawnDoublePush(Square from, Square to, Square enPassantSquare) {
 		assert enPassantSquare != null;
 		return fromPseudoLegalMove(from, to, null, enPassantSquare, null);
 	}
 
+	@Deprecated
 	private State fromPseudoLegalMoveWithPromotion(Square from, Square to, Content promotion) {
 		assert promotion != null;
 		return fromPseudoLegalMove(from, to, promotion, null, null);
 	}
-
-	private State fromLegalQueensideCastling(Square kingFrom, Square kingTo) {
+	@Deprecated
+	private State fromPseudoLegalQueensideCastling(Square kingFrom, Square kingTo) {
 		Square rookToCastle = Square.fromLegalInts(File.A, kingFrom.rank);
 		return fromPseudoLegalMove(kingFrom, kingTo, null, null, rookToCastle);
 	}
-
+	@Deprecated
 	private State fromLegalKingsideCastling(Square kingFrom, Square kingTo) {
 		Square rookToCastle = Square.fromLegalInts(File.H, kingFrom.rank);
 		return fromPseudoLegalMove(kingFrom, kingTo, null, null, rookToCastle);
@@ -162,6 +163,7 @@ public class State {
 	/**
 	 * Generates new BoardState based on move. Typical move without special events.
 	 */
+	@Deprecated
 	State fromPseudoLegalMove(Square from, Square to) {
 		return fromPseudoLegalMove(from, to, null, null, null);
 	}
@@ -170,6 +172,7 @@ public class State {
 	 * Generates new BoardState based on move. It does not verify game rules - assumes input is a legal move.
 	 * This is the root method - it covers all cases. All 'overload' methods should call this one.
 	 */
+	@Deprecated
 	private State fromPseudoLegalMove(Square from, Square to, @Nullable Content promotion, @Nullable Square futureEnPassantSquare,
 									  @Nullable Square rookToCastle) {
 		assert from != to : from + "->" + to + " is no move";
@@ -270,13 +273,7 @@ public class State {
 
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		sb.append("Turn: ").append(test(WHITE_TURN) ? "WHITE" : "BLACK");
-		sb.append(test(WHITE_KING_MOVED) ? "; WHITE_KING_MOVED" : "");
-		sb.append(test(WHITE_QS_ROOK_MOVED) ? "; WHITE_QS_ROOK_MOVED" : "");
-		sb.append(test(WHITE_KS_ROOK_MOVED) ? "; WHITE_KS_ROOK_MOVED" : "");
-		sb.append(test(BLACK_KING_MOVED) ? "; BLACK_KING_MOVED" : "");
-		sb.append(test(BLACK_QS_ROOK_MOVED) ? "; BLACK_QS_ROOK_MOVED" : "");
-		sb.append(test(BLACK_KS_ROOK_MOVED) ? "; BLACK_KS_ROOK_MOVED" : "");
+		sb.append(Utils.flagsToString(flags));
 		sb.append("\n | a  | b  | c  | d  | e  | f  | g  | h  |");
 		sb.append(Config.DEBUG_FIELD_IN_CHECK_FLAGS	? "| a  | b  | c  | d  | e  | f  | g  | h  |" : "");
 		sb.append(Config.DEBUG_PINNED_PIECES 		? "| a  | b  | c  | d  | e  | f  | g  | h  |" : "");
@@ -683,9 +680,31 @@ public class State {
 
 //	change into public int[] generateLegalMoves() {}
 
+	/**
+	 * @return count of generated moves
+	 */
+	public int generateLegalMoves2() {
+		int [] moves = new int[Config.DEFAULT_MOVES_CAPACITY];
+
+
+		Square[] squaresWithPiecesTakingTurn = test(WHITE_TURN) ? squaresWithWhites : squaresWithBlacks;
+		int countOfPiecesTakingTurn = test(WHITE_TURN) ? whitesCount : blacksCount;
+		if (isKingInCheck()) {
+			// TODO
+		}
+		int movesCount = generatePseudoLegalMoves(moves, squaresWithPiecesTakingTurn, countOfPiecesTakingTurn);
+		System.out.println("Generated moves count: " + movesCount);
+
+		for (int i = 0; i < movesCount; i++) {
+			int move = moves[i];
+			System.out.println(Move.toString(move));
+		}
+		return movesCount;
+	}
+
 	@Deprecated
 	public List<State> generateLegalMoves() {
-		List<State> moves = new ArrayList<>(Config.DEFAULT_MOVES_LIST_CAPACITY);
+		List<State> moves = new ArrayList<>(60);
 
 		int countOfPiecesTakingTurn = test(WHITE_TURN) ? whitesCount : blacksCount;
 		Square[] squaresWithPiecesTakingTurn = test(WHITE_TURN) ? squaresWithWhites : squaresWithBlacks;
@@ -703,6 +722,43 @@ public class State {
 	boolean isKingInCheck() {
 		Square[] squaresWithPiecesTakingTurn = test(WHITE_TURN) ? squaresWithWhites : squaresWithBlacks;
 		return isSquareCheckedBy(squaresWithPiecesTakingTurn[0], !test(WHITE_TURN));
+	}
+
+	private int generatePseudoLegalMoves(int[] moves, Square[] squaresWithPiecesTakingTurn, int countOfPiecesTakingTurn) {
+		int movesCount = 0;
+		for (int i = 0; i < countOfPiecesTakingTurn; i++) {
+			Square currSquare = squaresWithPiecesTakingTurn[i];
+			Content piece = Content.fromShort(board[currSquare.ordinal()]);
+			switch (piece) {
+				case WHITE_PAWN:
+				case BLACK_PAWN:
+					movesCount = appendPseudoLegalPawnMoves(currSquare, moves, movesCount);
+					break;
+				case WHITE_KNIGHT:
+				case BLACK_KNIGHT:
+					movesCount = appendPseudoLegalKnightMoves(currSquare, moves, movesCount);
+					break;
+				case WHITE_BISHOP:
+				case BLACK_BISHOP:
+					movesCount = appendPseudoLegalBishopMoves(currSquare, moves, movesCount);
+					break;
+				case WHITE_ROOK:
+				case BLACK_ROOK:
+					movesCount = appendPseudoLegalRookMoves(currSquare, moves, movesCount);
+					break;
+				case WHITE_QUEEN:
+				case BLACK_QUEEN:
+					movesCount = appendPseudoLegalQueenMoves(currSquare, moves, movesCount);
+					break;
+				case WHITE_KING:
+				case BLACK_KING:
+					movesCount = appendPseudoLegalKingMoves(currSquare, moves, movesCount);
+					break;
+				default:
+					assert false : "Thing on:" + squaresWithPiecesTakingTurn[i] + " is unknown piece: " + piece;
+			}
+		}
+		return movesCount;
 	}
 
 	/**
@@ -745,6 +801,67 @@ public class State {
 					break;
 				default:
 					assert false : "Thing on:" + squaresWithPiecesTakingTurn[i] + " is unknown piece: " + piece;
+			}
+		}
+		return movesCount;
+	}
+
+	private int appendPseudoLegalKingMoves(Square from, int [] outputMoves, int movesCount) {
+		Square to = Square.fromInts(from.file, from.rank + 1);
+		boolean isWhiteTurn = test(WHITE_TURN);
+		if (to != null && !isSameColorPieceOn(to) && isSquareOkForKing(to, isWhiteTurn)) {
+			movesCount = appendMove(from, to, outputMoves, movesCount);
+		}
+		to = Square.fromInts(from.file + 1, from.rank + 1);
+		if (to != null && !isSameColorPieceOn(to) && isSquareOkForKing(to, isWhiteTurn)) {
+			movesCount = appendMove(from, to, outputMoves, movesCount);
+		}
+		to = Square.fromInts(from.file + 1, from.rank);
+		if (to != null && !isSameColorPieceOn(to) && isSquareOkForKing(to, isWhiteTurn)) {
+			movesCount = appendMove(from, to, outputMoves, movesCount);
+		}
+		to = Square.fromInts(from.file + 1, from.rank - 1);
+		if (to != null && !isSameColorPieceOn(to) && isSquareOkForKing(to, isWhiteTurn)) {
+			movesCount = appendMove(from, to, outputMoves, movesCount);
+		}
+		to = Square.fromInts(from.file, from.rank - 1);
+		if (to != null && !isSameColorPieceOn(to) && isSquareOkForKing(to, isWhiteTurn)) {
+			movesCount = appendMove(from, to, outputMoves, movesCount);
+		}
+		to = Square.fromInts(from.file - 1, from.rank - 1);
+		if (to != null && !isSameColorPieceOn(to) && isSquareOkForKing(to, isWhiteTurn)) {
+			movesCount = appendMove(from, to, outputMoves, movesCount);
+		}
+		to = Square.fromInts(from.file - 1, from.rank);
+		if (to != null && !isSameColorPieceOn(to) && isSquareOkForKing(to, isWhiteTurn)) {
+			movesCount = appendMove(from, to, outputMoves, movesCount);
+		}
+		to = Square.fromInts(from.file - 1, from.rank + 1);
+		if (to != null && !isSameColorPieceOn(to) && isSquareOkForKing(to, isWhiteTurn)) {
+			movesCount = appendMove(from, to, outputMoves, movesCount);
+		}
+		int kingMovedBitflag = isWhiteTurn ? WHITE_KING_MOVED : BLACK_KING_MOVED;
+
+		if (!test(kingMovedBitflag) && !isSquareCheckedBy(from, !isWhiteTurn)) {
+			Content rook = isWhiteTurn ? Content.WHITE_ROOK : Content.BLACK_ROOK;
+			int qsRookMovedBitflag = isWhiteTurn ? WHITE_QS_ROOK_MOVED : BLACK_QS_ROOK_MOVED;
+			int ksRookMovedBitflag = isWhiteTurn ? WHITE_KS_ROOK_MOVED : BLACK_KS_ROOK_MOVED;
+			Square kingQsTo = isWhiteTurn ? Square.C1 : Square.C8;
+			Square kingKsTo = isWhiteTurn ? Square.G1 : Square.G8;
+			Square qsRook = isWhiteTurn ? Square.A1 : Square.A8;
+			Square ksRook = isWhiteTurn ? Square.H1 : Square.H8;
+
+			if (squaresOkForQsCastling(isWhiteTurn) && getContent(qsRook) == rook && !test(qsRookMovedBitflag)) {
+				if (outputMoves != null) {
+					outputMoves[movesCount] = Move.encodePseudoLegalCastling(from, kingQsTo, flags);
+				}
+				movesCount++;
+			}
+			if (squaresOkForKsCastling(isWhiteTurn) && getContent(ksRook) == rook && !test(ksRookMovedBitflag)) {
+				if (outputMoves != null) {
+					outputMoves[movesCount] = Move.encodePseudoLegalCastling(from, kingKsTo, flags);
+				}
+				movesCount++;
 			}
 		}
 		return movesCount;
@@ -799,7 +916,7 @@ public class State {
 
 			if (squaresOkForQsCastling(isWhiteTurn) && getContent(qsRook) == rook && !test(qsRookMovedBitflag)) {
 				if (outputMoves != null) {
-					outputMoves.add(fromLegalQueensideCastling(from, kingQsTo));
+					outputMoves.add(fromPseudoLegalQueensideCastling(from, kingQsTo));
 				} else {
 					movesCount++;
 				}
@@ -835,11 +952,25 @@ public class State {
 		return true;
 	}
 
+	private int appendPseudoLegalQueenMoves(Square from, int [] moves, int movesCount) {
+		movesCount = appendPseudoLegalRookMoves(from, moves, movesCount);
+		movesCount = appendPseudoLegalBishopMoves(from, moves, movesCount);
+		return movesCount;
+	}
+
 	@Deprecated
 	private int generatePseudoLegalQueenMoves(Square from, List<State> outputMoves) {
 		int movesCount = 0;
 		movesCount += generatePseudoLegalRookMoves(from, outputMoves);
 		movesCount += generatePseudoLegalBishopMoves(from, outputMoves);
+		return movesCount;
+	}
+
+	private int appendPseudoLegalRookMoves(Square from, int [] moves, int movesCount) {
+		movesCount = appendSlidingPieceMoves(from, 1, 0, moves, movesCount);
+		movesCount = appendSlidingPieceMoves(from, -1, 0, moves, movesCount);
+		movesCount = appendSlidingPieceMoves(from, 0, 1, moves, movesCount);
+		movesCount = appendSlidingPieceMoves(from, 0, -1, moves, movesCount);
 		return movesCount;
 	}
 
@@ -853,6 +984,14 @@ public class State {
 		return movesCount;
 	}
 
+	private int appendPseudoLegalBishopMoves(Square from, int [] moves, int movesCount) {
+		movesCount = appendSlidingPieceMoves(from, 1, 1, moves, movesCount);
+		movesCount = appendSlidingPieceMoves(from, 1, -1, moves, movesCount);
+		movesCount = appendSlidingPieceMoves(from, -1, 1, moves, movesCount);
+		movesCount = appendSlidingPieceMoves(from, -1, -1, moves, movesCount);
+		return movesCount;
+	}
+
 	@Deprecated
 	private int generatePseudoLegalBishopMoves(Square from, List<State> outputMoves) {
 		int movesCount = 0;
@@ -860,6 +999,23 @@ public class State {
 		movesCount += generateSlidingPieceMoves(from, 1, -1, outputMoves);
 		movesCount += generateSlidingPieceMoves(from, -1, 1, outputMoves);
 		movesCount += generateSlidingPieceMoves(from, -1, -1, outputMoves);
+		return movesCount;
+	}
+
+	private int appendSlidingPieceMoves(Square from, int deltaFile, int deltaRank,
+										int [] moves, int movesCount) {
+		if (pieceIsFreeToMove(from, Pin.fromDeltas(deltaFile, deltaRank))) {
+			for (int i = 1; true; i++) {
+				Square to = Square.fromInts(from.file + deltaFile * i, from.rank + i * deltaRank);
+				if (to == null || isSameColorPieceOn(to)) {
+					break;
+				}
+				movesCount = appendMove(from, to, moves, movesCount);
+				if (isOppositeColorPieceOn(to)) {
+					break;
+				}
+			}
+		}
 		return movesCount;
 	}
 
@@ -876,6 +1032,70 @@ public class State {
 				if (isOppositeColorPieceOn(to)) {
 					break;
 				}
+			}
+		}
+		return movesCount;
+	}
+
+	/**
+	 * @param from - pawn location
+	 * @param moves - output moves list to which pawn moves are appended to
+	 * @return - count of output moves after generating pawn moves.
+	 */
+	/*private*/ int appendPseudoLegalPawnMoves(Square from, int[] moves, int movesCount) {
+		int pawnDisplacement = test(WHITE_TURN) ? 1 : -1;
+		int pawnDoubleDisplacement = test(WHITE_TURN) ? 2 : -2;
+		Square to = Square.fromLegalInts(from.file, from.rank + pawnDisplacement);
+
+		// push
+		if (getContent(to) == Content.EMPTY && pieceIsFreeToMove(from, Pin.FILE)) {
+			if (isPromotingSquare(to)) {
+				movesCount = appendPromotionMoves(from, to, moves, movesCount);
+			} else {
+				movesCount = appendMove(from, to, moves, movesCount);
+				to = Square.fromLegalInts(from.file, from.rank + pawnDoubleDisplacement);
+				if (isInitialSquareOfPawn(from) && getContent(to) == Content.EMPTY) {
+					if (moves != null) {
+						moves[movesCount] = Move.encodePseudoLegalDoublePush(from, to, Square.fromLegalInts(from.file, from.rank + pawnDisplacement), flags);
+					}
+					movesCount++;
+				}
+			}
+		}
+		// queen-side take
+		int deltaFile = -1;
+		to = Square.fromInts(from.file + deltaFile, from.rank + pawnDisplacement);
+
+		if (to != null && pieceIsFreeToMove(from, Pin.fromDeltas(deltaFile, pawnDisplacement))) {
+			if (isOppositeColorPieceOn(to)) {
+				if (isPromotingSquare(to)) {
+					movesCount = appendPromotionMoves(from, to, moves, movesCount);
+				} else {
+					movesCount = appendMove(from, to, moves, movesCount);
+				}
+			} else if (to == enPassantSquare) {
+				if (moves != null) {
+					moves[movesCount] = Move.encodePseudoLegalEnPassantMove(from, to, flags);
+				}
+				movesCount++;
+			}
+		}
+
+		// king-side take
+		deltaFile = 1;
+		to = Square.fromInts(from.file + deltaFile, from.rank + pawnDisplacement);
+		if (to != null && pieceIsFreeToMove(from, Pin.fromDeltas(deltaFile, pawnDisplacement))) {
+			if (isOppositeColorPieceOn(to)) {
+				if (isPromotingSquare(to)) {
+					movesCount = appendPromotionMoves(from, to, moves, movesCount);
+				} else {
+					movesCount = appendMove(from, to, moves, movesCount);
+				}
+			} else if (to == enPassantSquare) {
+				if (moves != null) {
+					moves[movesCount] = Move.encodePseudoLegalEnPassantMove(from, to, flags);
+				}
+				movesCount++;
 			}
 		}
 		return movesCount;
@@ -929,6 +1149,18 @@ public class State {
 		return movesCount;
 	}
 
+	private int appendPromotionMoves(Square from, Square to, int[] outputMoves, int movesCount) {
+		if (outputMoves != null) {
+			outputMoves[movesCount++] = Move.encodePseudoLegalPromotion(from, to, getContent(to), Content.WHITE_KNIGHT, flags);
+			outputMoves[movesCount++] = Move.encodePseudoLegalPromotion(from, to, getContent(to), Content.WHITE_BISHOP, flags);
+			outputMoves[movesCount++] = Move.encodePseudoLegalPromotion(from, to, getContent(to), Content.WHITE_ROOK, flags);
+			outputMoves[movesCount++] = Move.encodePseudoLegalPromotion(from, to, getContent(to), Content.WHITE_QUEEN, flags);
+			return movesCount;
+		} else {
+			return movesCount + 4;
+		}
+	}
+
 	@Deprecated
 	private int generatePromotionMoves(Square from, Square to, List<State> outputMoves) {
 		if (outputMoves == null) {
@@ -939,6 +1171,45 @@ public class State {
 		outputMoves.add(fromPseudoLegalMoveWithPromotion(from, to, test(WHITE_TURN) ? Content.WHITE_BISHOP : Content.BLACK_QUEEN));
 		outputMoves.add(fromPseudoLegalMoveWithPromotion(from, to, test(WHITE_TURN) ? Content.WHITE_KNIGHT : Content.BLACK_QUEEN));
 		return 4;
+	}
+
+	private int appendPseudoLegalKnightMoves(Square from, int [] moves, int movesCount) {
+		if (!pieceIsFreeToMove(from, null)) {
+			return movesCount;
+		}
+		Square to = Square.fromInts(from.file + 1, from.rank + 2);
+		if (to != null && !isSameColorPieceOn(to)) {
+			movesCount = appendMove(from, to, moves, movesCount);
+		}
+		to = Square.fromInts(from.file + 1, from.rank - 2);
+		if (to != null && !isSameColorPieceOn(to)) {
+			movesCount = appendMove(from, to, moves, movesCount);
+		}
+		to = Square.fromInts(from.file - 1, from.rank + 2);
+		if (to != null && !isSameColorPieceOn(to)) {
+			movesCount = appendMove(from, to, moves, movesCount);
+		}
+		to = Square.fromInts(from.file - 1, from.rank - 2);
+		if (to != null && !isSameColorPieceOn(to)) {
+			movesCount = appendMove(from, to, moves, movesCount);
+		}
+		to = Square.fromInts(from.file + 2, from.rank + 1);
+		if (to != null && !isSameColorPieceOn(to)) {
+			movesCount = appendMove(from, to, moves, movesCount);
+		}
+		to = Square.fromInts(from.file + 2, from.rank - 1);
+		if (to != null && !isSameColorPieceOn(to)) {
+			movesCount = appendMove(from, to, moves, movesCount);
+		}
+		to = Square.fromInts(from.file - 2, from.rank + 1);
+		if (to != null && !isSameColorPieceOn(to)) {
+			movesCount = appendMove(from, to, moves, movesCount);
+		}
+		to = Square.fromInts(from.file - 2, from.rank - 1);
+		if (to != null && !isSameColorPieceOn(to)) {
+			movesCount = appendMove(from, to, moves, movesCount);
+		}
+		return movesCount;
 	}
 
 	@Deprecated
@@ -982,6 +1253,15 @@ public class State {
 		return movesCount;
 	}
 
+	private int appendMove(Square from, Square to, int[] outputMoves, int movesCount) {
+		if (outputMoves != null) {
+			outputMoves[movesCount++] = Move.encodePseudoLegalMove(from, to, getContent(to), flags);
+			return movesCount;
+		}
+		return movesCount + 1;
+	}
+
+	@Deprecated
 	private int createOrCountMove(Square from, Square to, List<State> outputMoves, int movesCount) {
 		if (outputMoves != null) {
 			outputMoves.add(fromPseudoLegalMove(from, to));
@@ -1004,7 +1284,7 @@ public class State {
 												   int countOfPiecesTakingTurn, Square[] squaresWithPiecesTakingTurn) {
 		int movesCount = 0;
 		if (getChecksCount(checkedKing, !test(WHITE_TURN)) < 2) {
-			List<State> pseudoLegalMoves = new ArrayList<>(Config.DEFAULT_MOVES_LIST_CAPACITY);
+			List<State> pseudoLegalMoves = new ArrayList<>(Config.DEFAULT_MOVES_CAPACITY);
 			generatePseudoLegalMoves(pseudoLegalMoves, countOfPiecesTakingTurn, squaresWithPiecesTakingTurn);
 			for (State pseudoLegalState : pseudoLegalMoves) {
 				if (pseudoLegalState.isLegal()) {
