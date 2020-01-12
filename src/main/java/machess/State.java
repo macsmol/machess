@@ -267,6 +267,39 @@ public class State {
 	}
 
 	/**
+	 * Revert input move in this State
+	 * @param move
+	 */
+	void unmakePseudoLegalMove(int move) {
+		plyNumber--;
+		flags = (byte)(move & MASK_FLAGS);
+		enPassantSquare = Move.getEnPassantUnmake(move);
+
+		Square from = Move.getFrom(move);
+		Square to = Move.getTo(move);
+		assert from != to : from + "->" + to + " is no move";
+
+		switch (Move.getMoveSelector(move)) {
+			case CODE_NORMAL_MOVE:
+				Content movedPiece = getContent(to);
+				board[to.ordinal()] = getTakenPiece(move).asByte;
+				board[from.ordinal()] = movedPiece.asByte;
+				break;
+			case CODE_CASTLING_MOVE:
+				break;
+			case CODE_DOUBLE_PUSH_MOVE:
+				break;
+			case CODE_EN_PASSANT_MOVE:
+				break;
+			case CODE_PROMOTION_MOVE:
+				break;
+			default:
+				assert false : "invalid move selector in " + Integer.toHexString(move);
+		}
+		movePieceOnPiecesLists(to, from);
+	}
+
+	/**
 	 * Generates new BoardState based on move. It does not verify game rules - assumes input is a legal move.
 	 * This is the root method - it covers all cases. All 'overload' methods should call this one.
 	 */
@@ -963,13 +996,13 @@ public class State {
 
 			if (squaresOkForQsCastling(isWhiteTurn) && getContent(qsRook) == rook && !test(qsRookMovedBitflag)) {
 				if (outputMoves != null) {
-					outputMoves[movesCount] = Move.encodePseudoLegalCastling(from, kingQsTo, flags);
+					outputMoves[movesCount] = Move.encodePseudoLegalCastling(from, kingQsTo, flags, enPassantSquare);
 				}
 				movesCount++;
 			}
 			if (squaresOkForKsCastling(isWhiteTurn) && getContent(ksRook) == rook && !test(ksRookMovedBitflag)) {
 				if (outputMoves != null) {
-					outputMoves[movesCount] = Move.encodePseudoLegalCastling(from, kingKsTo, flags);
+					outputMoves[movesCount] = Move.encodePseudoLegalCastling(from, kingKsTo, flags, enPassantSquare);
 				}
 				movesCount++;
 			}
@@ -1166,7 +1199,8 @@ public class State {
 				to = Square.fromLegalInts(from.file, from.rank + pawnDoubleDisplacement);
 				if (isInitialSquareOfPawn(from) && getContent(to) == Content.EMPTY) {
 					if (moves != null) {
-						moves[movesCount] = Move.encodePseudoLegalDoublePush(from, to, Square.fromLegalInts(from.file, from.rank + pawnDisplacement), flags);
+						moves[movesCount] = Move.encodePseudoLegalDoublePush(from, to,
+								Square.fromLegalInts(from.file, from.rank + pawnDisplacement), flags, enPassantSquare);
 					}
 					movesCount++;
 				}
@@ -1185,7 +1219,7 @@ public class State {
 				}
 			} else if (to == enPassantSquare) {
 				if (moves != null) {
-					moves[movesCount] = Move.encodePseudoLegalEnPassantMove(from, to, flags);
+					moves[movesCount] = Move.encodePseudoLegalEnPassantMove(from, to, flags, enPassantSquare);
 				}
 				movesCount++;
 			}
@@ -1203,7 +1237,7 @@ public class State {
 				}
 			} else if (to == enPassantSquare) {
 				if (moves != null) {
-					moves[movesCount] = Move.encodePseudoLegalEnPassantMove(from, to, flags);
+					moves[movesCount] = Move.encodePseudoLegalEnPassantMove(from, to, flags, enPassantSquare);
 				}
 				movesCount++;
 			}
@@ -1261,10 +1295,10 @@ public class State {
 
 	private int appendPromotionMoves(Square from, Square to, int[] outputMoves, int movesCount) {
 		if (outputMoves != null) {
-			outputMoves[movesCount++] = Move.encodePseudoLegalPromotion(from, to, getContent(to), Content.WHITE_KNIGHT, flags);
-			outputMoves[movesCount++] = Move.encodePseudoLegalPromotion(from, to, getContent(to), Content.WHITE_BISHOP, flags);
-			outputMoves[movesCount++] = Move.encodePseudoLegalPromotion(from, to, getContent(to), Content.WHITE_ROOK, flags);
-			outputMoves[movesCount++] = Move.encodePseudoLegalPromotion(from, to, getContent(to), Content.WHITE_QUEEN, flags);
+			outputMoves[movesCount++] = Move.encodePseudoLegalPromotion(from, to, getContent(to), Content.WHITE_KNIGHT, flags, enPassantSquare);
+			outputMoves[movesCount++] = Move.encodePseudoLegalPromotion(from, to, getContent(to), Content.WHITE_BISHOP, flags, enPassantSquare);
+			outputMoves[movesCount++] = Move.encodePseudoLegalPromotion(from, to, getContent(to), Content.WHITE_ROOK, flags, enPassantSquare);
+			outputMoves[movesCount++] = Move.encodePseudoLegalPromotion(from, to, getContent(to), Content.WHITE_QUEEN, flags, enPassantSquare);
 			return movesCount;
 		} else {
 			return movesCount + 4;
@@ -1365,7 +1399,7 @@ public class State {
 
 	private int appendMove(Square from, Square to, int[] outputMoves, int movesCount) {
 		if (outputMoves != null) {
-			outputMoves[movesCount++] = Move.encodePseudoLegalMove(from, to, getContent(to), flags);
+			outputMoves[movesCount++] = Move.encodePseudoLegalMove(from, to, getContent(to), flags, enPassantSquare);
 			return movesCount;
 		}
 		return movesCount + 1;

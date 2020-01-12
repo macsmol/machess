@@ -6,12 +6,12 @@ import static machess.State.*;
  * Used to make and unmake moves from given State.
  * MSB                             LSB
  * 87654321 87654321 87654321 87654321
- * ssssssss ssmmmRRR FFFrrrff flllllll
- * ssssssss ss000RRR FFFrrrff flllllll - normal
- * ssssssss ss001RRR FFFrrrff flllllll - castling
- * ssssssss ss010RRR FFFrrrff flllllll - Double push
- * ssssssss ss011RRR FFFrrrff flllllll - en passant take
- * ssssssss ss100RRR FFFrrrff flllllll - promotion
+ * Uuuussss ssmmmRRR FFFrrrff flllllll
+ * Uuuussss ss000RRR FFFrrrff flllllll - normal
+ * Uuuussss ss001RRR FFFrrrff flllllll - castling
+ * Uuuussss ss010RRR FFFrrrff flllllll - Double push
+ * Uuuussss ss011RRR FFFrrrff flllllll - en passant take
+ * Uuuussss ss100RRR FFFrrrff flllllll - promotion
  *
  * lllllll - game state flags before this move (encoded as in State.flags except shifted left)
  *
@@ -48,7 +48,10 @@ import static machess.State.*;
  *              10 - rook
  *              11 - queen
  *
- * ssssssss ss - special bits with meaning dependent on the mmm selector
+ * ssss ss - special bits with meaning dependent on the mmm selector
+ *
+ * uuu - en-passant unmake file - If U is set contains file where the pawn vulnerable to ep was before taking this move.
+ * U - en-passant unmake flag - if set means that before making this move there is a pawn vulnerable to ep at file uuu
  */
 public class Move {
     private Move(){}
@@ -64,6 +67,7 @@ public class Move {
     public static final int MASK_FILE = 0x07;
     public static final int MASK_TAKEN_PIECE = 0x0F;
     public static final int MASK_MOVE_SELECTOR = 0x0038_0000;
+    public static final int MASK_EN_PASSANT_UNMAKE = 0x8000_0000;
 
     public static final int CODE_NORMAL_MOVE        = 0x0000_0000;
     public static final int CODE_CASTLING_MOVE      = 0x0008_0000;
@@ -84,6 +88,7 @@ public class Move {
     public static final int BITSHIFT_TO_SQUARE = 13;
     public static final int BITSHIFT_SPECIAL_BITS = 22;
     public static final int BITSHIFT_MOVE_SELECTOR = 19;
+    public static final int BITSHIFT_EN_PASSANT_UNMAKE = 28;
 
     public static final int BITSHIFT_RANK_OR_FILE = 3;
 
@@ -91,37 +96,37 @@ public class Move {
      * Trusts the parameters that this move is pseudo-legal
      * Encodes normal move from 'from' and 'to' square. Set takenPiece to Content.EMPTY if nothing was taken.
      */
-    public static int encodePseudoLegalMove(Square from, Square to, Content takenPiece, int flags) {
+    public static int encodePseudoLegalMove(Square from, Square to, Content takenPiece, int flags, Square enPassantUnmake) {
         int move = takenPiece.asByte << MODE_SELECTOR_BITCOUNT;
-        return encodeCommonPartInMove(move, from, to, flags);
+        return encodeCommonPartInMove(move, from, to, flags, enPassantUnmake);
     }
 
-    public static int encodePseudoLegalCastling(Square kingFrom, Square kingTo, int flags) {
+    public static int encodePseudoLegalCastling(Square kingFrom, Square kingTo, int flags, Square enPassantUnmake) {
         int rookFromFile = kingTo.file == File.C ? File.A : File.H;
         int rookToFile = kingTo.file == File.C ? File.D : File.F;
         int move = rookToFile << BITSHIFT_RANK_OR_FILE;
         move = (move | rookFromFile) << MODE_SELECTOR_BITCOUNT;
         move = move | (CODE_CASTLING_MOVE >> BITSHIFT_MOVE_SELECTOR);
 
-        return encodeCommonPartInMove(move, kingFrom, kingTo, flags);
+        return encodeCommonPartInMove(move, kingFrom, kingTo, flags, enPassantUnmake);
     }
 
-    public static int encodePseudoLegalDoublePush(Square from, Square to, Square epSquare, int flags) {
+    public static int encodePseudoLegalDoublePush(Square from, Square to, Square epSquare, int flags, Square enPassantUnmake) {
         int move = epSquare.rank << BITSHIFT_RANK_OR_FILE;
         move = (move | epSquare.file) << MODE_SELECTOR_BITCOUNT;
         move = move | (CODE_DOUBLE_PUSH_MOVE >> BITSHIFT_MOVE_SELECTOR);
-        return encodeCommonPartInMove(move, from, to, flags);
+        return encodeCommonPartInMove(move, from, to, flags, enPassantUnmake);
     }
 
-    public static int encodePseudoLegalEnPassantMove(Square from, Square to, int flags) {
+    public static int encodePseudoLegalEnPassantMove(Square from, Square to, int flags, Square enPassantUnmake) {
         byte pawnCode = (flags & WHITE_TURN) == 0 ? Content.WHITE_PAWN.asByte : Content.BLACK_PAWN.asByte;
         int move = pawnCode << MODE_SELECTOR_BITCOUNT;
         move = move | (CODE_EN_PASSANT_MOVE >> BITSHIFT_MOVE_SELECTOR);
-        return encodeCommonPartInMove(move, from, to, flags);
+        return encodeCommonPartInMove(move, from, to, flags, enPassantUnmake);
     }
 
     public static int encodePseudoLegalPromotion(Square from, Square to, Content takenPiece,
-                                                 Content promoteTo, int flags) {
+                                                 Content promoteTo, int flags, Square enPassantUnmake) {
         int move;
         switch (promoteTo) {
             case WHITE_KNIGHT:
@@ -144,16 +149,20 @@ public class Move {
         move <<= TAKEN_PIECE_BITCOUNT;
         move = (move | takenPiece.asByte) << MODE_SELECTOR_BITCOUNT;
         move = move | (CODE_PROMOTION_MOVE >> BITSHIFT_MOVE_SELECTOR);
-        return encodeCommonPartInMove(move, from, to, flags);
+        return encodeCommonPartInMove(move, from, to, flags, enPassantUnmake);
     }
 
-    private static int encodeCommonPartInMove(int move, Square from, Square to, int flags) {
+    private static int encodeCommonPartInMove(int move, Square from, Square to, int flags, Square enPassantUnmake) {
         move <<= BITSHIFT_RANK_OR_FILE;
         move = (move | to.rank) << BITSHIFT_RANK_OR_FILE;
         move = (move | to.file) << BITSHIFT_RANK_OR_FILE;
         move = (move | from.rank) << BITSHIFT_RANK_OR_FILE;
         move = (move | from.file) << FLAGS_BITCOUNT;
         move = move | flags;
+        if (enPassantUnmake != null) {
+            int uuuBits = enPassantUnmake.file << BITSHIFT_EN_PASSANT_UNMAKE;
+            move = move | uuuBits | MASK_EN_PASSANT_UNMAKE;
+        }
         return move;
     }
 
@@ -220,6 +229,15 @@ public class Move {
         return Square.fromLegalInts(getFileFromSquare(sq), getRankFromSquare(sq));
     }
 
+    public static Square getEnPassantUnmake(int move) {
+        if ((move & MASK_EN_PASSANT_UNMAKE) == 0) {
+            return null;
+        }
+        int file = (move >> BITSHIFT_EN_PASSANT_UNMAKE) & MASK_FILE;
+        boolean whiteTurn = (move & WHITE_TURN) != 0;
+        return Square.fromLegalInts(file, whiteTurn ? Rank._6 : Rank._3);
+    }
+
     public static String toString(int move) {
         StringBuilder sb = new StringBuilder();
         sb.append("from: ").append(Move.getFrom(move));
@@ -247,7 +265,11 @@ public class Move {
             default:
                 assert false : "invalid move selector in " + Integer.toHexString(move);
         }
+        Square epUnmake = getEnPassantUnmake(move);
         sb.append("     ").append(Utils.flagsToString(move));
+        if (epUnmake != null) {
+            sb.append("; enPassant unmake: " + epUnmake);
+        }
         return sb.toString();
     }
 

@@ -6,9 +6,10 @@ public class Main {
         State game = new State();
 
         game = game
-                .fromPseudoLegalMove(Square.A1, Square.E3)
-//                .fromPseudoLegalPawnDoublePush(Square.E2, Square.E4, Square.E3)
-//                .fromPseudoLegalMove(Square.E7, Square.E6)
+                .fromPseudoLegalPawnDoublePush(Square.E2, Square.E4, Square.E3)
+                .fromPseudoLegalPawnDoublePush(Square.E7, Square.E5, Square.E6)
+                .fromPseudoLegalMove(Square.A2, Square.A3)
+//                .fromPseudoLegalMove(Square.A1, Square.E3)
 //                .fromPseudoLegalMove(Square.E1, Square.E3)
 
         ;
