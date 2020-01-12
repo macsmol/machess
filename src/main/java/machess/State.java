@@ -248,12 +248,12 @@ public class State {
 	}
 
 	private void takePieceOnPieceList(Square killedOn) {
-		Square[] takenPieces = test(WHITE_TURN) ? squaresWithBlacks : squaresWithWhites;
-		byte takenPiecesCount = test(WHITE_TURN) ? blacksCount : whitesCount;
+		Square[] vulnerablePieces = test(WHITE_TURN) ? squaresWithBlacks : squaresWithWhites;
+		byte vulnerablePiecesCount = test(WHITE_TURN) ? blacksCount : whitesCount;
 
-		for (int i = 0; i < takenPiecesCount; i++) {
-			if (takenPieces[i] == killedOn) {
-				takenPieces[i] = takenPieces[takenPiecesCount-1];
+		for (int i = 0; i < vulnerablePiecesCount; i++) {
+			if (vulnerablePieces[i] == killedOn) {
+				vulnerablePieces[i] = vulnerablePieces[vulnerablePiecesCount-1];
 				if (test(WHITE_TURN)) {
 					blacksCount--;
 				} else {
@@ -263,7 +263,7 @@ public class State {
 			}
 		}
 		assert false : "There was nothing isWhite="+test(WHITE_TURN) + " could take on piece list "
-				+ takenPieces + "; size: " + takenPiecesCount;
+				+ vulnerablePieces + "; size: " + vulnerablePiecesCount;
 	}
 
 	/**
@@ -279,24 +279,64 @@ public class State {
 		Square to = Move.getTo(move);
 		assert from != to : from + "->" + to + " is no move";
 
+		movePieceOnPiecesLists(to, from);
 		switch (Move.getMoveSelector(move)) {
 			case CODE_NORMAL_MOVE:
 				Content movedPiece = getContent(to);
-				board[to.ordinal()] = getTakenPiece(move).asByte;
+				Content takenPiece = Move.getTakenPiece(move);
+				board[to.ordinal()] = takenPiece.asByte;
+				if (takenPiece != Content.EMPTY) {
+					untakePieceOnPieceList(to);
+				}
 				board[from.ordinal()] = movedPiece.asByte;
 				break;
 			case CODE_CASTLING_MOVE:
+				movedPiece = getContent(to);
+				board[to.ordinal()] = Content.EMPTY.asByte;
+				board[from.ordinal()] = movedPiece.asByte;
+
+				Square rookFrom = Move.getRookCastlingFrom(move);
+				Square rookTo = Square.fromLegalInts(rookFrom.file == File.A ? File.D : File.F, rookFrom.rank);
+				Content movedRook = getContent(rookTo);
+				board[rookTo.ordinal()] = Content.EMPTY.asByte;
+				board[rookFrom.ordinal()] = movedRook.asByte;
+				movePieceOnPiecesLists(rookTo, rookFrom);
 				break;
 			case CODE_DOUBLE_PUSH_MOVE:
+				movedPiece = getContent(to);
+				board[to.ordinal()] = Content.EMPTY.asByte;
+				board[from.ordinal()] = movedPiece.asByte;
 				break;
 			case CODE_EN_PASSANT_MOVE:
+				movedPiece = getContent(to);
+				board[to.ordinal()] = Content.EMPTY.asByte;
+				board[from.ordinal()] = movedPiece.asByte;
+
+				Square killedPawnSquare = Square.fromLegalInts(to.file, test(WHITE_TURN) ? to.rank - 1 : to.rank + 1);
+				board[killedPawnSquare.ordinal()] = Move.getTakenPiece(move).asByte;
+				untakePieceOnPieceList(killedPawnSquare);
+
 				break;
 			case CODE_PROMOTION_MOVE:
+				takenPiece = Move.getTakenPiece(move);
+				board[to.ordinal()] = takenPiece.asByte;
+				if (takenPiece != Content.EMPTY) {
+					untakePieceOnPieceList(to);
+				}
+				board[from.ordinal()] = test(WHITE_TURN) ? Content.WHITE_PAWN.asByte : Content.BLACK_PAWN.asByte;
 				break;
 			default:
 				assert false : "invalid move selector in " + Integer.toHexString(move);
 		}
-		movePieceOnPiecesLists(to, from);
+		initPinnedPieces();
+		resetSquaresInCheck();
+		initSquaresInCheck();
+	}
+
+	private void untakePieceOnPieceList(Square killedOn) {
+		Square[] vulnerablePieces = test(WHITE_TURN) ? squaresWithBlacks : squaresWithWhites;
+		byte vulnerablePiecesCount = test(WHITE_TURN) ? blacksCount++ : whitesCount++;
+		vulnerablePieces[vulnerablePiecesCount] = killedOn;
 	}
 
 	/**

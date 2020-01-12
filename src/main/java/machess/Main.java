@@ -6,20 +6,19 @@ public class Main {
         State game = new State();
 
         game = game
-                .fromPseudoLegalPawnDoublePush(Square.E2, Square.E4, Square.E3)
-                .fromPseudoLegalPawnDoublePush(Square.E7, Square.E5, Square.E6)
-                .fromPseudoLegalMove(Square.A2, Square.A3)
-//                .fromPseudoLegalMove(Square.A1, Square.E3)
-//                .fromPseudoLegalMove(Square.E1, Square.E3)
+                .fromPseudoLegalMove(Square.C1, Square.C3)
+                .fromPseudoLegalMove(Square.C7, Square.C2)
 
+                .fromPseudoLegalPawnDoublePush(Square.E2, Square.E4, Square.E3)
         ;
         System.out.println("new game \n" + game);
-
-
         game.generateLegalMoves2(moves);
-game.makePseudoLegalMove(moves[4]);
-
+        int moveIdx = 21;
+        game.makePseudoLegalMove(moves[moveIdx]);
         System.out.println("tada!" + game);
+
+        game.unmakePseudoLegalMove(moves[moveIdx]);
+        System.out.println("adat!" + game);
 //        for (int i = 0; i < 150; i++) {
 //            Scorer.MoveScore bestMove = Scorer.miniMax(game);
 //
