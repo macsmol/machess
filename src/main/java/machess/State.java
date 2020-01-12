@@ -125,6 +125,7 @@ public class State {
 		initSquaresInCheck();
 	}
 
+	@Deprecated
 	private State(short[] board, Square[] squaresWithWhites, byte whitesCount, Square[] squaresWithBlacks, byte blacksCount,
 				  byte flags, @Nullable Square enPassantSquare, int plyNumber) {
 		this.board = board;
@@ -869,7 +870,6 @@ public class State {
 	 * @param moves - preallocated array for output moves
 	 */
 	public int generateLegalMoves2(int[] moves) {
-
 		Square[] squaresWithPiecesTakingTurn = test(WHITE_TURN) ? squaresWithWhites : squaresWithBlacks;
 		int countOfPiecesTakingTurn = test(WHITE_TURN) ? whitesCount : blacksCount;
 		if (isKingInCheck()) {
@@ -1463,11 +1463,16 @@ public class State {
 		return pin == null || pin == movementDirection;
 	}
 
+//	private int generateLegalMovesWhenKingInCheck(int [] outputMoves, Square checkedKing,
+//												  Square[] squaresWithPiecesTakingTurn, int countOfPiecesTakingTurn) {
+//		int movesCount = 0;
+//	}
+
 	@Deprecated
 	private int generateLegalMovesWhenKingInCheck(List<State> outputMoves, Square checkedKing,
 												   int countOfPiecesTakingTurn, Square[] squaresWithPiecesTakingTurn) {
 		int movesCount = 0;
-		if (getChecksCount(checkedKing, !test(WHITE_TURN)) < 2) {
+		if (getChecksCount(checkedKing, !test(WHITE_TURN)) < 2) { // TODO BUG? no moves generated when double checked..
 			List<State> pseudoLegalMoves = new ArrayList<>(Config.DEFAULT_MOVES_CAPACITY);
 			generatePseudoLegalMoves(pseudoLegalMoves, countOfPiecesTakingTurn, squaresWithPiecesTakingTurn);
 			for (State pseudoLegalState : pseudoLegalMoves) {
