@@ -4,6 +4,8 @@ import com.sun.istack.internal.Nullable;
 
 import java.util.*;
 
+import static machess.Move.*;
+
 /**
  * Game state seen as game board rather than a list of figures.
  * All is static in order to avoid allocations.
@@ -36,7 +38,7 @@ public class State {
 	private static final int INITIAL_PLAYER_PIECES_COUNT = 16;
 
 	// flags
-	private final byte flags;
+	private byte flags;
 	static final int WHITE_TURN 			= 0x01;
 	static final int WHITE_KING_MOVED 		= 0x02;
 	static final int BLACK_KING_MOVED 		= 0x04;
@@ -52,16 +54,17 @@ public class State {
 
 	// king, queen, rooks and knights, pawns
 	final Square[] squaresWithWhites;
-	final byte whitesCount;
+	byte whitesCount;
 
 	final Square[] squaresWithBlacks;
-	final byte blacksCount;
+	byte blacksCount;
 	/**
+	 * The square jumped over by pawn while double-pushing.
 	 * If not null it means there is a possibility to en-passant on this square
 	 */
-	private final Square enPassantSquare;
+	private Square enPassantSquare;
 	// not really necessary - only for debug purposes
-	private final int plyNumber;
+	private int plyNumber;
 
 	/**
 	 * Board with absolutely pinned pieces. It's indexed by Square.ordinal()
@@ -169,6 +172,101 @@ public class State {
 	}
 
 	/**
+	 *
+	 * Modify this State by making a move give. The result might be an illegal position.
+	 * @param move - move to make - it's trusted to be pseudolegal
+	 */
+	void makePseudoLegalMove(int move) {
+		Square from = Move.getFrom(move);
+		Square to = Move.getTo(move);
+		assert from != to : from + "->" + to + " is no move";
+
+		Content movedPiece = getContent(from);
+		assert movedPiece != Content.EMPTY : from + "->" + to + " moves nothing";
+		assert movedPiece.isWhite == test(WHITE_TURN) : "Moved " + movedPiece + " on " + (test(WHITE_TURN) ? "white" : "black") + " turn";
+
+		board[from.ordinal()] = Content.EMPTY.asByte;
+		movePieceOnPiecesLists(from, to);
+		enPassantSquare = null;
+
+		switch (Move.getMoveSelector(move)) {
+			case CODE_NORMAL_MOVE:
+				board[to.ordinal()] = movedPiece.asByte;
+				if (getTakenPiece(move) != Content.EMPTY) {
+					takePieceOnPieceList(to);
+				}
+				if (from == Square.E1) {
+					flags |= WHITE_KING_MOVED;
+				} else if (from == Square.E8) {
+					flags |= BLACK_KING_MOVED;
+				} else if (from == Square.A1) {
+					flags |= WHITE_QS_ROOK_MOVED;
+				} else if (from == Square.H1) {
+					flags |= WHITE_KS_ROOK_MOVED;
+				} else if (from == Square.A8) {
+					flags |= BLACK_QS_ROOK_MOVED;
+				} else if (from == Square.H8) {
+					flags |= BLACK_KS_ROOK_MOVED;
+				}
+				break;
+			case CODE_CASTLING_MOVE:
+				board[to.ordinal()] = movedPiece.asByte;
+				Square rookFrom = Move.getRookCastlingFrom(move);
+				Square rookTo = Square.fromLegalInts(rookFrom.file == File.A ? File.D : File.F, rookFrom.rank);
+
+				Content movedRook = getContent(rookFrom);
+				board[rookFrom.ordinal()] = Content.EMPTY.asByte;
+				board[rookTo.ordinal()] = movedRook.asByte;
+				movePieceOnPiecesLists(rookFrom, rookTo);
+
+				flags |= test(WHITE_TURN) ? WHITE_KING_MOVED : BLACK_KING_MOVED;
+				break;
+			case CODE_DOUBLE_PUSH_MOVE:
+				board[to.ordinal()] = movedPiece.asByte;
+				enPassantSquare = Move.getEnPassantSquare(move);
+				break;
+			case CODE_EN_PASSANT_MOVE:
+				board[to.ordinal()] = movedPiece.asByte;
+				Square killedPawnSquare = Square.fromLegalInts(to.file, test(WHITE_TURN) ? to.rank - 1 : to.rank + 1);
+				takePieceOnPieceList(killedPawnSquare);
+				board[killedPawnSquare.ordinal()] = Content.EMPTY.asByte;
+				break;
+			case CODE_PROMOTION_MOVE:
+				board[to.ordinal()] = getPromotion(move).asByte;
+				if (getTakenPiece(move) != Content.EMPTY) {
+					takePieceOnPieceList(to);
+				}
+				break;
+			default:
+				assert false : "invalid move selector in " + Integer.toHexString(move);
+		}
+		flags ^= WHITE_TURN;
+		plyNumber++;
+		initPinnedPieces();
+		resetSquaresInCheck();
+		initSquaresInCheck();
+	}
+
+	private void takePieceOnPieceList(Square killedOn) {
+		Square[] takenPieces = test(WHITE_TURN) ? squaresWithBlacks : squaresWithWhites;
+		byte takenPiecesCount = test(WHITE_TURN) ? blacksCount : whitesCount;
+
+		for (int i = 0; i < takenPiecesCount; i++) {
+			if (takenPieces[i] == killedOn) {
+				takenPieces[i] = takenPieces[takenPiecesCount-1];
+				if (test(WHITE_TURN)) {
+					blacksCount--;
+				} else {
+					whitesCount--;
+				}
+				return;
+			}
+		}
+		assert false : "There was nothing isWhite="+test(WHITE_TURN) + " could take on piece list "
+				+ takenPieces + "; size: " + takenPiecesCount;
+	}
+
+	/**
 	 * Generates new BoardState based on move. It does not verify game rules - assumes input is a legal move.
 	 * This is the root method - it covers all cases. All 'overload' methods should call this one.
 	 */
@@ -255,6 +353,19 @@ public class State {
 				(byte) flagsCopy, futureEnPassantSquare, plyNumber + 1);
 	}
 
+	private void movePieceOnPiecesLists(Square from, Square to) {
+		Square[] movingPieces = test(WHITE_TURN) ? squaresWithWhites : squaresWithBlacks;
+		byte movingPiecesCount = test(WHITE_TURN) ? whitesCount : blacksCount;
+
+		for (int i = 0; i < movingPiecesCount; i++) {
+			if (movingPieces[i] == from) {
+				movingPieces[i] = to;
+				return;
+			}
+		}
+	}
+
+	@Deprecated
 	private void movePieceOnPiecesLists(Square[] squaresWithWhites, Square[] squaresWithBlacks, Square from, Square to) {
 		Square[] movingPieces = test(WHITE_TURN) ? squaresWithWhites : squaresWithBlacks;
 		byte movingPiecesCount = test(WHITE_TURN) ? whitesCount : blacksCount;
@@ -682,10 +793,9 @@ public class State {
 
 	/**
 	 * @return count of generated moves
+	 * @param moves - preallocated array for output moves
 	 */
-	public int generateLegalMoves2() {
-		int [] moves = new int[Config.DEFAULT_MOVES_CAPACITY];
-
+	public int generateLegalMoves2(int[] moves) {
 
 		Square[] squaresWithPiecesTakingTurn = test(WHITE_TURN) ? squaresWithWhites : squaresWithBlacks;
 		int countOfPiecesTakingTurn = test(WHITE_TURN) ? whitesCount : blacksCount;
@@ -697,7 +807,7 @@ public class State {
 
 		for (int i = 0; i < movesCount; i++) {
 			int move = moves[i];
-			System.out.println(Move.toString(move));
+			System.out.println(i + ":::" + Move.toString(move));
 		}
 		return movesCount;
 	}
@@ -1302,6 +1412,7 @@ public class State {
 	/**
 	 * Is king of side that just moved in check
 	 */
+	@Deprecated
 	private boolean isLegal() {
 		boolean isWhiteTurn = test(WHITE_TURN);
 		Square king = isWhiteTurn ? squaresWithBlacks[0] : squaresWithWhites[0];

@@ -235,10 +235,10 @@ public class Move {
                 sb.append("castling rook from: ").append(getRookCastlingFrom(move));
                 break;
             case CODE_DOUBLE_PUSH_MOVE:
-                sb.append("double pushed over: ").append(getEnPassantSquare(move));
+                sb.append("double push over: ").append(getEnPassantSquare(move));
                 break;
             case CODE_EN_PASSANT_MOVE:
-                sb.append("taken ep: ").append(getTakenPiece(move));
+                sb.append("en-passant take: ").append(getTakenPiece(move));
                 break;
             case CODE_PROMOTION_MOVE:
                 sb.append("taken piece: ").append(getTakenPiece(move));
