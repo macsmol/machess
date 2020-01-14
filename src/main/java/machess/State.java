@@ -72,6 +72,12 @@ public class State {
 	private final Pin[] pinnedPieces;
 
 	/**
+	 * special place kept so that we don't have ever to allocate/free it every time filtering pseudolegal moves when king is in check.
+	 */
+	private final int[] pseudoLegalMoves = new int[Config.DEFAULT_MOVES_CAPACITY];
+	private int pseudoLegalMovesCount = 0;
+
+	/**
 	 * new game
 	 */
 	State() {
@@ -869,13 +875,15 @@ public class State {
 	 * @return count of generated moves
 	 * @param moves - preallocated array for output moves
 	 */
-	public int generateLegalMoves2(int[] moves) {
+	public int generateLegalMoves(int[] moves) {
 		Square[] squaresWithPiecesTakingTurn = test(WHITE_TURN) ? squaresWithWhites : squaresWithBlacks;
 		int countOfPiecesTakingTurn = test(WHITE_TURN) ? whitesCount : blacksCount;
+		int movesCount;
 		if (isKingInCheck()) {
-			// TODO
+			movesCount = generateLegalMovesWhenKingInCheck(moves, squaresWithPiecesTakingTurn[0], squaresWithPiecesTakingTurn, countOfPiecesTakingTurn);
+		} else {
+			movesCount = generatePseudoLegalMoves(moves, squaresWithPiecesTakingTurn, countOfPiecesTakingTurn);
 		}
-		int movesCount = generatePseudoLegalMoves(moves, squaresWithPiecesTakingTurn, countOfPiecesTakingTurn);
 		System.out.println("Generated moves count: " + movesCount);
 
 		for (int i = 0; i < movesCount; i++) {
@@ -935,7 +943,7 @@ public class State {
 					break;
 				case WHITE_KING:
 				case BLACK_KING:
-					movesCount = appendPseudoLegalKingMoves(currSquare, moves, movesCount);
+					movesCount = appendLegalKingMoves(currSquare, moves, movesCount);
 					break;
 				default:
 					assert false : "Thing on:" + squaresWithPiecesTakingTurn[i] + " is unknown piece: " + piece;
@@ -989,7 +997,7 @@ public class State {
 		return movesCount;
 	}
 
-	private int appendPseudoLegalKingMoves(Square from, int [] outputMoves, int movesCount) {
+	private int appendLegalKingMoves(Square from, int [] outputMoves, int movesCount) {
 		Square to = Square.fromInts(from.file, from.rank + 1);
 		boolean isWhiteTurn = test(WHITE_TURN);
 		if (to != null && !isSameColorPieceOn(to) && isSquareOkForKing(to, isWhiteTurn)) {
@@ -1463,10 +1471,27 @@ public class State {
 		return pin == null || pin == movementDirection;
 	}
 
-//	private int generateLegalMovesWhenKingInCheck(int [] outputMoves, Square checkedKing,
-//												  Square[] squaresWithPiecesTakingTurn, int countOfPiecesTakingTurn) {
-//		int movesCount = 0;
-//	}
+	private int generateLegalMovesWhenKingInCheck(int [] outputMoves, Square checkedKing,
+												  Square[] squaresWithPiecesTakingTurn, int countOfPiecesTakingTurn) {
+		int movesCount = 0;
+		if (getChecksCount(checkedKing, !test(WHITE_TURN)) < 2) {
+			pseudoLegalMovesCount = generatePseudoLegalMoves(pseudoLegalMoves, squaresWithPiecesTakingTurn, countOfPiecesTakingTurn);
+
+			for (int i = 0; i < pseudoLegalMovesCount; i++) {
+				int move = pseudoLegalMoves[i];
+				makePseudoLegalMove(move);
+				if (isLegal()) {
+					outputMoves[movesCount++] = move;
+				}
+				unmakePseudoLegalMove(move);
+			}
+
+			// double check
+		} else {
+			movesCount = appendLegalKingMoves(checkedKing, outputMoves,0);
+		}
+		return movesCount;
+	}
 
 	@Deprecated
 	private int generateLegalMovesWhenKingInCheck(List<State> outputMoves, Square checkedKing,
@@ -1491,7 +1516,6 @@ public class State {
 	/**
 	 * Is king of side that just moved in check
 	 */
-	@Deprecated
 	private boolean isLegal() {
 		boolean isWhiteTurn = test(WHITE_TURN);
 		Square king = isWhiteTurn ? squaresWithBlacks[0] : squaresWithWhites[0];

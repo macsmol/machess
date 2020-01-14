@@ -6,14 +6,17 @@ public class Main {
         State game = new State();
 
         game = game
-                .fromPseudoLegalMove(Square.C1, Square.C3)
-                .fromPseudoLegalMove(Square.C7, Square.C2)
+                .fromPseudoLegalMove(Square.B1, Square.D7)
+                .fromPseudoLegalMove(Square.F7, Square.F6)
 
-                .fromPseudoLegalPawnDoublePush(Square.E2, Square.E4, Square.E3)
+                .fromPseudoLegalMove(Square.D1, Square.A4)
+                .fromPseudoLegalMove(Square.H7, Square.H6)
+
+                .fromPseudoLegalMove(Square.D7, Square.F6)//double-check!
         ;
         System.out.println("new game \n" + game);
-        game.generateLegalMoves2(moves);
-        int moveIdx = 21;
+        game.generateLegalMoves(moves);
+        int moveIdx = 0;
         game.makePseudoLegalMove(moves[moveIdx]);
         System.out.println("tada!" + game);
 
