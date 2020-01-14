@@ -12,7 +12,12 @@ public class Config {
 	 */
 	public static final int MAX_THEORETICAL_NUMBER_OF_MOVES = 218;
 
-	public static final int SEARCH_DEPTH = 3;
+	/**
+	 * how many arrays for plies are allocated. Just make it bigger than how far the program can see.
+	 */
+	public static int SEARCH_DEPTH_CAPACITY = 40;
+
+	public static final int MAX_SEARCH_DEPTH = 3;
 
 	/**
 	 * Decrement maximizing player search depth by this number

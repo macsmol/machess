@@ -1,8 +1,6 @@
 package machess;
 
 
-import java.util.List;
-
 public class Scorer {
 	private static final int MAXIMIZING_WIN = 1_000_000;
 	private static final int MINIMIZING_WIN = -1_000_000;
@@ -26,58 +24,85 @@ public class Scorer {
 	private static long totalNanosElapsed = 0;
 
 
+
+	/**
+	 * moves at ach ply
+	 * [ply][moveAsInt]
+	 */
+	private static int[][] MOVES_SEARCHED;
+
+	/**
+	 * move counts per ply
+	 */
+	private static int[] MOVE_COUNTS;
+
+	static {
+		MOVES_SEARCHED = new int[Config.SEARCH_DEPTH_CAPACITY][];
+		for (int i = 0; i < Config.SEARCH_DEPTH_CAPACITY; i++) {
+			MOVES_SEARCHED[i] = new int[Config.DEFAULT_MOVES_CAPACITY];
+		}
+		MOVE_COUNTS = new int[Config.SEARCH_DEPTH_CAPACITY];
+	}
+
+
 	public static MoveScore miniMax(State rootState) {
 		boolean maximizing = rootState.test(State.WHITE_TURN);
 		movesEvaluatedInPly = 0 ;
 		long before = System.nanoTime();
-		List<State> moves = rootState.generateLegalMoves();
+		MOVE_COUNTS[0] = rootState.generateLegalMoves(MOVES_SEARCHED[0]);
 		int resultScore = maximizing ? Integer.MIN_VALUE : Integer.MAX_VALUE;
-		int indexOfResultScore = -1;
-		if (moves.isEmpty()) {
+		if (MOVE_COUNTS[0] == 0) {
 			System.out.println("Total seconds elapsed: " + totalNanosElapsed / 1000_000_000
 					+ "; Moves/sec: " + Utils.calcMovesPerSecond(totalMovesEvaluated, totalNanosElapsed));
-			return new MoveScore(terminalNodeScore(rootState), -1);
+			return new MoveScore(terminalNodeScore(rootState), Move.NULL);
 		}
-		for (int i = 0; i < moves.size(); i++) {
-			int depth = Config.SEARCH_DEPTH - 1;
-			depth -=  maximizing ? Config.WHITE_PLY_HANDICAP : Config.BLACK_PLY_HANDICAP;
-
-			int currScore = miniMax(moves.get(i), depth);
+		int bestMove = Move.NULL;
+		for (int i = 0; i < MOVE_COUNTS[0]; i++) {
+			int move = MOVES_SEARCHED[0][i];
+			rootState.makePseudoLegalMove(move);
+			int currScore = miniMax(rootState, 1);
+			rootState.unmakePseudoLegalMove(move);
 			if (maximizing) {
 				if (currScore > resultScore) {
 					resultScore = currScore;
-					indexOfResultScore = i;
+					bestMove = move;
 				}
 			} else {
 				if (currScore < resultScore) {
 					resultScore = currScore;
-					indexOfResultScore = i;
+					bestMove = move;
 				}
 			}
 		}
 		System.out.println("Moves evaluated: " + movesEvaluatedInPly);
 		long after = System.nanoTime();
-		MoveScore bestMove = new MoveScore(resultScore, indexOfResultScore);
+		MoveScore bestMoveAndScore = new MoveScore(resultScore, bestMove);
 		long elapsedNanos = after - before;
 		totalMovesEvaluated += movesEvaluatedInPly;
 		totalNanosElapsed += elapsedNanos;
 
 		System.out.println(bestMove + "; millis elapsed: " + elapsedNanos / 1000_000 + "; Moves/sec: " + Utils.calcMovesPerSecond(movesEvaluatedInPly, elapsedNanos));
-		return bestMove;
+		return bestMoveAndScore;
 	}
 
 	private static int miniMax(State state, int depth) {
 		boolean maximizingTurn = state.test(State.WHITE_TURN);
-		if (depth <= 0) {
+		int maxSearchDepth = Config.MAX_SEARCH_DEPTH;
+		maxSearchDepth -= maximizingTurn ? Config.WHITE_PLY_HANDICAP : Config.BLACK_PLY_HANDICAP;
+		if (depth >= maxSearchDepth) {
 			return evaluate(state);
 		}
 		int resultScore = maximizingTurn ? Integer.MIN_VALUE : Integer.MAX_VALUE;
-		List<State> moves = state.generateLegalMoves();
-		if (moves.isEmpty()) {
+
+		MOVE_COUNTS[depth] = state.generateLegalMoves(MOVES_SEARCHED[depth]);
+		if (MOVE_COUNTS[depth] == 0) {
 			return terminalNodeScore(state);
 		}
-		for (State move : moves) {
-			int currScore = discourageLaterWin(miniMax(move, depth - 1));
+		for (int i = 0; i < MOVE_COUNTS[depth]; i++) {
+			int move = MOVES_SEARCHED[depth][i];
+			state.makePseudoLegalMove(move);
+			int currScore = discourageLaterWin(miniMax(state, depth + 1));
+			state.unmakePseudoLegalMove(move);
 			if (maximizingTurn) {
 				if (currScore > resultScore) {
 					resultScore = currScore;
@@ -101,18 +126,18 @@ public class Scorer {
 
 	public static class MoveScore {
 		public final int score;
-		public final int moveIndex;
+		public final int moveAsInt;
 
-		public MoveScore(int score, int moveIndex) {
+		public MoveScore(int score, int moveAsInt) {
 			this.score = score;
-			this.moveIndex = moveIndex;
+			this.moveAsInt = moveAsInt;
 		}
 
 		@Override
 		public String toString() {
 			return "MoveScore{" +
 					"score=" + score +
-					", moveIndex=" + moveIndex +
+					", moveAsInt=" + moveAsInt +
 					'}';
 		}
 	}
@@ -150,24 +175,24 @@ public class Scorer {
 
 	private static int getMaterialScore(Content piece) {
 		switch (piece) {
-		case WHITE_PAWN:
-		case BLACK_PAWN:
-			return MATERIAL_PAWN;
-		case WHITE_KNIGHT:
-		case BLACK_KNIGHT:
-			return MATERIAL_KNIGHT;
-		case WHITE_BISHOP:
-		case BLACK_BISHOP:
-			return MATERIAL_BISHOP;
-		case WHITE_ROOK:
-		case BLACK_ROOK:
-			return MATERIAL_ROOK;
-		case WHITE_QUEEN:
-		case BLACK_QUEEN:
-			return MATERIAL_QUEEN;
-		default:
-			assert false : "Wrong Content for material score: " + piece;
-			return 0;
+			case WHITE_PAWN:
+			case BLACK_PAWN:
+				return MATERIAL_PAWN;
+			case WHITE_KNIGHT:
+			case BLACK_KNIGHT:
+				return MATERIAL_KNIGHT;
+			case WHITE_BISHOP:
+			case BLACK_BISHOP:
+				return MATERIAL_BISHOP;
+			case WHITE_ROOK:
+			case BLACK_ROOK:
+				return MATERIAL_ROOK;
+			case WHITE_QUEEN:
+			case BLACK_QUEEN:
+				return MATERIAL_QUEEN;
+			default:
+				assert false : "Wrong Content for material score: " + piece;
+				return 0;
 		}
 	}
 

@@ -854,11 +854,6 @@ public class State {
 		return !isSquareCheckedBy(square, !isKingWhite) && (board[square.ordinal()] & SquareFormat.NO_KINGS_FLAG) == 0;
 	}
 
-	@Deprecated
-	public State chooseMove(int moveIndex) {
-		return generateLegalMoves().get(moveIndex);
-	}
-
 	public int countLegalMoves() {
 		int countOfPiecesTakingTurn = test(WHITE_TURN) ? whitesCount : blacksCount;
 		Square[] squaresWithPiecesTakingTurn = test(WHITE_TURN) ? squaresWithWhites : squaresWithBlacks;
@@ -884,30 +879,13 @@ public class State {
 		} else {
 			movesCount = generatePseudoLegalMoves(moves, squaresWithPiecesTakingTurn, countOfPiecesTakingTurn);
 		}
-		System.out.println("Generated moves count: " + movesCount);
-
-		for (int i = 0; i < movesCount; i++) {
-			int move = moves[i];
-			System.out.println(i + ":::" + Move.toString(move));
-		}
+//		System.out.println("Generated moves count: " + movesCount);
+//
+//		for (int i = 0; i < movesCount; i++) {
+//			int move = moves[i];
+//			System.out.println(i + ":::" + Move.toString(move));
+//		}
 		return movesCount;
-	}
-
-	@Deprecated
-	public List<State> generateLegalMoves() {
-		List<State> moves = new ArrayList<>(60);
-
-		int countOfPiecesTakingTurn = test(WHITE_TURN) ? whitesCount : blacksCount;
-		Square[] squaresWithPiecesTakingTurn = test(WHITE_TURN) ? squaresWithWhites : squaresWithBlacks;
-
-		if (isKingInCheck()) {
-			generateLegalMovesWhenKingInCheck(moves, squaresWithPiecesTakingTurn[0], countOfPiecesTakingTurn,
-					squaresWithPiecesTakingTurn);
-			return moves;
-		}
-
-		generatePseudoLegalMoves(moves, countOfPiecesTakingTurn, squaresWithPiecesTakingTurn);
-		return moves;
 	}
 
 	boolean isKingInCheck() {
