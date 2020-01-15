@@ -681,8 +681,6 @@ public class State {
 		return generatePseudoLegalMoves(null, countOfPiecesTakingTurn, squaresWithPiecesTakingTurn);
 	}
 
-//	change into public int[] generateLegalMoves() {}
-
 	@Deprecated
 	public List<State> generateLegalMoves() {
 		List<State> moves = new ArrayList<>(Config.DEFAULT_MOVES_LIST_CAPACITY);
@@ -741,7 +739,7 @@ public class State {
 					break;
 				case WHITE_KING:
 				case BLACK_KING:
-					movesCount += generatePseudoLegalKingMoves(currSquare, ouputMoves);
+					movesCount += generateLegalKingMoves(currSquare, ouputMoves);
 					break;
 				default:
 					assert false : "Thing on:" + squaresWithPiecesTakingTurn[i] + " is unknown piece: " + piece;
@@ -751,7 +749,7 @@ public class State {
 	}
 
 	@Deprecated
-	private int generatePseudoLegalKingMoves(Square from, List<State> outputMoves) {
+	private int generateLegalKingMoves(Square from, List<State> outputMoves) {
 		int movesCount = 0;
 		Square to = Square.fromInts(from.file, from.rank + 1);
 		boolean isWhiteTurn = test(WHITE_TURN);
@@ -1015,6 +1013,8 @@ public class State {
 					}
 				}
 			}
+		} else {
+			movesCount = generateLegalKingMoves(checkedKing, outputMoves);
 		}
 		return movesCount;
 	}
