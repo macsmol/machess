@@ -221,14 +221,7 @@ public class State {
 
 		if (takenPiece != Content.EMPTY) {
 			assert movedPiece.isWhite != takenPiece.isWhite : from + "->" + to + " is a friendly take";
-			for (int i = 0; i < takenPiecesCount; i++) {
-				if (takenPieces[i] == to || takenPieces[i] == squareWithPawnTakenEnPassant) {
-					// decrement size of alive pieces
-					takenPiecesCount--;
-					takenPieces[i] = takenPieces[takenPiecesCount];
-					break;
-				}
-			}
+			takenPiecesCount = takePieceOnPieceList(to, squareWithPawnTakenEnPassant, takenPieces, takenPiecesCount);
 		}
 
 		int flagsCopy = flags ^ WHITE_TURN;
@@ -250,6 +243,18 @@ public class State {
 		byte updatedBlacksCount = test(WHITE_TURN) ? takenPiecesCount : blacksCount;
 		return new State(boardCopy, squaresWithWhitesCopy, updatedWhitesCount, squaresWithBlacksCopy, updatedBlacksCount,
 				(byte) flagsCopy, futureEnPassantSquare, plyNumber + 1);
+	}
+
+	private byte takePieceOnPieceList(Square to, Square squareWithPawnTakenEnPassant, Square[] vulnerablePieces, byte vulnerablePiecesCount) {
+		for (int i = 0; i < vulnerablePiecesCount; i++) {
+			if (vulnerablePieces[i] == to || vulnerablePieces[i] == squareWithPawnTakenEnPassant) {
+				// decrement size of alive pieces
+				vulnerablePiecesCount--;
+				vulnerablePieces[i] = vulnerablePieces[vulnerablePiecesCount];
+				break;
+			}
+		}
+		return vulnerablePiecesCount;
 	}
 
 	private void movePieceOnPiecesLists(Square[] squaresWithWhites, Square[] squaresWithBlacks, Square from, Square to) {
