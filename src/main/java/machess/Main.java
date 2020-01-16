@@ -2,7 +2,6 @@ package machess;
 
 public class Main {
     public static void main(String[] args) {
-        int [] moves = new int [Config.DEFAULT_MOVES_CAPACITY];
         State game = new State();
         System.out.println("new game \n" + game);
         for (int i = 0; i < 150; i++) {

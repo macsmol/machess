@@ -7,7 +7,7 @@ import static machess.State.*;
 public class Utils {
 	public static String checkCountsToString(short number) {
 		StringBuilder sb = new StringBuilder();
-		boolean isNoKing = (State.SquareFormat.NO_KINGS_FLAG & number) != 0;
+		boolean isNoKing = (State.MetaSquareFormat.NO_KINGS_FLAG & number) != 0;
 		sb.append(isNoKing ? '1' : '.');
 		number = (short)(number >>> 8);
 
@@ -53,5 +53,23 @@ public class Utils {
 
     public static String asHexWithTrailingZeros(int number) {
 		return String.format(" %08X", number);
+	}
+
+	public static char pinToString(short pinCode) {
+		switch (pinCode) {
+			case MetaSquareFormat.PIN_FILE:
+				return '|';
+			case MetaSquareFormat.PIN_RANK:
+				return '_';
+			case MetaSquareFormat.PIN_DIAGONAL:
+				return '/';
+			case MetaSquareFormat.PIN_ANTIDIAGONAL:
+				return '\\';
+			case MetaSquareFormat.NULL_PIN:
+				return ' ';
+			default:
+				assert false: "Invalid absolute pin code: " + Integer.toHexString(pinCode);
+				return '?';
+		}
 	}
 }

@@ -81,7 +81,7 @@ public class Scorer {
 		totalMovesEvaluated += movesEvaluatedInPly;
 		totalNanosElapsed += elapsedNanos;
 
-		System.out.println(bestMove + "; millis elapsed: " + elapsedNanos / 1000_000 + "; Moves/sec: " + Utils.calcMovesPerSecond(movesEvaluatedInPly, elapsedNanos));
+		System.out.println(bestMoveAndScore + "; millis elapsed: " + elapsedNanos / 1000_000 + "; Moves/sec: " + Utils.calcMovesPerSecond(movesEvaluatedInPly, elapsedNanos));
 		return bestMoveAndScore;
 	}
 
@@ -137,7 +137,7 @@ public class Scorer {
 		public String toString() {
 			return "MoveScore{" +
 					"score=" + score +
-					", moveAsInt=" + moveAsInt +
+					", moveAsInt=" + Move.toString(moveAsInt) +
 					'}';
 		}
 	}

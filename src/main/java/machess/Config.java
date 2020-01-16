@@ -12,6 +12,8 @@ public class Config {
 	 */
 	public static final int MAX_THEORETICAL_NUMBER_OF_MOVES = 218;
 
+	public static final boolean SORT_OCCUPIED_SQUARES = false;
+
 	/**
 	 * how many arrays for plies are allocated. Just make it bigger than how far the program can see.
 	 */

@@ -1,25 +1,17 @@
 package machess;
 
+import static machess.State.MetaSquareFormat.*;
+
 /**
  * Describes the line to which movement is limited
  */
-enum Pin {
-    FILE('|'),          // |
-    RANK('_'),          // _
-    DIAGONAL('/'),      // /
-    ANTIDIAGONAL('\\');	// \
+public class Pin {
 
-    char symbol;
-
-    Pin(char symbol) {
-        this.symbol = symbol;
-    }
-
-    private static final Pin[] LUT = {
-        DIAGONAL, FILE, ANTIDIAGONAL, RANK, null, RANK, ANTIDIAGONAL, FILE, DIAGONAL
+    private static final byte[] LUT = {
+            PIN_DIAGONAL, PIN_FILE, PIN_ANTIDIAGONAL, PIN_RANK, NULL_PIN, PIN_RANK, PIN_ANTIDIAGONAL, PIN_FILE, PIN_DIAGONAL
     };
 
-    static Pin fromDeltas(int deltaFile, int deltaRank) {
+    static byte fromDeltas(int deltaFile, int deltaRank) {
         assert (deltaFile != 0 || deltaRank != 0) 	: "Zero deltas";
         assert Math.abs(deltaFile) <= 1 			: "Invalid deltaFile: " + deltaFile;
         assert Math.abs(deltaRank) <= 1 			: "Invalid deltaRank: " + deltaRank;

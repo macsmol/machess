@@ -16,23 +16,43 @@ public class State {
 
 	/**
 	 * Bit layout of each square is
-	 * bbbbwwww---ncppp
+	 * ----cppp
 	 *
 	 * p - piece type
-	 * c - is piece white flag
-	 * n - no kings flag (for squares adjacent to two kings at once)
-	 * w - checks by white count
-	 * b - checks by black count
+	 * c - is-piece-white flag
 	 */
 	public static final class SquareFormat {
 		static final byte PIECE_TYPE_MASK = 0x07;
 		static final byte IS_WHITE_PIECE_FLAG = 0x08;
+	}
+
+	/**
+	 * Square with supplementary data: checks counts and pins info.
+	 * Bit layout of each square is
+	 * bbbbwwww ----nppP
+	 *	P - if set there is an absolute pin encoded in pp
+	 *  pp - absolute pin code
+	 * 	n - no kings flag (for squares adjacent to two kings at once)
+	 * 	w - checks by white count
+	 * 	b - checks by black count
+	 */
+	public static final class MetaSquareFormat {
+		static final short PIN_CODE_MASK = 0x07;
+
+		static final byte NULL_PIN = 0x0;
+		static final byte PIN_FILE = 0x1;
+		static final byte PIN_RANK = 0x3;
+		static final byte PIN_DIAGONAL = 0x5;
+		static final byte PIN_ANTIDIAGONAL = 0x7;
+
 		// neither king can walk onto a square with this flag set - squares adjacent to both kings at once
-		static final byte NO_KINGS_FLAG = 0x10;
-		// mask to get checks count by black or white. Four MSBits are checks by black, next 4 bits are checks by white.
+		static final byte NO_KINGS_FLAG = 0x8;
+
+
 		static final byte CHECKS_COUNT_MASK = 0x0F;
-		static final byte CHECKS_BY_WHITE_BIT_OFFSET = 8;
-		static final byte CHECKS_BY_BLACK_BIT_OFFSET = 12;
+		static final short CHECKS_RESET_MASK = 0x00FF;
+		static final byte BITSHIFT_CHECKS_BY_WHITE = 8;
+		static final byte BITSHIFT_CHECKS_BY_BLACK = 12;
 	}
 
 	private static final int INITIAL_PLAYER_PIECES_COUNT = 16;
@@ -50,7 +70,7 @@ public class State {
 	/**
 	 * one byte per square.
 	 */
-	final short[] board;
+	final byte[] board;
 
 	// king, queen, rooks and knights, pawns
 	final Square[] squaresWithWhites;
@@ -67,22 +87,27 @@ public class State {
 	private int plyNumber;
 
 	/**
-	 * Board with absolutely pinned pieces. It's indexed by Square.ordinal()
+	 *
+	 * Board with supplementary info:
+	 * -check counts per square
+	 * -absolutely pinned pieces.
+	 *
+	 * Board indexed by Square.ordinal()
+	 * Contents of each cell described in MetaSquareFormat.
 	 */
-	private final Pin[] pinnedPieces;
+	private final short[] metaBoard;
 
 	/**
 	 * special place kept so that we don't have ever to allocate/free it every time filtering pseudolegal moves when king is in check.
 	 */
 	private final int[] pseudoLegalMoves = new int[Config.DEFAULT_MOVES_CAPACITY];
-	private int pseudoLegalMovesCount = 0;
 
 	/**
 	 * new game
 	 */
 	State() {
 		flags = WHITE_TURN;
-		board = new short[Square.values().length];
+		board = new byte[Square.values().length];
 		for (int file = File.A; file <= File.H; file++) {
 			board[Square.fromLegalInts(file, Rank._2).ordinal()] = Content.WHITE_PAWN.asByte;
 			board[Square.fromLegalInts(file, Rank._7).ordinal()] = Content.BLACK_PAWN.asByte;
@@ -127,12 +152,12 @@ public class State {
 		enPassantSquare = null;
 		plyNumber = 1;
 
-		pinnedPieces = new Pin[Square.values().length];
+		metaBoard = new short[Square.values().length];
 		initSquaresInCheck();
 	}
 
 	@Deprecated
-	private State(short[] board, Square[] squaresWithWhites, byte whitesCount, Square[] squaresWithBlacks, byte blacksCount,
+	private State(byte[] board, Square[] squaresWithWhites, byte whitesCount, Square[] squaresWithBlacks, byte blacksCount,
 				  byte flags, @Nullable Square enPassantSquare, int plyNumber) {
 		this.board = board;
 		this.squaresWithWhites = squaresWithWhites;
@@ -142,10 +167,10 @@ public class State {
 		this.flags = flags;
 		this.enPassantSquare = enPassantSquare;
 		this.plyNumber = plyNumber;
+		metaBoard = new short[Square.values().length];
 		resetSquaresInCheck();
 		initSquaresInCheck();
 
-		pinnedPieces = new Pin[Square.values().length];
 		initPinnedPieces();
 	}
 	@Deprecated
@@ -252,6 +277,21 @@ public class State {
 		initPinnedPieces();
 		resetSquaresInCheck();
 		initSquaresInCheck();
+		debugSortOccupiedSquares();
+	}
+
+	private void debugSortOccupiedSquares() {
+		if (!Config.SORT_OCCUPIED_SQUARES) {
+			return;
+		}
+		Comparator<Square> comparator = new Comparator<Square>() {
+			@Override
+			public int compare(Square sq1, Square sq2) {
+				return sq1.ordinal() - sq2.ordinal();
+			}
+		};
+		Arrays.sort(squaresWithWhites, 1, whitesCount, comparator);
+		Arrays.sort(squaresWithBlacks, 1, blacksCount, comparator);
 	}
 
 	private void takePieceOnPieceList(Square killedOn) {
@@ -338,6 +378,7 @@ public class State {
 		initPinnedPieces();
 		resetSquaresInCheck();
 		initSquaresInCheck();
+		debugSortOccupiedSquares();
 	}
 
 	private void untakePieceOnPieceList(Square killedOn) {
@@ -354,7 +395,7 @@ public class State {
 	private State fromPseudoLegalMove(Square from, Square to, @Nullable Content promotion, @Nullable Square futureEnPassantSquare,
 									  @Nullable Square rookToCastle) {
 		assert from != to : from + "->" + to + " is no move";
-		short[] boardCopy = board.clone();
+		byte[] boardCopy = board.clone();
 		Square[] squaresWithWhitesCopy = squaresWithWhites.clone();
 		Square[] squaresWithBlacksCopy = squaresWithBlacks.clone();
 
@@ -481,13 +522,12 @@ public class State {
 				Content content = getContent(file, rank);
 				sb.append(content.symbol).append(" |");
 
+				short metaSquareAsShort = metaBoard[Square.fromLegalInts(file, rank).ordinal()];
 				if (Config.DEBUG_FIELD_IN_CHECK_FLAGS) {
-					short contentAsShort = board[Square.fromLegalInts(file, rank).ordinal()];
-					sbCheckFlags.append(Utils.checkCountsToString(contentAsShort)).append('|');
+					sbCheckFlags.append(Utils.checkCountsToString(metaSquareAsShort)).append('|');
 				}
 				if (Config.DEBUG_PINNED_PIECES) {
-					Pin pinType = pinnedPieces[Square.fromLegalInts(file, rank).ordinal()];
-					sbPins.append(" ").append(pinType != null ? pinType.symbol : ' ').append("  |");
+					sbPins.append(" ").append(Utils.pinToString((short)(metaSquareAsShort & MetaSquareFormat.PIN_CODE_MASK))).append("  |");
 				}
 			}
 			sb.append(sbCheckFlags).append(sbPins)
@@ -567,8 +607,7 @@ public class State {
 
 	private void resetSquaresInCheck() {
 		for (int i = 0; i < board.length; i++) {
-			short contentAsShort = board[i];
-			board[i] = (byte) (contentAsShort & (SquareFormat.PIECE_TYPE_MASK | SquareFormat.IS_WHITE_PIECE_FLAG));
+			metaBoard[i] &= MetaSquareFormat.CHECKS_RESET_MASK;
 		}
 	}
 
@@ -584,8 +623,9 @@ public class State {
 		assert getContent(whiteKing) == Content.WHITE_KING : "Corrupted white king position";
 		assert getContent(blackKing) == Content.BLACK_KING : "Corrupted black king position";
 
+		// reset
 		for (Square sq : Square.values()) {
-			pinnedPieces[sq.ordinal()] = null;
+			metaBoard[sq.ordinal()] &= ~MetaSquareFormat.PIN_CODE_MASK;
 		}
 
 		initPinnedPieces(whiteKing, WHITE);
@@ -624,7 +664,7 @@ public class State {
 				Content enemyQueen = isPinnedToWhiteKing ? Content.BLACK_QUEEN : Content.WHITE_QUEEN;
 				Content enemySlider = Content.rookOrBishop(!isPinnedToWhiteKing, deltaFile, deltaRank);
 				if (afterCandidate == enemyQueen || afterCandidate == enemySlider) {
-					pinnedPieces[candidate.ordinal()] = Pin.fromDeltas(deltaFile, deltaRank);
+					metaBoard[candidate.ordinal()] |= Pin.fromDeltas(deltaFile, deltaRank);
 					return;
 				} else if (afterCandidate != Content.EMPTY) {
 					return;
@@ -824,21 +864,21 @@ public class State {
 	}
 
 	private void incrementChecksOnSquare(Square square, boolean isCheckedByWhite) {
-		short contentAsShort = board[square.ordinal()];
-		byte bitOffset = isCheckedByWhite ? SquareFormat.CHECKS_BY_WHITE_BIT_OFFSET : SquareFormat.CHECKS_BY_BLACK_BIT_OFFSET;
-		short checksCount = (short) ((contentAsShort >>> bitOffset) & SquareFormat.CHECKS_COUNT_MASK);
+		short contentAsShort = metaBoard[square.ordinal()];
+		byte bitOffset = isCheckedByWhite ? MetaSquareFormat.BITSHIFT_CHECKS_BY_WHITE : MetaSquareFormat.BITSHIFT_CHECKS_BY_BLACK;
+		short checksCount = (short) ((contentAsShort >>> bitOffset) & MetaSquareFormat.CHECKS_COUNT_MASK);
 		checksCount++;
 		checksCount <<= bitOffset;
 
-		short resettingMask = (short) ~(SquareFormat.CHECKS_COUNT_MASK << bitOffset);
+		short resettingMask = (short) ~(MetaSquareFormat.CHECKS_COUNT_MASK << bitOffset);
 		contentAsShort = (short) (contentAsShort & resettingMask);
 
-		board[square.ordinal()] = (short) (contentAsShort | checksCount);
+		metaBoard[square.ordinal()] = (short) (contentAsShort | checksCount);
 	}
 
 	private void setNoKingFlagOnSquare(Square square) {
-		short contentAsShort = board[square.ordinal()];
-		board[square.ordinal()] = (byte) (contentAsShort | SquareFormat.NO_KINGS_FLAG);
+		short contentAsShort = metaBoard[square.ordinal()];
+		metaBoard[square.ordinal()] = (byte) (contentAsShort | MetaSquareFormat.NO_KINGS_FLAG);
 	}
 
 	boolean isSquareCheckedBy(Square square, boolean testChecksByWhite) {
@@ -846,12 +886,12 @@ public class State {
 	}
 
 	private byte getChecksCount(Square square, boolean checksByWhite) {
-		byte bitOffset = checksByWhite ? SquareFormat.CHECKS_BY_WHITE_BIT_OFFSET : SquareFormat.CHECKS_BY_BLACK_BIT_OFFSET;
-		return (byte) ((board[square.ordinal()] >> bitOffset) & SquareFormat.CHECKS_COUNT_MASK);
+		byte bitOffset = checksByWhite ? MetaSquareFormat.BITSHIFT_CHECKS_BY_WHITE : MetaSquareFormat.BITSHIFT_CHECKS_BY_BLACK;
+		return (byte) ((metaBoard[square.ordinal()] >> bitOffset) & MetaSquareFormat.CHECKS_COUNT_MASK);
 	}
 
 	private boolean isSquareOkForKing(Square square, boolean isKingWhite) {
-		return !isSquareCheckedBy(square, !isKingWhite) && (board[square.ordinal()] & SquareFormat.NO_KINGS_FLAG) == 0;
+		return !isSquareCheckedBy(square, !isKingWhite) && (metaBoard[square.ordinal()] & MetaSquareFormat.NO_KINGS_FLAG) == 0;
 	}
 
 	public int countLegalMoves() {
@@ -1217,7 +1257,7 @@ public class State {
 		Square to = Square.fromLegalInts(from.file, from.rank + pawnDisplacement);
 
 		// push
-		if (getContent(to) == Content.EMPTY && pieceIsFreeToMove(from, Pin.FILE)) {
+		if (getContent(to) == Content.EMPTY && pieceIsFreeToMove(from, MetaSquareFormat.PIN_FILE)) {
 			if (isPromotingSquare(to)) {
 				movesCount = appendPromotionMoves(from, to, moves, movesCount);
 			} else {
@@ -1278,7 +1318,7 @@ public class State {
 		int pawnDoubleDisplacement = test(WHITE_TURN) ? 2 : -2;
 		Square to = Square.fromLegalInts(from.file, from.rank + pawnDisplacement);
 		// head-on move
-		if (getContent(to) == Content.EMPTY && pieceIsFreeToMove(from, Pin.FILE)) {
+		if (getContent(to) == Content.EMPTY && pieceIsFreeToMove(from, MetaSquareFormat.PIN_FILE)) {
 			if (isPromotingSquare(to)) {
 				movesCount += generatePromotionMoves(from, to, outputMoves);
 			} else {
@@ -1344,7 +1384,7 @@ public class State {
 	}
 
 	private int appendPseudoLegalKnightMoves(Square from, int [] moves, int movesCount) {
-		if (!pieceIsFreeToMove(from, null)) {
+		if (!pieceIsFreeToMove(from, MetaSquareFormat.NULL_PIN)) {
 			return movesCount;
 		}
 		Square to = Square.fromInts(from.file + 1, from.rank + 2);
@@ -1384,7 +1424,7 @@ public class State {
 
 	@Deprecated
 	private int generatePseudoLegalKnightMoves(Square from, List<State> outputMoves) {
-		if (!pieceIsFreeToMove(from, null)) {
+		if (!pieceIsFreeToMove(from, MetaSquareFormat.NULL_PIN)) {
 			return 0;
 		}
 		int movesCount = 0;
@@ -1442,18 +1482,18 @@ public class State {
 
 	/**
 	 * Returns true if piece at pieceLocation can move along the movementDirection line (is not absolutely pinned).
-	 * @param movementDirection - leave this null in case of knight at pieceLocation
+	 * @param movementDirection - Pin as described in MetaSquareFormat. Leave this NULL_PIN in case of knight at pieceLocation
 	 */
-	private boolean pieceIsFreeToMove(Square pieceLocation, Pin movementDirection) {
-		Pin pin = pinnedPieces[pieceLocation.ordinal()];
-		return pin == null || pin == movementDirection;
+	private boolean pieceIsFreeToMove(Square pieceLocation, byte movementDirection) {
+		byte pin = (byte)(metaBoard[pieceLocation.ordinal()] & MetaSquareFormat.PIN_CODE_MASK);
+		return pin == MetaSquareFormat.NULL_PIN || pin == movementDirection;
 	}
 
 	private int generateLegalMovesWhenKingInCheck(int [] outputMoves, Square checkedKing,
 												  Square[] squaresWithPiecesTakingTurn, int countOfPiecesTakingTurn) {
 		int movesCount = 0;
 		if (getChecksCount(checkedKing, !test(WHITE_TURN)) < 2) {
-			pseudoLegalMovesCount = generatePseudoLegalMoves(pseudoLegalMoves, squaresWithPiecesTakingTurn, countOfPiecesTakingTurn);
+			int pseudoLegalMovesCount = generatePseudoLegalMoves(pseudoLegalMoves, squaresWithPiecesTakingTurn, countOfPiecesTakingTurn);
 
 			for (int i = 0; i < pseudoLegalMovesCount; i++) {
 				int move = pseudoLegalMoves[i];
