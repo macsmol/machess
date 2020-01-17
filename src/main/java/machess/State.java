@@ -132,11 +132,27 @@ public class State {
 		this.flags = flags;
 		this.enPassantSquare = enPassantSquare;
 		this.plyNumber = plyNumber;
+		sortOccupiedSquares();
+
 		resetSquaresInCheck();
 		initSquaresInCheck();
 
 		pinnedPieces = new Pin[Square.values().length];
 		initPinnedPieces();
+	}
+
+	private void sortOccupiedSquares() {
+		if (!Config.SORT_OCCUPIED_SQUARES) {
+			return;
+		}
+		Comparator<Square> comparator = new Comparator<Square>() {
+			@Override
+			public int compare(Square sq1, Square sq2) {
+				return sq1.ordinal()-sq2.ordinal();
+			}
+		};
+		Arrays.sort(squaresWithWhites, 1, whitesCount, comparator);
+		Arrays.sort(squaresWithBlacks, 1, blacksCount, comparator);
 	}
 
 	private State fromPseudoLegalPawnDoublePush(Square from, Square to, Square enPassantSquare) {

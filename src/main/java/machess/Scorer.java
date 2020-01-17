@@ -34,7 +34,7 @@ public class Scorer {
 		int resultScore = maximizing ? Integer.MIN_VALUE : Integer.MAX_VALUE;
 		int indexOfResultScore = -1;
 		if (moves.isEmpty()) {
-			System.out.println("Total seconds elapsed: " + totalNanosElapsed / 1000_000_000
+			System.out.println("Total milliseconds elapsed: " + totalNanosElapsed / 1000_000
 					+ "; Moves/sec: " + Utils.calcMovesPerSecond(totalMovesEvaluated, totalNanosElapsed));
 			return new MoveScore(terminalNodeScore(rootState), -1);
 		}

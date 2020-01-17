@@ -6,6 +6,8 @@ public class Config {
 
 	public static final int DEFAULT_MOVES_LIST_CAPACITY = 60;
 
+	public static final boolean SORT_OCCUPIED_SQUARES = true;
+
 	public static final int SEARCH_DEPTH = 3;
 
 	/**
