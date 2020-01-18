@@ -687,7 +687,6 @@ public class State {
 		return !isSquareCheckedBy(square, !isKingWhite) && (board[square.ordinal()] & SquareFormat.NO_KINGS_FLAG) == 0;
 	}
 
-	@Deprecated
 	public State chooseMove(int moveIndex) {
 		return generateLegalMoves().get(moveIndex);
 	}
@@ -702,7 +701,6 @@ public class State {
 		return generatePseudoLegalMoves(null, countOfPiecesTakingTurn, squaresWithPiecesTakingTurn);
 	}
 
-	@Deprecated
 	public List<State> generateLegalMoves() {
 		List<State> moves = new ArrayList<>(Config.DEFAULT_MOVES_LIST_CAPACITY);
 
@@ -730,7 +728,6 @@ public class State {
 	 * @param ouputMoves - leave this null to skip generation and just count
 	 * @return number of output moves
 	 */
-	@Deprecated
 	private int generatePseudoLegalMoves(List<State> ouputMoves, int countOfPiecesTakingTurn,
 										  Square[] squaresWithPiecesTakingTurn) {
 		int movesCount = 0;
@@ -769,7 +766,6 @@ public class State {
 		return movesCount;
 	}
 
-	@Deprecated
 	private int generateLegalKingMoves(Square from, List<State> outputMoves) {
 		int movesCount = 0;
 		Square to = Square.fromInts(from.file, from.rank + 1);
@@ -854,7 +850,6 @@ public class State {
 		return true;
 	}
 
-	@Deprecated
 	private int generatePseudoLegalQueenMoves(Square from, List<State> outputMoves) {
 		int movesCount = 0;
 		movesCount += generatePseudoLegalRookMoves(from, outputMoves);
@@ -862,7 +857,6 @@ public class State {
 		return movesCount;
 	}
 
-	@Deprecated
 	private int generatePseudoLegalRookMoves(Square from, List<State> outputMoves) {
 		int movesCount = 0;
 		movesCount += generateSlidingPieceMoves(from, 1, 0, outputMoves);
@@ -872,7 +866,6 @@ public class State {
 		return movesCount;
 	}
 
-	@Deprecated
 	private int generatePseudoLegalBishopMoves(Square from, List<State> outputMoves) {
 		int movesCount = 0;
 		movesCount += generateSlidingPieceMoves(from, 1, 1, outputMoves);
@@ -882,7 +875,6 @@ public class State {
 		return movesCount;
 	}
 
-	@Deprecated
 	private int generateSlidingPieceMoves(Square from, int deltaFile, int deltaRank, List<State> outputMoves) {
 		int movesCount = 0;
 		if (pieceIsFreeToMove(from, Pin.fromDeltas(deltaFile, deltaRank))) {
@@ -900,7 +892,6 @@ public class State {
 		return movesCount;
 	}
 
-	@Deprecated
 	private int generatePseudoLegalPawnMoves(Square from, List<State> outputMoves) {
 		int movesCount = 0;
 		int pawnDisplacement = test(WHITE_TURN) ? 1 : -1;
@@ -948,7 +939,6 @@ public class State {
 		return movesCount;
 	}
 
-	@Deprecated
 	private int generatePromotionMoves(Square from, Square to, List<State> outputMoves) {
 		if (outputMoves == null) {
 			return 4;
@@ -960,7 +950,6 @@ public class State {
 		return 4;
 	}
 
-	@Deprecated
 	private int generatePseudoLegalKnightMoves(Square from, List<State> outputMoves) {
 		if (!pieceIsFreeToMove(from, null)) {
 			return 0;
@@ -1018,7 +1007,6 @@ public class State {
 		return pin == null || pin == movementDirection;
 	}
 
-	@Deprecated
 	private int generateLegalMovesWhenKingInCheck(List<State> outputMoves, Square checkedKing,
 												   int countOfPiecesTakingTurn, Square[] squaresWithPiecesTakingTurn) {
 		int movesCount = 0;
