@@ -129,69 +129,59 @@ public class Scorer {
 	}
 
 	private static int evaluateMaterialScore(State state) {
-		int whiteMaterialScore = evaluateMaterialScore(state.squaresWithWhites, state.whitesCount, state);
-		int blackMaterialScore = evaluateMaterialScore(state.squaresWithBlacks, state.blacksCount, state);
+		int whiteMaterialScore = evaluateMaterialScore(state.pieces, State.WHITE);
+		int blackMaterialScore = evaluateMaterialScore(state.pieces, State.BLACK);
 
 		return whiteMaterialScore - blackMaterialScore;
 	}
 
-	private static int evaluateMaterialScore(Square[] piecesOfOneColor, int piecesCount, State state) {
+	private static int evaluateMaterialScore(PieceLists pieces, boolean whitePieces) {
 		int score = 0;
-		for (int i = piecesCount - 1; i >= 1; i--) {
-			Square square = piecesOfOneColor[i];
+		byte piecesCount = whitePieces ? pieces.whitePawnsCount : pieces.blackPawnsCount;
+			score += MATERIAL_PAWN * piecesCount;
+		piecesCount = whitePieces ? pieces.whiteKnightsCount : pieces.blackKnightsCount;
+			score += MATERIAL_KNIGHT * piecesCount;
+		piecesCount = whitePieces ? pieces.whiteBishopsCount : pieces.blackBishopsCount;
+			score += MATERIAL_BISHOP * piecesCount;
+		piecesCount = whitePieces ? pieces.whiteRooksCount : pieces.blackRooksCount;
+			score += MATERIAL_ROOK * piecesCount;
+		piecesCount = whitePieces ? pieces.whiteQueensCount : pieces.blackQueensCount;
+			score += MATERIAL_QUEEN * piecesCount;
 
-			Content piece = state.getContent(square);
-			score += getMaterialScore(piece)
-//					* getSafetyFactor(piece.isWhite, square, state)
-			;
-		}
 		return score;
 	}
 
-	private static int getMaterialScore(Content piece) {
-		switch (piece) {
-		case WHITE_PAWN:
-		case BLACK_PAWN:
-			return MATERIAL_PAWN;
-		case WHITE_KNIGHT:
-		case BLACK_KNIGHT:
-			return MATERIAL_KNIGHT;
-		case WHITE_BISHOP:
-		case BLACK_BISHOP:
-			return MATERIAL_BISHOP;
-		case WHITE_ROOK:
-		case BLACK_ROOK:
-			return MATERIAL_ROOK;
-		case WHITE_QUEEN:
-		case BLACK_QUEEN:
-			return MATERIAL_QUEEN;
-		default:
-			assert false : "Wrong Content for material score: " + piece;
-			return 0;
-		}
-	}
-
-	/**
-	 * TODO this factor seems to have detrimental effect on play. Remove it? improve it?
-	 // multiply material score by appropriate factor
-	 * This model seems too simplistic. Will have to implement SEE..?
-	 * https://www.chessprogramming.org/Loose_Piece
-	 * https://www.chessprogramming.org/Hanging_Piece
-	 * https://www.chessprogramming.org/Static_Exchange_Evaluation
-	 */
-	private static float getSafetyFactor(boolean isPieceWhite, Square square, State state) {
-		boolean isCheckedByWhite = state.isSquareCheckedBy(square, State.WHITE);
-		boolean isCheckedByBlack = state.isSquareCheckedBy(square, State.BLACK);
-
-		boolean checkedByFriend = isPieceWhite ? isCheckedByWhite : isCheckedByBlack;
-		boolean checkedByEnemy = isPieceWhite ? isCheckedByBlack : isCheckedByWhite;
-
-		if (checkedByFriend) {
-			return checkedByEnemy ? FACTOR_ATTACKED_AND_DEFENDED : FACTOR_DEFENDED_PIECE;
-		} else {
-			return checkedByEnemy ? FACTOR_HANGING_PIECE : FACTOR_LOOSE_PIECE;
-		}
-	}
+//	private static int evaluateMaterialScore(PieceLists pieces, boolean whitePieces) {
+//		int score = 0;
+//		// Squares array will be useful after introducing piece-square tables
+//		Square [] piecesOfOneType = whitePieces ? pieces.whitePawns : pieces.blackPawns;
+//		byte piecesCount = whitePieces ? pieces.whitePawnsCount : pieces.blackPawnsCount;
+//		for (int i = 0; i < piecesCount; i++) {
+//			score += MATERIAL_PAWN;
+//		}
+//		piecesOfOneType = whitePieces ? pieces.whiteKnights : pieces.blackKnights;
+//		piecesCount = whitePieces ? pieces.whiteKnightsCount : pieces.blackKnightsCount;
+//		for (int i = 0; i < piecesCount; i++) {
+//			score += MATERIAL_KNIGHT;
+//		}
+//		piecesOfOneType = whitePieces ? pieces.whiteBishops : pieces.blackBishops;
+//		piecesCount = whitePieces ? pieces.whiteBishopsCount : pieces.blackBishopsCount;
+//		for (int i = 0; i < piecesCount; i++) {
+//			score += MATERIAL_BISHOP;
+//		}
+//		piecesOfOneType = whitePieces ? pieces.whiteRooks : pieces.blackRooks;
+//		piecesCount = whitePieces ? pieces.whiteRooksCount : pieces.blackRooksCount;
+//		for (int i = 0; i < piecesCount; i++) {
+//			score += MATERIAL_ROOK;
+//		}
+//		piecesOfOneType = whitePieces ? pieces.whiteQueens : pieces.blackQueens;
+//		piecesCount = whitePieces ? pieces.whiteQueensCount : pieces.blackQueensCount;
+//		for (int i = 0; i < piecesCount; i++) {
+//			score += MATERIAL_QUEEN;
+//		}
+//
+//		return score;
+//	}
 
 	private static int evaluateCheckedSquaresScore(State state) {
 		int squaresCheckedByWhite = countSquaresCheckedBy(State.WHITE, state);
