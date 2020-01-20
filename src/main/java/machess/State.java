@@ -442,13 +442,24 @@ public class State {
 		}
 	}
 
+	// TODO test it
 	private void initChecksByBishops(Square king, boolean isCheckedByWhite, Square[] bishops, byte bishopsCount) {
 		for (int i = 0; i < bishopsCount; i++) {
-			byte deltaFile = (byte)(king.file - bishops[i].file);
 			byte deltaRank = (byte)(king.rank - bishops[i].rank);
 
-			if (isAlignedDiagonally(deltaFile,deltaRank)) {
-				initSquaresInCheckByBishop(bishops[i], isCheckedByWhite);
+			if (deltaRank > 0) {
+				// king above
+				initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, 1, 1);
+				initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, -1, 1);
+			} else if (deltaRank < 0) {
+				//king below
+				initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, 1, -1);
+				initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, -1, -1);
+			} else  {
+				initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, 1, 1);
+				initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, -1, 1);
+				initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, 1, -1);
+				initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, -1, -1);
 			}
 		}
 	}
@@ -457,26 +468,18 @@ public class State {
 		return Math.abs(deltaFile) - Math.abs(deltaRank) <= 2;
 	}
 
+	// TODO works
 	private void initChecksByRooks(Square king, boolean isCheckedByWhite, Square[] rooks, byte rooksCount) {
 		for (int i = 0; i < rooksCount; i++) {
-			byte deltaFile = (byte)(king.file - rooks[i].file);
+			initCheckFlagsBySlidingPiece(rooks[i], isCheckedByWhite, 0, 1);
+			initCheckFlagsBySlidingPiece(rooks[i], isCheckedByWhite, 0, -1);
+
 			byte deltaRank = (byte)(king.rank - rooks[i].rank);
-			// aligned vertically
-			if (isAlmostAlignedVertically(deltaFile, isCheckedByWhite)) {
-				initCheckFlagsBySlidingPiece(rooks[i], isCheckedByWhite, 0, 1);
-				initCheckFlagsBySlidingPiece(rooks[i], isCheckedByWhite, 0, -1);
-			}
-			//aligned horizontally
 			if (isCloseEnoughToRank(deltaRank)) {
 				initCheckFlagsBySlidingPiece(rooks[i], isCheckedByWhite, 1, 0);
 				initCheckFlagsBySlidingPiece(rooks[i], isCheckedByWhite, -1, 0);
 			}
 		}
-	}
-
-	private boolean isAlmostAlignedVertically(byte deltaFile, boolean hasKingMoved) {
-		//TODO castling - hasKingMoved?
-		return Math.abs(deltaFile) <= 1;
 	}
 
 	private boolean isCloseEnoughToRank(byte deltaRank) {
@@ -487,16 +490,17 @@ public class State {
 		for (int i = 0; i < queensCount; i++) {
 			byte deltaFile = (byte)(king.file - queens[i].file);
 			byte deltaRank = (byte)(king.rank - queens[i].rank);
-
-			if (isAlignedDiagonally(deltaFile,deltaRank)) {
-				initSquaresInCheckByBishop(queens[i], isCheckedByWhite);
-			}
-			//TODO
-			if (isAlmostAlignedVertically(deltaFile, false)) {
+//TODO
+			if (deltaRank > 1) {
+				// king at least two ranks above
 				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, 1);
 				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, -1);
-			}
-			// TODO
+			} else if (deltaRank < -1) {
+				// king at least two ranks below
+			} else if
+			initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, 1);
+			initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, -1);
+
 			if (isCloseEnoughToRank(deltaRank)) {
 				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 1, 0);
 				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, -1, 0);

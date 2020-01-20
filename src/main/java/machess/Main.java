@@ -5,13 +5,13 @@ public class Main {
         State game = new State();
         System.out.println("new game \n" + game);
 
-        game = game.fromPseudoLegalMove(Square.A1, Square.D8)
-				.fromPseudoLegalMove(Square.A7, Square.A6)
+        game = game.fromPseudoLegalMove(Square.D1, Square.H3)
+				.fromPseudoLegalMove(Square.A8, Square.C1)
 
-				.fromPseudoLegalMove(Square.D8, Square.C8)
-				.fromPseudoLegalMove(Square.B8, Square.C6)
+				.fromPseudoLegalMove(Square.A2, Square.A3)
+				.fromPseudoLegalMove(Square.C1, Square.C2)
 
-				.fromPseudoLegalMove(Square.C8, Square.C7)
+				.fromPseudoLegalMove(Square.B1, Square.C3)
 				;
 
         System.out.println("castle test \n" + game);
