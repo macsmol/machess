@@ -170,7 +170,7 @@ public class State {
 
 		Content takenPiece = Content.fromShort(boardCopy[to.ordinal()]);
 		assert takenPiece != Content.BLACK_KING && takenPiece != Content.WHITE_KING : from + "->" + to + " is taking king";
-		boardCopy[to.ordinal()] = promotion != null ? promotion.asByte : movedPiece.asByte;
+		boardCopy[to.ordinal()] = movedPiece.asByte;
 
 		Square squareWithPawnTakenEnPassant = null;
 		if (enPassantSquare == to) {
@@ -196,6 +196,10 @@ public class State {
 			}
 			// update pieces lists
 			piecesCopy.move(rook, rookCastleFrom, rookDestination);
+		} else if (promotion != null) {
+			boardCopy[to.ordinal()] = promotion.asByte;
+			// TODO promotion bug: pawn position not updated on pawn list(confused 'to' with 'from')
+			pieces.promote(to, promotion);
 		}
 
 		piecesCopy.move(movedPiece, from, to);

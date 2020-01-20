@@ -42,7 +42,7 @@ public class Scorer {
 
 			try {
 				currScore = miniMax(moves.get(i), depth - 1);
-			} catch (AssertionError ae) {
+			} catch (Throwable ae) {
 				System.out.println("----------------------FAILED ASSERTION!-------------------------------------");
 				System.out.println("DEPTH: " + depth + " STATE: " + rootState);
 				throw ae;
@@ -89,7 +89,7 @@ public class Scorer {
 
 			try {
 				currScore = discourageLaterWin(miniMax(move, depth - 1));
-			} catch (AssertionError ae) {
+			} catch (Throwable ae) {
 				System.out.println("----------------------FAILED ASSERTION!-------------------------------------");
 				System.out.println("DEPTH: " + depth + " STATE: " + state);
 				throw ae;

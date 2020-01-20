@@ -290,7 +290,53 @@ class PieceLists {
         }
         assert false : "Didn't find piece to kill on piece list " + piece + " " + killedOn;
     }
-    
+
+    public void promote(Square where, Content toWhat) {
+        Square[] pieces = toWhat.isWhite ? whitePawns : blackPawns;
+        byte piecesCount = toWhat.isWhite ? whitePawnsCount-- : blackPawnsCount--;
+        for (int i = 0; i < piecesCount; i++) {
+            if (pieces[i] == where) {
+               pieces[i] = pieces[piecesCount - 1];
+            }
+        }
+        switch (toWhat) {
+            case BLACK_KNIGHT:
+                pieces = blackKnights;
+                piecesCount = blackKnightsCount++;
+                break;
+            case BLACK_BISHOP:
+                pieces = blackBishops;
+                piecesCount = blackBishopsCount++;
+                break;
+            case BLACK_ROOK:
+                pieces = blackRooks;
+                piecesCount = blackRooksCount++;
+                break;
+            case BLACK_QUEEN:
+                pieces = blackQueens;
+                piecesCount = blackQueensCount++;
+                break;
+            case WHITE_KNIGHT:
+                pieces = whiteKnights;
+                piecesCount = whiteKnightsCount++;
+                break;
+            case WHITE_BISHOP:
+                pieces = whiteBishops;
+                piecesCount = whiteBishopsCount++;
+                break;
+            case WHITE_ROOK:
+                pieces = whiteRooks;
+                piecesCount = whiteRooksCount++;
+                break;
+            case WHITE_QUEEN:
+                pieces = whiteQueens;
+                piecesCount = whiteQueensCount++;
+                break;
+            default:
+                assert false : "Invalid piece to promote to: " + toWhat;
+        }
+        pieces[piecesCount] = where;
+    }
 
     public Square getWhiteKing() {
         return whiteKing;
