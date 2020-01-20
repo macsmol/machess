@@ -14,12 +14,7 @@ public class Scorer {
 	private static final int MATERIAL_ROOK		= 500;
 	private static final int MATERIAL_QUEEN		= 900;
 
-	private static final float FACTOR_DEFENDED_PIECE 		= 1.0f;
-	private static final float FACTOR_LOOSE_PIECE 			= 0.9f;
-	private static final float FACTOR_ATTACKED_AND_DEFENDED = 0.6f;
-	private static final float FACTOR_HANGING_PIECE 		= 0.3f;
-
-	private static final int CHECKED_SQUARE_SCORE = 5;
+	private static final int LEGAL_MOVE_SCORE = 5;
 
 	private static int movesEvaluatedInPly = 0;
 	private static long totalMovesEvaluated = 0;
@@ -31,6 +26,7 @@ public class Scorer {
 		movesEvaluatedInPly = 0 ;
 		long before = System.nanoTime();
 		List<State> moves = rootState.generateLegalMoves();
+
 		int resultScore = maximizing ? Integer.MIN_VALUE : Integer.MAX_VALUE;
 		int indexOfResultScore = -1;
 		if (moves.isEmpty()) {
@@ -38,11 +34,20 @@ public class Scorer {
 					+ "; Moves/sec: " + Utils.calcMovesPerSecond(totalMovesEvaluated, totalNanosElapsed));
 			return new MoveScore(terminalNodeScore(rootState), -1);
 		}
-		for (int i = 0; i < moves.size(); i++) {
-			int depth = Config.SEARCH_DEPTH - 1;
-			depth -=  maximizing ? Config.WHITE_PLY_HANDICAP : Config.BLACK_PLY_HANDICAP;
 
-			int currScore = miniMax(moves.get(i), depth);
+		int depth = Config.SEARCH_DEPTH;
+		depth -=  maximizing ? Config.WHITE_PLY_HANDICAP : Config.BLACK_PLY_HANDICAP;
+		for (int i = 0; i < moves.size(); i++) {
+			int currScore;
+
+			try {
+				currScore = miniMax(moves.get(i), depth - 1);
+			} catch (AssertionError ae) {
+				System.out.println("----------------------FAILED ASSERTION!-------------------------------------");
+				System.out.println("DEPTH: " + depth + " STATE: " + rootState);
+				throw ae;
+			}
+
 			if (maximizing) {
 				if (currScore > resultScore) {
 					resultScore = currScore;
@@ -72,30 +77,32 @@ public class Scorer {
 			return evaluate(state);
 		}
 		int resultScore = maximizingTurn ? Integer.MIN_VALUE : Integer.MAX_VALUE;
-		List<State> moves = null;
 
-		try {
-			moves = state.generateLegalMoves();
-		} catch (AssertionError ae) {
-			System.out.println("----------------------FAILED ASSERTION!-------------------------------------");
-			System.out.println("DEPTH: " + depth + " STATE: " + state);
-			throw ae;
-		}
+		List<State> moves = state.generateLegalMoves();
+
 
 		if (moves.isEmpty()) {
 			return terminalNodeScore(state);
 		}
 		for (State move : moves) {
-				int currScore = discourageLaterWin(miniMax(move, depth - 1));
-				if (maximizingTurn) {
-					if (currScore > resultScore) {
-						resultScore = currScore;
-					}
-				} else {
-					if (currScore < resultScore) {
-						resultScore = currScore;
-					}
+			int currScore;
+
+			try {
+				currScore = discourageLaterWin(miniMax(move, depth - 1));
+			} catch (AssertionError ae) {
+				System.out.println("----------------------FAILED ASSERTION!-------------------------------------");
+				System.out.println("DEPTH: " + depth + " STATE: " + state);
+				throw ae;
+			}
+			if (maximizingTurn) {
+				if (currScore > resultScore) {
+					resultScore = currScore;
 				}
+			} else {
+				if (currScore < resultScore) {
+					resultScore = currScore;
+				}
+			}
 
 		}
 		return resultScore;
@@ -128,14 +135,15 @@ public class Scorer {
 	}
 
 	public static int evaluate(State state) {
-		if (state.countLegalMoves() == 0) {
+		int legalMoves = state.countLegalMoves();
+//		int mobilityScore = LEGAL_MOVE_SCORE * legalMoves;
+		if (legalMoves == 0) {
 			return terminalNodeScore(state);
 		}
 		movesEvaluatedInPly++;
 		int materialScore = evaluateMaterialScore(state);
-		int checkedSquaresScore = evaluateCheckedSquaresScore(state);
 
-		return materialScore + checkedSquaresScore;
+		return materialScore;
 	}
 
 	private static int evaluateMaterialScore(State state) {
@@ -192,22 +200,6 @@ public class Scorer {
 //
 //		return score;
 //	}
-
-	private static int evaluateCheckedSquaresScore(State state) {
-		int squaresCheckedByWhite = countSquaresCheckedBy(State.WHITE, state);
-		int squaresCheckedByBlack = countSquaresCheckedBy(State.BLACK, state);
-		return (squaresCheckedByWhite - squaresCheckedByBlack) * CHECKED_SQUARE_SCORE;
-	}
-
-	private static int countSquaresCheckedBy(boolean checksByWhite, State state) {
-		int checksCount = 0;
-		for (Square square : Square.values()) {
-			if (state.isSquareCheckedBy(square, checksByWhite)) {
-				checksCount++;
-			}
-		}
-		return checksCount;
-	}
 
 	private static int terminalNodeScore(State state) {
 		movesEvaluatedInPly++;

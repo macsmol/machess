@@ -396,18 +396,17 @@ public class State {
 
 	private void initChecksAroundKing(boolean isCheckedByWhite) {
 		Square king = isCheckedByWhite ? pieces.getBlackKing() : pieces.getWhiteKing();
-// TODO bug: these optimizations break castling legality checks!
 		int kingMovedFlag = isCheckedByWhite ? BLACK_KING_MOVED : WHITE_KING_MOVED;
 		boolean hasKingMoved = test(kingMovedFlag);
 
 		if (isCheckedByWhite) {
-			initChecksByPawns(king, isCheckedByWhite, pieces.whitePawns, pieces.whitePawnsCount);
+			initChecksByPawns(king, hasKingMoved, isCheckedByWhite, pieces.whitePawns, pieces.whitePawnsCount);
 			initChecksByKnights(king, hasKingMoved, isCheckedByWhite, pieces.whiteKnights, pieces.whiteKnightsCount);
 			initChecksByBishops(king, isCheckedByWhite, pieces.whiteBishops, pieces.whiteBishopsCount);
 			initChecksByRooks(king, isCheckedByWhite, pieces.whiteRooks, pieces.whiteRooksCount);
 			initChecksByQueens(king, isCheckedByWhite, pieces.whiteQueens, pieces.whiteQueensCount);
 		} else {
-			initChecksByPawns(king, isCheckedByWhite, pieces.blackPawns, pieces.blackPawnsCount);
+			initChecksByPawns(king, hasKingMoved, isCheckedByWhite, pieces.blackPawns, pieces.blackPawnsCount);
 			initChecksByKnights(king, hasKingMoved, isCheckedByWhite, pieces.blackKnights, pieces.blackKnightsCount);
 			initChecksByBishops(king, isCheckedByWhite, pieces.blackBishops, pieces.blackBishopsCount);
 			initChecksByRooks(king, isCheckedByWhite, pieces.blackRooks, pieces.blackRooksCount);
@@ -416,16 +415,19 @@ public class State {
 	}
 
 
-	private void initChecksByPawns(Square king, boolean isCheckedByWhite, Square[] pawns, byte pawnsCount) {
+	private void initChecksByPawns(Square king, boolean hasKingMoved, boolean isCheckedByWhite,
+								   Square[] pawns, byte pawnsCount) {
 		Arrays.sort(pawns, 0, pawnsCount, Comparator.comparingInt(sq -> sq.file));
+
+		byte minKingSafeDistance = (byte)(hasKingMoved ? 2 : 3);
 		for (int i = pawnsCount / 2; i >= 0; i--) {
-			if (pawns[i].file < king.file - 2) {
+			if (pawns[i].file < king.file - minKingSafeDistance) {
 				break;
 			}
 			initSquaresInCheckByPawn(pawns[i], isCheckedByWhite);
 		}
 		for (int i = pawnsCount / 2 + 1; i < pawnsCount; i++) {
-			if (pawns[i].file > king.file + 2) {
+			if (pawns[i].file > king.file + minKingSafeDistance) {
 				break;
 			}
 			initSquaresInCheckByPawn(pawns[i], isCheckedByWhite);
@@ -442,7 +444,6 @@ public class State {
 		}
 	}
 
-	// TODO test it
 	private void initChecksByBishops(Square king, boolean isCheckedByWhite, Square[] bishops, byte bishopsCount) {
 		for (int i = 0; i < bishopsCount; i++) {
 			byte deltaRank = (byte)(king.rank - bishops[i].rank);
@@ -455,20 +456,19 @@ public class State {
 				//king below
 				initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, 1, -1);
 				initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, -1, -1);
-			} else  {
-				initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, 1, 1);
-				initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, -1, 1);
-				initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, 1, -1);
-				initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, -1, -1);
+			} else {
+				byte deltaFile = (byte) (king.file - bishops[i].file);
+				if (deltaFile > 0) { // king to the right
+					initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, 1, 1);
+					initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, 1, -1);
+				} else {
+					initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, -1, 1);
+					initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, -1, -1);
+				}
 			}
 		}
 	}
 
-	private boolean isAlignedDiagonally(byte deltaFile, byte deltaRank) {
-		return Math.abs(deltaFile) - Math.abs(deltaRank) <= 2;
-	}
-
-	// TODO works
 	private void initChecksByRooks(Square king, boolean isCheckedByWhite, Square[] rooks, byte rooksCount) {
 		for (int i = 0; i < rooksCount; i++) {
 			initCheckFlagsBySlidingPiece(rooks[i], isCheckedByWhite, 0, 1);
@@ -488,22 +488,42 @@ public class State {
 
 	private void initChecksByQueens(Square king, boolean isCheckedByWhite, Square[] queens, byte queensCount) {
 		for (int i = 0; i < queensCount; i++) {
-			byte deltaFile = (byte)(king.file - queens[i].file);
-			byte deltaRank = (byte)(king.rank - queens[i].rank);
-//TODO
-			if (deltaRank > 1) {
-				// king at least two ranks above
+			byte deltaRank = (byte) (king.rank - queens[i].rank);
+			if (deltaRank > 1) { // king at least two ranks above
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, -1, 1);
 				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, 1);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 1, 1);
+			} else if (deltaRank < -1) { // king at least two ranks below
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, -1, -1);
 				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, -1);
-			} else if (deltaRank < -1) {
-				// king at least two ranks below
-			} else if
-			initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, 1);
-			initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, -1);
-
-			if (isCloseEnoughToRank(deltaRank)) {
-				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 1, 0);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 1, -1);
+			} else if (deltaRank > 0) { // king just above
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, -1, 1);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, 1);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 1, 1);
 				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, -1, 0);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 1, 0);
+			} else if (deltaRank < 0) { // king just below
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, -1, -1);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, -1);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 1, -1);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, -1, 0);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 1, 0);
+			} else { // same rank
+				byte deltaFile = (byte) (king.file - queens[i].file);
+				if (deltaFile > 0) { // king to the right
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 1, 1);
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 1, 0);
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 1, -1);
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, 1);
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, -1);
+				} else { // king to the left
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, -1, 1);
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, -1, 0);
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, -1, -1);
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, 1);
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, -1);
+				}
 			}
 		}
 	}
@@ -696,14 +716,20 @@ public class State {
 
 	public List<State> generateLegalMoves() {
 		List<State> moves = new ArrayList<>(Config.DEFAULT_MOVES_LIST_CAPACITY);
+		try {
 
-		if (isKingInCheck()) {
-			Square checkedKing = test(WHITE_TURN) ? pieces.getWhiteKing() : pieces.getBlackKing();
-			generateLegalMovesWhenKingInCheck(moves, checkedKing);
-			return moves;
+			if (isKingInCheck()) {
+				Square checkedKing = test(WHITE_TURN) ? pieces.getWhiteKing() : pieces.getBlackKing();
+				generateLegalMovesWhenKingInCheck(moves, checkedKing);
+				return moves;
+			}
+
+			generatePseudoLegalMoves(moves);
+		} catch (AssertionError ae) {
+			System.out.println("------------------FAILED ASSERTION IN MOVE GENERATION----------------------------");
+			System.out.println(" STATE: " + this);
+			throw ae;
 		}
-
-		generatePseudoLegalMoves(moves);
 		return moves;
 	}
 
