@@ -9,7 +9,7 @@ public class Config {
 	// TODO conflict with pawn sorting?
 	public static final boolean SORT_OCCUPIED_SQUARES = false;
 
-	public static final int SEARCH_DEPTH = 2;
+	public static final int SEARCH_DEPTH = 4;
 
 	/**
 	 * Decrement maximizing player search depth by this number

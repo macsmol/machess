@@ -72,21 +72,31 @@ public class Scorer {
 			return evaluate(state);
 		}
 		int resultScore = maximizingTurn ? Integer.MIN_VALUE : Integer.MAX_VALUE;
-		List<State> moves = state.generateLegalMoves();
+		List<State> moves = null;
+
+		try {
+			moves = state.generateLegalMoves();
+		} catch (AssertionError ae) {
+			System.out.println("----------------------FAILED ASSERTION!-------------------------------------");
+			System.out.println("DEPTH: " + depth + " STATE: " + state);
+			throw ae;
+		}
+
 		if (moves.isEmpty()) {
 			return terminalNodeScore(state);
 		}
 		for (State move : moves) {
-			int currScore = discourageLaterWin(miniMax(move, depth - 1));
-			if (maximizingTurn) {
-				if (currScore > resultScore) {
-					resultScore = currScore;
+				int currScore = discourageLaterWin(miniMax(move, depth - 1));
+				if (maximizingTurn) {
+					if (currScore > resultScore) {
+						resultScore = currScore;
+					}
+				} else {
+					if (currScore < resultScore) {
+						resultScore = currScore;
+					}
 				}
-			} else {
-				if (currScore < resultScore) {
-					resultScore = currScore;
-				}
-			}
+
 		}
 		return resultScore;
 	}
