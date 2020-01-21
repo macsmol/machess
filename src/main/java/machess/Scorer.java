@@ -17,13 +17,15 @@ public class Scorer {
 	private static final int LEGAL_MOVE_SCORE = 5;
 
 	private static int movesEvaluatedInPly = 0;
+	private static int checkMatesFound = 0;
 	private static long totalMovesEvaluated = 0;
 	private static long totalNanosElapsed = 0;
 
 
 	public static MoveScore miniMax(State rootState) {
 		boolean maximizing = rootState.test(State.WHITE_TURN);
-		movesEvaluatedInPly = 0 ;
+		movesEvaluatedInPly = 0;
+		checkMatesFound = 0;
 		long before = System.nanoTime();
 		List<State> moves = rootState.generateLegalMoves();
 
@@ -61,6 +63,7 @@ public class Scorer {
 			}
 		}
 		System.out.println("Moves evaluated: " + movesEvaluatedInPly);
+		System.out.println("Checkmates found: " + checkMatesFound);
 		long after = System.nanoTime();
 		MoveScore bestMove = new MoveScore(resultScore, indexOfResultScore);
 		long elapsedNanos = after - before;
@@ -206,12 +209,14 @@ public class Scorer {
 		boolean maximizingTurn = state.test(State.WHITE_TURN);
 		if (maximizingTurn) {
 			if (state.isKingInCheck()) {
+				checkMatesFound++;
 				return MINIMIZING_WIN;
 			} else {
 				return DRAW;
 			}
 		} else {
 			if (state.isKingInCheck()) {
+				checkMatesFound++;
 				return MAXIMIZING_WIN;
 			} else {
 				return DRAW;
