@@ -1,16 +1,5 @@
 Release 1:
-
--move generation -
-    -introduce Move object
-    -makeMove()
-    -unmakeMove()
-    -Keep State objects only for played plies + tree depth.
-    -States in the tree need to be mutable (to save allocations)
-
--white at terminal node with SEARCH_DEPTH = 4; WHITE_PLY_HANDICAP = 1; BLACK_PLY_HANDICAP = 0
-evaluated 27166 moves to realize it lost?!?!?
-
--check flags are only used for king (initialize them only for fields adjacent to the king)
+-TODOs in code
 
 -0x88 array
 
@@ -18,5 +7,7 @@ evaluated 27166 moves to realize it lost?!?!?
 
 -oscillation when playing against itself
 
+-perft(5) gives 8 moves too much  - probably false checkmates: same problem reproduced in
+9686663c8d7d89d2910bcaa463e7d2dfd0b3d295 	SEARCH_DEPTH = 3;  WHITE_PLY_HANDICAP = 0; BLACK_PLY_HANDICAP = 1;
 
 
