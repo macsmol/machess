@@ -1,3 +1,5 @@
+-initial pins implementation was wrong had one board per color. Only realized that when started writing code that reads them
+
 -Move as int is slower than moves as State instances. Looks like java is good at GC.
 
 -checked fields optimization was tricky due to king castlings.
