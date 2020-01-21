@@ -7,7 +7,6 @@ Release 1:
 
 -oscillation when playing against itself
 
--perft(5) gives 8 moves too much  - probably false checkmates: same problem reproduced in
-9686663c8d7d89d2910bcaa463e7d2dfd0b3d295 	SEARCH_DEPTH = 3;  WHITE_PLY_HANDICAP = 0; BLACK_PLY_HANDICAP = 1;
+-perft(5) gives 8 moves too much. It also gives 8 checkmates to much. It's NOT the old problem with double check giving false C-M.
 
 
