@@ -3,7 +3,7 @@ package machess;
 public class Main {
     public static void main(String[] args) {
         State game = new State();
-        System.out.println("new game \n" + game);
+//        System.out.println("new game \n" + game);
 
 //        game = game.fromPseudoLegalMove(Square.D1, Square.H3)
 //				.fromPseudoLegalMove(Square.C8, Square.C1)
@@ -13,7 +13,7 @@ public class Main {
 //				;
 //        System.out.println("castle test \n" + game);
 
-        for (int ply = 1; ply < 150; ply++) {
+        for (int ply = 1; ply < 2; ply++) {
             Scorer.MoveScore bestMove = Scorer.miniMax(game);
 
             if (bestMove.moveIndex == -1) {
@@ -22,7 +22,13 @@ public class Main {
                 break;
             }
             game = game.chooseMove(bestMove.moveIndex);
-            System.out.println(game);
+            System.out.println("*****************************************************");
+            System.out.println("*****************************************************");
+            System.out.println("*****************************************************");
+            System.out.println("*****************************************************");
+            System.out.println("*****************************************************");
+            System.out.println("*****************************************************");
+//            System.out.println(game);
         }
     }
 }

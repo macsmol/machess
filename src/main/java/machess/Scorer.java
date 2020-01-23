@@ -210,6 +210,7 @@ public class Scorer {
 		if (maximizingTurn) {
 			if (state.isKingInCheck()) {
 				checkMatesFound++;
+				System.out.println("BLACK checkmates("+checkMatesFound+"): " + state);
 				return MINIMIZING_WIN;
 			} else {
 				return DRAW;
@@ -217,6 +218,7 @@ public class Scorer {
 		} else {
 			if (state.isKingInCheck()) {
 				checkMatesFound++;
+				System.out.println("WHITE checkmates("+checkMatesFound+"): " + state);
 				return MAXIMIZING_WIN;
 			} else {
 				return DRAW;

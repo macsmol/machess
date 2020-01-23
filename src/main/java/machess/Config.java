@@ -18,7 +18,7 @@ public class Config {
 	/**
 	 * Decrement minimizing player search depth by this number
 	 */
-	public static final int BLACK_PLY_HANDICAP = 1;
+	public static final int BLACK_PLY_HANDICAP = 0;
 
 	public static final int PIECE_LIST_CAPACITY = 4;
 }

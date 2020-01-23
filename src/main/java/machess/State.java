@@ -719,6 +719,7 @@ public class State {
 	}
 
 	public List<State> generateLegalMoves() {
+		assert isLegal() : "King is still left in check after previous move!\n" + this;
 		List<State> moves = new ArrayList<>(Config.DEFAULT_MOVES_LIST_CAPACITY);
 		try {
 
