@@ -1,0 +1,10 @@
+-initial pins implementation was wrong had one board per color. Only realized that when started writing code that reads them
+
+-Move as int is slower than moves as State instances. Looks like java is good at GC.
+
+-checked fields optimization was tricky due to king castlings.
+
+-Catching assertionErrors in minmax, logging state and rethrowing looks like a good idea. Normal/conditionall breakpoints don't really work because of geometric growth.
+At 5 plies depth generateLegalMoves() breaks ~2000000 times.
+
+-perft(5) is correct. We just should not count checkmates from previous ply.

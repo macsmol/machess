@@ -4,6 +4,8 @@ import com.sun.istack.internal.Nullable;
 
 import java.util.*;
 
+import static machess.Square.*;
+
 /**
  * Game state seen as game board rather than a list of figures.
  * All is static in order to avoid allocations.
@@ -33,8 +35,6 @@ public class State {
 		static final byte CHECKS_BY_BLACK_BIT_OFFSET = 12;
 	}
 
-	private static final int INITIAL_PLAYER_PIECES_COUNT = 16;
-
 	// flags
 	private final byte flags;
 	static final int WHITE_TURN 			= 0x01;
@@ -50,12 +50,7 @@ public class State {
 	 */
 	final short[] board;
 
-	// king, queen, rooks and knights, pawns
-	final Square[] squaresWithWhites;
-	final byte whitesCount;
-
-	final Square[] squaresWithBlacks;
-	final byte blacksCount;
+	final PieceLists pieces;
 	/**
 	 * If not null it means there is a possibility to en-passant on this square
 	 */
@@ -79,42 +74,32 @@ public class State {
 			board[Square.fromLegalInts(file, Rank._7).ordinal()] = Content.BLACK_PAWN.asByte;
 
 			switch (file) {
-				case 0:
-				case 7:
+				case File.A:
+				case File.H:
 					board[Square.fromLegalInts(file, Rank._1).ordinal()] = Content.WHITE_ROOK.asByte;
 					board[Square.fromLegalInts(file, Rank._8).ordinal()] = Content.BLACK_ROOK.asByte;
 					break;
-				case 1:
-				case 6:
+				case File.B:
+				case File.G:
 					board[Square.fromLegalInts(file, Rank._1).ordinal()] = Content.WHITE_KNIGHT.asByte;
 					board[Square.fromLegalInts(file, Rank._8).ordinal()] = Content.BLACK_KNIGHT.asByte;
 					break;
-				case 2:
-				case 5:
+				case File.C:
+				case File.F:
 					board[Square.fromLegalInts(file, Rank._1).ordinal()] = Content.WHITE_BISHOP.asByte;
 					board[Square.fromLegalInts(file, Rank._8).ordinal()] = Content.BLACK_BISHOP.asByte;
 					break;
-				case 3:
+				case File.D:
 					board[Square.fromLegalInts(file, Rank._1).ordinal()] = Content.WHITE_QUEEN.asByte;
 					board[Square.fromLegalInts(file, Rank._8).ordinal()] = Content.BLACK_QUEEN.asByte;
 					break;
-				case 4:
+				case File.E:
 					board[Square.fromLegalInts(file, Rank._1).ordinal()] = Content.WHITE_KING.asByte;
 					board[Square.fromLegalInts(file, Rank._8).ordinal()] = Content.BLACK_KING.asByte;
 					break;
 			}
 		}
-		squaresWithWhites = new Square[]{
-				Square.E1, Square.D1, Square.A1, Square.H1, Square.B1, Square.C1, Square.F1, Square.G1,
-				Square.A2, Square.B2, Square.C2, Square.D2, Square.E2, Square.F2, Square.G2, Square.H2
-		};
-		whitesCount = INITIAL_PLAYER_PIECES_COUNT;
-
-		squaresWithBlacks = new Square[]{
-				Square.E8, Square.D8, Square.A8, Square.H8, Square.B8, Square.C8, Square.F8, Square.G8,
-				Square.A7, Square.B7, Square.C7, Square.D7, Square.E7, Square.F7, Square.G7, Square.H7
-		};
-		blacksCount = INITIAL_PLAYER_PIECES_COUNT;
+		pieces = new PieceLists();
 		enPassantSquare = null;
 		plyNumber = 1;
 
@@ -122,17 +107,14 @@ public class State {
 		initSquaresInCheck();
 	}
 
-	private State(short[] board, Square[] squaresWithWhites, byte whitesCount, Square[] squaresWithBlacks, byte blacksCount,
-				  byte flags, @Nullable Square enPassantSquare, int plyNumber) {
+	private State(short[] board, PieceLists pieces, byte flags,
+				  @Nullable Square enPassantSquare, int plyNumber) {
 		this.board = board;
-		this.squaresWithWhites = squaresWithWhites;
-		this.squaresWithBlacks = squaresWithBlacks;
-		this.whitesCount = whitesCount;
-		this.blacksCount = blacksCount;
+		this.pieces = pieces;
 		this.flags = flags;
 		this.enPassantSquare = enPassantSquare;
 		this.plyNumber = plyNumber;
-		sortOccupiedSquares();
+		pieces.sortOccupiedSquares();
 
 		resetSquaresInCheck();
 		initSquaresInCheck();
@@ -141,19 +123,7 @@ public class State {
 		initPinnedPieces();
 	}
 
-	private void sortOccupiedSquares() {
-		if (!Config.SORT_OCCUPIED_SQUARES) {
-			return;
-		}
-		Comparator<Square> comparator = new Comparator<Square>() {
-			@Override
-			public int compare(Square sq1, Square sq2) {
-				return sq1.ordinal()-sq2.ordinal();
-			}
-		};
-		Arrays.sort(squaresWithWhites, 1, whitesCount, comparator);
-		Arrays.sort(squaresWithBlacks, 1, blacksCount, comparator);
-	}
+
 
 	private State fromPseudoLegalPawnDoublePush(Square from, Square to, Square enPassantSquare) {
 		assert enPassantSquare != null;
@@ -187,11 +157,10 @@ public class State {
 	 * This is the root method - it covers all cases. All 'overload' methods should call this one.
 	 */
 	private State fromPseudoLegalMove(Square from, Square to, @Nullable Content promotion, @Nullable Square futureEnPassantSquare,
-									  @Nullable Square rookToCastle) {
+									  @Nullable Square rookCastleFrom) {
 		assert from != to : from + "->" + to + " is no move";
 		short[] boardCopy = board.clone();
-		Square[] squaresWithWhitesCopy = squaresWithWhites.clone();
-		Square[] squaresWithBlacksCopy = squaresWithBlacks.clone();
+		PieceLists piecesCopy = pieces.clone();
 
 		//  update boardCopy
 		Content movedPiece = Content.fromShort(boardCopy[from.ordinal()]);
@@ -201,7 +170,9 @@ public class State {
 
 		Content takenPiece = Content.fromShort(boardCopy[to.ordinal()]);
 		assert takenPiece != Content.BLACK_KING && takenPiece != Content.WHITE_KING : from + "->" + to + " is taking king";
-		boardCopy[to.ordinal()] = promotion != null ? promotion.asByte : movedPiece.asByte;
+		boardCopy[to.ordinal()] = movedPiece.asByte;
+
+		piecesCopy.move(movedPiece, from, to);
 
 		Square squareWithPawnTakenEnPassant = null;
 		if (enPassantSquare == to) {
@@ -214,30 +185,27 @@ public class State {
 				takenPiece = Content.fromShort(boardCopy[squareWithPawnTakenEnPassant.ordinal()]);
 				boardCopy[squareWithPawnTakenEnPassant.ordinal()] = Content.EMPTY.asByte;
 			}
-		} else if (rookToCastle != null) {
-			boardCopy[rookToCastle.ordinal()] = Content.EMPTY.asByte;
-			byte rookAsByte = test(WHITE_TURN) ? Content.WHITE_ROOK.asByte : Content.BLACK_ROOK.asByte;
+		} else if (rookCastleFrom != null) {
+			boardCopy[rookCastleFrom.ordinal()] = Content.EMPTY.asByte;
+			Content rook = test(WHITE_TURN) ? Content.WHITE_ROOK : Content.BLACK_ROOK;
 			Square rookDestination;
-			if (rookToCastle.file == 0) {
+			if (rookCastleFrom.file == 0) {
 				rookDestination = test(WHITE_TURN) ? Square.D1 : Square.D8;
-				boardCopy[rookDestination.ordinal()] = rookAsByte;
+				boardCopy[rookDestination.ordinal()] = rook.asByte;
 			} else {
 				rookDestination = test(WHITE_TURN) ? Square.F1 : Square.F8;
-				boardCopy[rookDestination.ordinal()] = rookAsByte;
+				boardCopy[rookDestination.ordinal()] = rook.asByte;
 			}
 			// update pieces lists
-			movePieceOnPiecesLists(squaresWithWhitesCopy, squaresWithBlacksCopy, rookToCastle, rookDestination);
+			piecesCopy.move(rook, rookCastleFrom, rookDestination);
+		} else if (promotion != null) {
+			boardCopy[to.ordinal()] = promotion.asByte;
+			piecesCopy.promote(to, promotion);
 		}
-
-		// update pieces lists
-		movePieceOnPiecesLists(squaresWithWhitesCopy, squaresWithBlacksCopy, from, to);
-
-		Square[] takenPieces = test(WHITE_TURN) ? squaresWithBlacksCopy : squaresWithWhitesCopy;
-		byte takenPiecesCount = test(WHITE_TURN) ? blacksCount : whitesCount;
 
 		if (takenPiece != Content.EMPTY) {
 			assert movedPiece.isWhite != takenPiece.isWhite : from + "->" + to + " is a friendly take";
-			takenPiecesCount = takePieceOnPieceList(to, squareWithPawnTakenEnPassant, takenPieces, takenPiecesCount);
+			piecesCopy.kill(takenPiece, squareWithPawnTakenEnPassant != null ? squareWithPawnTakenEnPassant : to);
 		}
 
 		int flagsCopy = flags ^ WHITE_TURN;
@@ -255,34 +223,7 @@ public class State {
 			flagsCopy |= BLACK_KS_ROOK_MOVED;
 		}
 
-		byte updatedWhitesCount = test(WHITE_TURN) ? whitesCount : takenPiecesCount;
-		byte updatedBlacksCount = test(WHITE_TURN) ? takenPiecesCount : blacksCount;
-		return new State(boardCopy, squaresWithWhitesCopy, updatedWhitesCount, squaresWithBlacksCopy, updatedBlacksCount,
-				(byte) flagsCopy, futureEnPassantSquare, plyNumber + 1);
-	}
-
-	private byte takePieceOnPieceList(Square to, Square squareWithPawnTakenEnPassant, Square[] vulnerablePieces, byte vulnerablePiecesCount) {
-		for (int i = 0; i < vulnerablePiecesCount; i++) {
-			if (vulnerablePieces[i] == to || vulnerablePieces[i] == squareWithPawnTakenEnPassant) {
-				// decrement size of alive pieces
-				vulnerablePiecesCount--;
-				vulnerablePieces[i] = vulnerablePieces[vulnerablePiecesCount];
-				break;
-			}
-		}
-		return vulnerablePiecesCount;
-	}
-
-	private void movePieceOnPiecesLists(Square[] squaresWithWhites, Square[] squaresWithBlacks, Square from, Square to) {
-		Square[] movingPieces = test(WHITE_TURN) ? squaresWithWhites : squaresWithBlacks;
-		byte movingPiecesCount = test(WHITE_TURN) ? whitesCount : blacksCount;
-
-		for (int i = 0; i < movingPiecesCount; i++) {
-			if (movingPieces[i] == from) {
-				movingPieces[i] = to;
-				break;
-			}
-		}
+		return new State(boardCopy, piecesCopy, (byte) flagsCopy, futureEnPassantSquare, plyNumber + 1);
 	}
 
 	boolean test(int flagMask) {
@@ -329,16 +270,7 @@ public class State {
 					.append(Config.DEBUG_PINNED_PIECES 			? "+----+----+----+----+----+----+----+----+" : "")
 					.append('\n');
 		}
-		sb.append("squaresWithWhites: [");
-		for (int i = 0; i < squaresWithWhites.length; i++) {
-			sb.append(squaresWithWhites[i]).append(i == (whitesCount - 1) ? ";   " : ", ");
-		}
-		sb.append("] count: ").append(whitesCount).append('\n');
-		sb.append("squaresWithBlacks: [");
-		for (int i = 0; i < squaresWithBlacks.length; i++) {
-			sb.append(squaresWithBlacks[i]).append(i == (blacksCount - 1) ? ";   " : ", ");
-		}
-		sb.append("] count: ").append(blacksCount).append('\n');
+		sb.append(pieces);
 		sb.append("enPassantSquare: ").append(enPassantSquare).append('\n');
 		sb.append("plyNumber: ").append(plyNumber).append('\n');
 		return sb.toString();
@@ -406,14 +338,14 @@ public class State {
 	}
 
 	private void initSquaresInCheck() {
-		initSquaresInCheck(BLACK);
-		initSquaresInCheck(WHITE);
+		initChecksAroundKing(BLACK);
+		initChecksAroundKing(WHITE);
 		initSquaresInCheckByKings();
 	}
 
 	private void initPinnedPieces() {
-		Square whiteKing = squaresWithWhites[0];
-		Square blackKing = squaresWithBlacks[0];
+		Square whiteKing = pieces.getWhiteKing();
+		Square blackKing = pieces.getBlackKing();
 		assert getContent(whiteKing) == Content.WHITE_KING : "Corrupted white king position";
 		assert getContent(blackKing) == Content.BLACK_KING : "Corrupted black king position";
 
@@ -466,44 +398,143 @@ public class State {
 		}
 	}
 
-	private void initSquaresInCheck(boolean isCheckedByWhite) {
-		int countOfPiecesTakingTurn = isCheckedByWhite ? whitesCount : blacksCount;
-		Square[] squaresWithPiecesTakingTurn = isCheckedByWhite ? squaresWithWhites : squaresWithBlacks;
+	private void initChecksAroundKing(boolean isCheckedByWhite) {
+		Square king = isCheckedByWhite ? pieces.getBlackKing() : pieces.getWhiteKing();
+		int kingMovedFlag = isCheckedByWhite ? BLACK_KING_MOVED : WHITE_KING_MOVED;
+		boolean hasKingMoved = test(kingMovedFlag);
 
-		// for every piece except king
-		for (int i = countOfPiecesTakingTurn - 1; i > 0; i--) {
-			Square currSquare = squaresWithPiecesTakingTurn[i];
-			Content piece = Content.fromShort(board[currSquare.ordinal()]);
-			switch (piece) {
-				case WHITE_PAWN:
-				case BLACK_PAWN:
-					initSquaresInCheckByPawn(currSquare, isCheckedByWhite);
-					break;
-				case WHITE_KNIGHT:
-				case BLACK_KNIGHT:
-					initSquaresInCheckByKnight(currSquare, isCheckedByWhite);
-					break;
-				case WHITE_BISHOP:
-				case BLACK_BISHOP:
-					initSquaresInCheckByBishop(currSquare, isCheckedByWhite);
-					break;
-				case WHITE_ROOK:
-				case BLACK_ROOK:
-					initSquaresInCheckByRook(currSquare, isCheckedByWhite);
-					break;
-				case WHITE_QUEEN:
-				case BLACK_QUEEN:
-					initSquaresInCheckByQueen(currSquare, isCheckedByWhite);
-					break;
-				default:
-					assert false : "Thing on:" + squaresWithPiecesTakingTurn[i] + " is unknown piece: " + piece;
+		if (isCheckedByWhite) {
+			initChecksByPawns(king, hasKingMoved, isCheckedByWhite, pieces.whitePawns, pieces.whitePawnsCount);
+			initChecksByKnights(king, hasKingMoved, isCheckedByWhite, pieces.whiteKnights, pieces.whiteKnightsCount);
+			initChecksByBishops(king, isCheckedByWhite, pieces.whiteBishops, pieces.whiteBishopsCount);
+			initChecksByRooks(king, isCheckedByWhite, pieces.whiteRooks, pieces.whiteRooksCount);
+			initChecksByQueens(king, isCheckedByWhite, pieces.whiteQueens, pieces.whiteQueensCount);
+		} else {
+			initChecksByPawns(king, hasKingMoved, isCheckedByWhite, pieces.blackPawns, pieces.blackPawnsCount);
+			initChecksByKnights(king, hasKingMoved, isCheckedByWhite, pieces.blackKnights, pieces.blackKnightsCount);
+			initChecksByBishops(king, isCheckedByWhite, pieces.blackBishops, pieces.blackBishopsCount);
+			initChecksByRooks(king, isCheckedByWhite, pieces.blackRooks, pieces.blackRooksCount);
+			initChecksByQueens(king, isCheckedByWhite, pieces.blackQueens, pieces.blackQueensCount);
+		}
+	}
+
+
+	private void initChecksByPawns(Square king, boolean hasKingMoved, boolean isCheckedByWhite,
+								   Square[] pawns, byte pawnsCount) {
+		Arrays.sort(pawns, 0, pawnsCount, Comparator.comparingInt(sq -> sq.file));
+
+		byte minKingSafeDistance = (byte)(hasKingMoved ? 2 : 3);
+		for (int i = pawnsCount / 2; i >= 0; i--) {
+			if (pawns[i].file < king.file - minKingSafeDistance) {
+				break;
+			}
+			initSquaresInCheckByPawn(pawns[i], isCheckedByWhite);
+		}
+		for (int i = pawnsCount / 2 + 1; i < pawnsCount; i++) {
+			if (pawns[i].file > king.file + minKingSafeDistance) {
+				break;
+			}
+			initSquaresInCheckByPawn(pawns[i], isCheckedByWhite);
+		}
+	}
+
+	private void initChecksByKnights(Square king, boolean hasKingMoved, boolean isCheckedByWhite, Square[] knights,
+			byte knightsCount) {
+		byte minKingSafeDistance = (byte)(hasKingMoved ? 4 : 5);
+		for (int i = 0; i < knightsCount; i++) {
+			if (Math.abs(knights[i].file - king.file) < minKingSafeDistance && Math.abs(knights[i].rank - king.rank) < minKingSafeDistance) {
+				initSquaresInCheckByKnight(knights[i],isCheckedByWhite);
+			}
+		}
+	}
+
+	private void initChecksByBishops(Square king, boolean isCheckedByWhite, Square[] bishops, byte bishopsCount) {
+		for (int i = 0; i < bishopsCount; i++) {
+			byte deltaRank = (byte)(king.rank - bishops[i].rank);
+
+			if (deltaRank > 0) {
+				// king above
+				initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, 1, 1);
+				initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, -1, 1);
+			} else if (deltaRank < 0) {
+				//king below
+				initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, 1, -1);
+				initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, -1, -1);
+			} else {
+				byte deltaFile = (byte) (king.file - bishops[i].file);
+				if (deltaFile > 0) { // king to the right
+					initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, 1, 1);
+					initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, 1, -1);
+				} else {
+					initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, -1, 1);
+					initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, -1, -1);
+				}
+			}
+		}
+	}
+
+	private void initChecksByRooks(Square king, boolean isCheckedByWhite, Square[] rooks, byte rooksCount) {
+		for (int i = 0; i < rooksCount; i++) {
+			initCheckFlagsBySlidingPiece(rooks[i], isCheckedByWhite, 0, 1);
+			initCheckFlagsBySlidingPiece(rooks[i], isCheckedByWhite, 0, -1);
+
+			byte deltaRank = (byte)(king.rank - rooks[i].rank);
+			if (isCloseEnoughToRank(deltaRank)) {
+				initCheckFlagsBySlidingPiece(rooks[i], isCheckedByWhite, 1, 0);
+				initCheckFlagsBySlidingPiece(rooks[i], isCheckedByWhite, -1, 0);
+			}
+		}
+	}
+
+	private boolean isCloseEnoughToRank(byte deltaRank) {
+		return Math.abs(deltaRank) <= 1;
+	}
+
+	private void initChecksByQueens(Square king, boolean isCheckedByWhite, Square[] queens, byte queensCount) {
+		for (int i = 0; i < queensCount; i++) {
+			byte deltaRank = (byte) (king.rank - queens[i].rank);
+			if (deltaRank > 1) { // king at least two ranks above
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, -1, 1);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, 1);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 1, 1);
+			} else if (deltaRank < -1) { // king at least two ranks below
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, -1, -1);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, -1);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 1, -1);
+			} else if (deltaRank > 0) { // king just above
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, -1, 1);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, 1);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 1, 1);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, -1, 0);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 1, 0);
+			} else if (deltaRank < 0) { // king just below
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, -1, -1);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, -1);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 1, -1);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, -1, 0);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 1, 0);
+			} else { // same rank
+				byte deltaFile = (byte) (king.file - queens[i].file);
+				if (deltaFile > 0) { // king to the right
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 1, 1);
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 1, 0);
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 1, -1);
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, 1);
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, -1);
+				} else { // king to the left
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, -1, 1);
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, -1, 0);
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, -1, -1);
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, 1);
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, -1);
+				}
 			}
 		}
 	}
 
 	private void initSquaresInCheckByKings() {
-		Square whiteKing = squaresWithWhites[0];
-		Square blackKing = squaresWithBlacks[0];
+		Square whiteKing = pieces.getWhiteKing();
+		Square blackKing = pieces.getBlackKing();
 		assert getContent(whiteKing) == Content.WHITE_KING : "Corrupted white king position";
 		assert getContent(blackKing) == Content.BLACK_KING : "Corrupted black king position";
 		assert Math.abs(blackKing.rank - whiteKing.rank) > 1
@@ -570,18 +601,6 @@ public class State {
 			neighbourhood.add(to);
 		}
 		return neighbourhood;
-	}
-
-	private void initSquaresInCheckByQueen(Square queenSquare, boolean isCheckedByWhite) {
-		initSquaresInCheckByBishop(queenSquare, isCheckedByWhite);
-		initSquaresInCheckByRook(queenSquare, isCheckedByWhite);
-	}
-
-	private void initSquaresInCheckByRook(Square rookSquare, boolean isCheckedByWhite) {
-		initCheckFlagsBySlidingPiece(rookSquare, isCheckedByWhite, 1, 0);
-		initCheckFlagsBySlidingPiece(rookSquare, isCheckedByWhite, -1, 0);
-		initCheckFlagsBySlidingPiece(rookSquare, isCheckedByWhite, 0, 1);
-		initCheckFlagsBySlidingPiece(rookSquare, isCheckedByWhite, 0, -1);
 	}
 
 	private void initSquaresInCheckByBishop(Square bishopSquare, boolean isCheckedByWhite) {
@@ -692,34 +711,35 @@ public class State {
 	}
 
 	public int countLegalMoves() {
-		int countOfPiecesTakingTurn = test(WHITE_TURN) ? whitesCount : blacksCount;
-		Square[] squaresWithPiecesTakingTurn = test(WHITE_TURN) ? squaresWithWhites : squaresWithBlacks;
 		if (isKingInCheck()) {
-			return generateLegalMovesWhenKingInCheck(null, squaresWithPiecesTakingTurn[0], countOfPiecesTakingTurn,
-					squaresWithPiecesTakingTurn);
+			Square checkedKing = test(WHITE_TURN) ? pieces.getWhiteKing() : pieces.getBlackKing();
+			return generateLegalMovesWhenKingInCheck(null, checkedKing);
 		}
-		return generatePseudoLegalMoves(null, countOfPiecesTakingTurn, squaresWithPiecesTakingTurn);
+		return generatePseudoLegalMoves(null);
 	}
 
 	public List<State> generateLegalMoves() {
+		assert isLegal() : "King is still left in check after previous move!\n" + this;
 		List<State> moves = new ArrayList<>(Config.DEFAULT_MOVES_LIST_CAPACITY);
+		try {
 
-		int countOfPiecesTakingTurn = test(WHITE_TURN) ? whitesCount : blacksCount;
-		Square[] squaresWithPiecesTakingTurn = test(WHITE_TURN) ? squaresWithWhites : squaresWithBlacks;
+			if (isKingInCheck()) {
+				Square checkedKing = test(WHITE_TURN) ? pieces.getWhiteKing() : pieces.getBlackKing();
+				generateLegalMovesWhenKingInCheck(moves, checkedKing);
+				return moves;
+			}
 
-		if (isKingInCheck()) {
-			generateLegalMovesWhenKingInCheck(moves, squaresWithPiecesTakingTurn[0], countOfPiecesTakingTurn,
-					squaresWithPiecesTakingTurn);
-			return moves;
+			generatePseudoLegalMoves(moves);
+		} catch (AssertionError ae) {
+			System.out.println("------------------FAILED ASSERTION IN MOVE GENERATION----------------------------");
+			System.out.println(" STATE: " + this);
+			throw ae;
 		}
-
-		generatePseudoLegalMoves(moves, countOfPiecesTakingTurn, squaresWithPiecesTakingTurn);
 		return moves;
 	}
 
 	boolean isKingInCheck() {
-		Square[] squaresWithPiecesTakingTurn = test(WHITE_TURN) ? squaresWithWhites : squaresWithBlacks;
-		return isSquareCheckedBy(squaresWithPiecesTakingTurn[0], !test(WHITE_TURN));
+		return isSquareCheckedBy(test(WHITE_TURN) ? pieces.getWhiteKing() : pieces.getBlackKing(), !test(WHITE_TURN));
 	}
 
 	/**
@@ -728,41 +748,40 @@ public class State {
 	 * @param ouputMoves - leave this null to skip generation and just count
 	 * @return number of output moves
 	 */
-	private int generatePseudoLegalMoves(List<State> ouputMoves, int countOfPiecesTakingTurn,
-										  Square[] squaresWithPiecesTakingTurn) {
+	private int generatePseudoLegalMoves(List<State> ouputMoves) {
 		int movesCount = 0;
-		for (int i = 0; i < countOfPiecesTakingTurn; i++) {
-			Square currSquare = squaresWithPiecesTakingTurn[i];
-			Content piece = Content.fromShort(board[currSquare.ordinal()]);
-			switch (piece) {
-				case WHITE_PAWN:
-				case BLACK_PAWN:
-					movesCount += generatePseudoLegalPawnMoves(currSquare, ouputMoves);
-					break;
-				case WHITE_KNIGHT:
-				case BLACK_KNIGHT:
-					movesCount += generatePseudoLegalKnightMoves(currSquare, ouputMoves);
-					break;
-				case WHITE_BISHOP:
-				case BLACK_BISHOP:
-					movesCount += generatePseudoLegalBishopMoves(currSquare, ouputMoves);
-					break;
-				case WHITE_ROOK:
-				case BLACK_ROOK:
-					movesCount += generatePseudoLegalRookMoves(currSquare, ouputMoves);
-					break;
-				case WHITE_QUEEN:
-				case BLACK_QUEEN:
-					movesCount += generatePseudoLegalQueenMoves(currSquare, ouputMoves);
-					break;
-				case WHITE_KING:
-				case BLACK_KING:
-					movesCount += generateLegalKingMoves(currSquare, ouputMoves);
-					break;
-				default:
-					assert false : "Thing on:" + squaresWithPiecesTakingTurn[i] + " is unknown piece: " + piece;
+		Square[] piecesOfOneType = test(WHITE_TURN) ? pieces.whitePawns : pieces.blackPawns;
+		byte piecesCount = test(WHITE_TURN) ? pieces.whitePawnsCount : pieces.blackPawnsCount;
+		for (byte i = 0; i < piecesCount; i++) {
+			movesCount += generatePseudoLegalPawnMoves(piecesOfOneType[i], ouputMoves);
+		}
+		piecesOfOneType = test(WHITE_TURN) ? pieces.whiteKnights : pieces.blackKnights;
+		piecesCount = test(WHITE_TURN) ? pieces.whiteKnightsCount : pieces.blackKnightsCount;
+		for (byte i = 0; i < piecesCount; i++) {
+			try {
+				movesCount += generatePseudoLegalKnightMoves(piecesOfOneType[i], ouputMoves);
+			} catch (AssertionError ae) {
+				System.out.println("asserror!!: " + i);
+				throw ae;
 			}
 		}
+		piecesOfOneType = test(WHITE_TURN) ? pieces.whiteBishops : pieces.blackBishops;
+		piecesCount = test(WHITE_TURN) ? pieces.whiteBishopsCount : pieces.blackBishopsCount;
+		for (byte i = 0; i < piecesCount; i++) {
+			movesCount += generatePseudoLegalBishopMoves(piecesOfOneType[i], ouputMoves);
+		}
+		piecesOfOneType = test(WHITE_TURN) ? pieces.whiteRooks : pieces.blackRooks;
+		piecesCount = test(WHITE_TURN) ? pieces.whiteRooksCount : pieces.blackRooksCount;
+		for (byte i = 0; i < piecesCount; i++) {
+			movesCount += generatePseudoLegalRookMoves(piecesOfOneType[i], ouputMoves);
+		}
+		piecesOfOneType = test(WHITE_TURN) ? pieces.whiteQueens : pieces.blackQueens;
+		piecesCount = test(WHITE_TURN) ? pieces.whiteQueensCount : pieces.blackQueensCount;
+		for (byte i = 0; i < piecesCount; i++) {
+			movesCount += generatePseudoLegalQueenMoves(piecesOfOneType[i], ouputMoves);
+		}
+		movesCount += generateLegalKingMoves(test(WHITE_TURN) ? pieces.getWhiteKing() : pieces.getBlackKing(),
+				ouputMoves);
 		return movesCount;
 	}
 
@@ -837,7 +856,7 @@ public class State {
 				return false;
 			}
 		}
-		return getContent(isWhiteKingCastling ? Square.B1 : Square.B8) == Content.EMPTY;
+		return getContent(isWhiteKingCastling ? B1 : Square.B8) == Content.EMPTY;
 	}
 
 	private boolean squaresOkForKsCastling(boolean isWhiteKingCastling) {
@@ -977,7 +996,13 @@ public class State {
 		}
 		to = Square.fromInts(from.file + 2, from.rank - 1);
 		if (to != null && !isSameColorPieceOn(to)) {
+			try {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
+			} catch (AssertionError ae) {
+				System.out.println("asserror!! from: " + from + "to:" + to + "ply:" + plyNumber);
+				System.out.println("failed state: " + this);
+				throw ae;
+			}
 		}
 		to = Square.fromInts(from.file - 2, from.rank + 1);
 		if (to != null && !isSameColorPieceOn(to)) {
@@ -1007,12 +1032,11 @@ public class State {
 		return pin == null || pin == movementDirection;
 	}
 
-	private int generateLegalMovesWhenKingInCheck(List<State> outputMoves, Square checkedKing,
-												   int countOfPiecesTakingTurn, Square[] squaresWithPiecesTakingTurn) {
+	private int generateLegalMovesWhenKingInCheck(List<State> outputMoves, Square checkedKing) {
 		int movesCount = 0;
 		if (getChecksCount(checkedKing, !test(WHITE_TURN)) < 2) {
 			List<State> pseudoLegalMoves = new ArrayList<>(Config.DEFAULT_MOVES_LIST_CAPACITY);
-			generatePseudoLegalMoves(pseudoLegalMoves, countOfPiecesTakingTurn, squaresWithPiecesTakingTurn);
+			generatePseudoLegalMoves(pseudoLegalMoves);
 			for (State pseudoLegalState : pseudoLegalMoves) {
 				if (pseudoLegalState.isLegal()) {
 					if (outputMoves != null) {
@@ -1029,11 +1053,11 @@ public class State {
 	}
 
 	/**
-	 * Is king of side that just moved in check
+	 * Is king left in check after move
 	 */
 	private boolean isLegal() {
 		boolean isWhiteTurn = test(WHITE_TURN);
-		Square king = isWhiteTurn ? squaresWithBlacks[0] : squaresWithWhites[0];
+		Square king = isWhiteTurn ? pieces.getBlackKing() : pieces.getWhiteKing();
 		return !isSquareCheckedBy(king, isWhiteTurn);
 	}
 }
