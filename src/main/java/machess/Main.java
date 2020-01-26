@@ -5,10 +5,10 @@ public class Main {
         State game = new State();
         System.out.println("new game \n" + game);
 
-        for (int i = 0; i < 150; i++) {
+        for (int ply = 1; ply < 150; ply++) {
             Scorer.MoveScore bestMove = Scorer.miniMax(game);
 
-            if(bestMove.moveIndex==-1) {
+            if (bestMove.moveIndex == -1) {
                 String winMessage = bestMove.score > 0 ? "white win!" : "black win!";
                 System.out.println("Game over: " + winMessage);
                 break;

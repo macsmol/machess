@@ -6,7 +6,10 @@ public class Config {
 
 	public static final int DEFAULT_MOVES_LIST_CAPACITY = 60;
 
-	public static final int SEARCH_DEPTH = 3;
+	// TODO conflict with pawn sorting?
+	public static final boolean SORT_OCCUPIED_SQUARES = false;
+
+	public static final int SEARCH_DEPTH = 5;
 
 	/**
 	 * Decrement maximizing player search depth by this number
@@ -15,5 +18,7 @@ public class Config {
 	/**
 	 * Decrement minimizing player search depth by this number
 	 */
-	public static final int BLACK_PLY_HANDICAP = 1;
+	public static final int BLACK_PLY_HANDICAP = 0;
+
+	public static final int PIECE_LIST_CAPACITY = 4;
 }
