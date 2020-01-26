@@ -758,12 +758,7 @@ public class State {
 		piecesOfOneType = test(WHITE_TURN) ? pieces.whiteKnights : pieces.blackKnights;
 		piecesCount = test(WHITE_TURN) ? pieces.whiteKnightsCount : pieces.blackKnightsCount;
 		for (byte i = 0; i < piecesCount; i++) {
-			try {
 				movesCount += generatePseudoLegalKnightMoves(piecesOfOneType[i], ouputMoves);
-			} catch (AssertionError ae) {
-				System.out.println("asserror!!: " + i);
-				throw ae;
-			}
 		}
 		piecesOfOneType = test(WHITE_TURN) ? pieces.whiteBishops : pieces.blackBishops;
 		piecesCount = test(WHITE_TURN) ? pieces.whiteBishopsCount : pieces.blackBishopsCount;
@@ -996,13 +991,7 @@ public class State {
 		}
 		to = Square.fromInts(from.file + 2, from.rank - 1);
 		if (to != null && !isSameColorPieceOn(to)) {
-			try {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
-			} catch (AssertionError ae) {
-				System.out.println("asserror!! from: " + from + "to:" + to + "ply:" + plyNumber);
-				System.out.println("failed state: " + this);
-				throw ae;
-			}
 		}
 		to = Square.fromInts(from.file - 2, from.rank + 1);
 		if (to != null && !isSameColorPieceOn(to)) {
