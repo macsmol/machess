@@ -46,7 +46,7 @@ public class Scorer {
 				currScore = miniMax(moves.get(i), depth - 1);
 			} catch (Throwable ae) {
 				System.out.println("----------------------FAILED ASSERTION!-------------------------------------");
-				System.out.println("DEPTH: " + depth + " STATE: " + rootState);
+				System.out.println("DEPTH: " + depth + " ROOT STATE: " + rootState);
 				throw ae;
 			}
 
@@ -106,7 +106,6 @@ public class Scorer {
 					resultScore = currScore;
 				}
 			}
-
 		}
 		return resultScore;
 	}
@@ -138,12 +137,16 @@ public class Scorer {
 	}
 
 	public static int evaluate(State state) {
+		movesEvaluatedInPly++;
 		int legalMoves = state.countLegalMoves();
 //		int mobilityScore = LEGAL_MOVE_SCORE * legalMoves;
 		if (legalMoves == 0) {
-			return terminalNodeScore(state);
+			int terminalNodeScore = terminalNodeScore(state);
+			if (terminalNodeScore != DRAW) {
+				checkMatesFound++;
+			}
+			return terminalNodeScore;
 		}
-		movesEvaluatedInPly++;
 		int materialScore = evaluateMaterialScore(state);
 
 		return materialScore;
@@ -205,20 +208,15 @@ public class Scorer {
 //	}
 
 	private static int terminalNodeScore(State state) {
-		movesEvaluatedInPly++;
 		boolean maximizingTurn = state.test(State.WHITE_TURN);
 		if (maximizingTurn) {
 			if (state.isKingInCheck()) {
-				checkMatesFound++;
-				System.out.println("BLACK checkmates("+checkMatesFound+"): " + state);
 				return MINIMIZING_WIN;
 			} else {
 				return DRAW;
 			}
 		} else {
 			if (state.isKingInCheck()) {
-				checkMatesFound++;
-				System.out.println("WHITE checkmates("+checkMatesFound+"): " + state);
 				return MAXIMIZING_WIN;
 			} else {
 				return DRAW;

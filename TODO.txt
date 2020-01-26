@@ -7,6 +7,4 @@ Release 1:
 
 -oscillation when playing against itself
 
--perft(5) gives 8 moves too much. It also gives 8 checkmates to much. It's NOT the old problem with double check giving false C-M.
-
 
