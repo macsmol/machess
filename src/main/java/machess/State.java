@@ -806,12 +806,12 @@ public class State {
 		for (byte i = 0; i < piecesCount; i++) {
 			movesCount += generatePseudoLegalQueenMoves(piecesOfOneType[i], ouputMoves);
 		}
-		movesCount += generatePseudoLegalKingMoves(test(WHITE_TURN) ? pieces.getWhiteKing() : pieces.getBlackKing(),
+		movesCount += generateLegalKingMoves(test(WHITE_TURN) ? pieces.getWhiteKing() : pieces.getBlackKing(),
 				ouputMoves);
 		return movesCount;
 	}
 
-	private int generatePseudoLegalKingMoves(Square from, List<State> outputMoves) {
+	private int generateLegalKingMoves(Square from, List<State> outputMoves) {
 		int movesCount = 0;
 		Square to = Square.fromInts(from.file, from.rank + 1);
 		boolean isWhiteTurn = test(WHITE_TURN);
@@ -1067,7 +1067,7 @@ public class State {
 				}
 			}
 		} else {
-			movesCount = generatePseudoLegalKingMoves(checkedKing, outputMoves);
+			movesCount = generateLegalKingMoves(checkedKing, outputMoves);
 		}
 		return movesCount;
 	}
