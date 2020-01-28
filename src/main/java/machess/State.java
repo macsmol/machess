@@ -616,13 +616,6 @@ public class State {
 		return neighbourhood;
 	}
 
-	private void initSquaresInCheckByBishop(Square bishopSquare, boolean isCheckedByWhite) {
-		initCheckFlagsBySlidingPiece(bishopSquare, isCheckedByWhite, 1, 1);
-		initCheckFlagsBySlidingPiece(bishopSquare, isCheckedByWhite, 1, -1);
-		initCheckFlagsBySlidingPiece(bishopSquare, isCheckedByWhite, -1, 1);
-		initCheckFlagsBySlidingPiece(bishopSquare, isCheckedByWhite, -1, -1);
-	}
-
 	private void initCheckFlagsBySlidingPiece(Square from, boolean isCheckedByWhite, int deltaFile, int deltaRank) {
 		for (int i = 1; true; i++) {
 			Square underCheck = Square.fromInts(from.file + deltaFile * i, from.rank + i * deltaRank);
