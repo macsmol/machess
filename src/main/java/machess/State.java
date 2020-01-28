@@ -628,15 +628,22 @@ public class State {
 			Square underCheck = Square.fromInts(from.file + deltaFile * i, from.rank + i * deltaRank);
 			if (underCheck == null) {
 				break;
-			} else if (isSameColorPieceOn(underCheck, isCheckedByWhite)) {
-				incrementChecksOnSquare(underCheck, isCheckedByWhite);
-				break;
 			}
 			incrementChecksOnSquare(underCheck, isCheckedByWhite);
-			if (isOppositeColorPieceOn(underCheck, isCheckedByWhite)) {
+			if (isSquareBlockingSlidingPiece(underCheck, isCheckedByWhite)) {
 				break;
 			}
 		}
+	}
+
+	private boolean isSquareBlockingSlidingPiece(Square square, boolean isSlidingPieceWhite) {
+		byte contentAsByte =  (byte)(board[square.ordinal()]
+				& (SquareFormat.PIECE_TYPE_MASK | SquareFormat.IS_WHITE_PIECE_FLAG));
+		if (contentAsByte == Content.EMPTY.asByte) {
+			return false;
+		}
+		byte enemyKing = isSlidingPieceWhite ? Content.BLACK_KING.asByte : Content.WHITE_KING.asByte;
+		return contentAsByte != enemyKing;
 	}
 
 	private void initSquaresInCheckByPawn(Square from, boolean isCheckedByWhite) {
@@ -1060,7 +1067,6 @@ public class State {
 				}
 			}
 		} else {
-			//TODO bug in king move generation when in check by a sliding piece. King hides in his own shadow.
 			movesCount = generatePseudoLegalKingMoves(checkedKing, outputMoves);
 		}
 		return movesCount;
