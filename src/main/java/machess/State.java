@@ -36,7 +36,7 @@ public class State {
 	}
 
 	// flags
-	private final byte flags;
+	private byte flags;
 	static final int WHITE_TURN 			= 0x01;
 	static final int WHITE_KING_MOVED 		= 0x02;
 	static final int BLACK_KING_MOVED 		= 0x04;
@@ -718,6 +718,17 @@ public class State {
 		return generatePseudoLegalMoves(null);
 	}
 
+	public int countOtherSideLegalMoves() {
+		makeNullMove();
+		int legalMoves = countLegalMoves();
+		makeNullMove();
+		return legalMoves;
+	}
+
+	private void makeNullMove() {
+		flags ^= WHITE_TURN;
+	}
+
 	public List<State> generateLegalMoves() {
 		assert isLegal() : "King is still left in check after previous move!\n" + this;
 		List<State> moves = new ArrayList<>(Config.DEFAULT_MOVES_LIST_CAPACITY);
@@ -775,12 +786,12 @@ public class State {
 		for (byte i = 0; i < piecesCount; i++) {
 			movesCount += generatePseudoLegalQueenMoves(piecesOfOneType[i], ouputMoves);
 		}
-		movesCount += generateLegalKingMoves(test(WHITE_TURN) ? pieces.getWhiteKing() : pieces.getBlackKing(),
+		movesCount += generatePseudoLegalKingMoves(test(WHITE_TURN) ? pieces.getWhiteKing() : pieces.getBlackKing(),
 				ouputMoves);
 		return movesCount;
 	}
 
-	private int generateLegalKingMoves(Square from, List<State> outputMoves) {
+	private int generatePseudoLegalKingMoves(Square from, List<State> outputMoves) {
 		int movesCount = 0;
 		Square to = Square.fromInts(from.file, from.rank + 1);
 		boolean isWhiteTurn = test(WHITE_TURN);
@@ -1036,7 +1047,8 @@ public class State {
 				}
 			}
 		} else {
-			movesCount = generateLegalKingMoves(checkedKing, outputMoves);
+			//TODO bug in king move generation when in check by a sliding piece. King hides in his own shadow.
+			movesCount = generatePseudoLegalKingMoves(checkedKing, outputMoves);
 		}
 		return movesCount;
 	}
