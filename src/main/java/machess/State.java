@@ -63,6 +63,10 @@ public class State {
 	 */
 	private final Pin[] pinnedPieces;
 
+
+	private Square from;
+	private Square to;
+
 	/**
 	 * new game
 	 */
@@ -108,12 +112,14 @@ public class State {
 	}
 
 	private State(short[] board, PieceLists pieces, byte flags,
-				  @Nullable Square enPassantSquare, int plyNumber) {
+				  @Nullable Square enPassantSquare, int plyNumber, Square from, Square to) {
 		this.board = board;
 		this.pieces = pieces;
 		this.flags = flags;
 		this.enPassantSquare = enPassantSquare;
 		this.plyNumber = plyNumber;
+		this.from = from;
+		this.to = to;
 		pieces.sortOccupiedSquares();
 
 		resetSquaresInCheck();
@@ -223,7 +229,8 @@ public class State {
 			flagsCopy |= BLACK_KS_ROOK_MOVED;
 		}
 
-		return new State(boardCopy, piecesCopy, (byte) flagsCopy, futureEnPassantSquare, plyNumber + 1);
+		return new State(boardCopy, piecesCopy, (byte) flagsCopy, futureEnPassantSquare, plyNumber + 1,
+				from, to);
 	}
 
 	boolean test(int flagMask) {
@@ -252,15 +259,21 @@ public class State {
 			StringBuilder sbPins = 			new StringBuilder(Config.DEBUG_PINNED_PIECES 			? "|" : "");
 			sb.append(rank + 1).append("|");
 			for (byte file = File.A; file <= File.H; file++) {
+				Square square = Square.fromLegalInts(file, rank);
 				Content content = getContent(file, rank);
-				sb.append(content.symbol).append(" |");
+				sb.append(content.symbol);
+				if (square == to || square == from) {
+					sb.append(" <");
+				} else {
+					sb.append(" |");
+				}
 
 				if (Config.DEBUG_FIELD_IN_CHECK_FLAGS) {
-					short contentAsShort = board[Square.fromLegalInts(file, rank).ordinal()];
+					short contentAsShort = board[square.ordinal()];
 					sbCheckFlags.append(Utils.checkCountsToString(contentAsShort)).append('|');
 				}
 				if (Config.DEBUG_PINNED_PIECES) {
-					Pin pinType = pinnedPieces[Square.fromLegalInts(file, rank).ordinal()];
+					Pin pinType = pinnedPieces[square.ordinal()];
 					sbPins.append(" ").append(pinType != null ? pinType.symbol : ' ').append("  |");
 				}
 			}
