@@ -36,7 +36,7 @@ public class State {
 	}
 
 	// flags
-	private final byte flags;
+	private byte flags;
 	static final int WHITE_TURN 			= 0x01;
 	static final int WHITE_KING_MOVED 		= 0x02;
 	static final int BLACK_KING_MOVED 		= 0x04;
@@ -62,6 +62,10 @@ public class State {
 	 * Board with absolutely pinned pieces. It's indexed by Square.ordinal()
 	 */
 	private final Pin[] pinnedPieces;
+
+
+	private Square from;
+	private Square to;
 
 	/**
 	 * new game
@@ -108,12 +112,14 @@ public class State {
 	}
 
 	private State(short[] board, PieceLists pieces, byte flags,
-				  @Nullable Square enPassantSquare, int plyNumber) {
+				  @Nullable Square enPassantSquare, int plyNumber, Square from, Square to) {
 		this.board = board;
 		this.pieces = pieces;
 		this.flags = flags;
 		this.enPassantSquare = enPassantSquare;
 		this.plyNumber = plyNumber;
+		this.from = from;
+		this.to = to;
 		pieces.sortOccupiedSquares();
 
 		resetSquaresInCheck();
@@ -223,7 +229,8 @@ public class State {
 			flagsCopy |= BLACK_KS_ROOK_MOVED;
 		}
 
-		return new State(boardCopy, piecesCopy, (byte) flagsCopy, futureEnPassantSquare, plyNumber + 1);
+		return new State(boardCopy, piecesCopy, (byte) flagsCopy, futureEnPassantSquare, plyNumber + 1,
+				from, to);
 	}
 
 	boolean test(int flagMask) {
@@ -252,15 +259,21 @@ public class State {
 			StringBuilder sbPins = 			new StringBuilder(Config.DEBUG_PINNED_PIECES 			? "|" : "");
 			sb.append(rank + 1).append("|");
 			for (byte file = File.A; file <= File.H; file++) {
+				Square square = Square.fromLegalInts(file, rank);
 				Content content = getContent(file, rank);
-				sb.append(content.symbol).append(" |");
+				sb.append(content.symbol);
+				if (square == to || square == from) {
+					sb.append(" <");
+				} else {
+					sb.append(" |");
+				}
 
 				if (Config.DEBUG_FIELD_IN_CHECK_FLAGS) {
-					short contentAsShort = board[Square.fromLegalInts(file, rank).ordinal()];
+					short contentAsShort = board[square.ordinal()];
 					sbCheckFlags.append(Utils.checkCountsToString(contentAsShort)).append('|');
 				}
 				if (Config.DEBUG_PINNED_PIECES) {
-					Pin pinType = pinnedPieces[Square.fromLegalInts(file, rank).ordinal()];
+					Pin pinType = pinnedPieces[square.ordinal()];
 					sbPins.append(" ").append(pinType != null ? pinType.symbol : ' ').append("  |");
 				}
 			}
@@ -615,15 +628,22 @@ public class State {
 			Square underCheck = Square.fromInts(from.file + deltaFile * i, from.rank + i * deltaRank);
 			if (underCheck == null) {
 				break;
-			} else if (isSameColorPieceOn(underCheck, isCheckedByWhite)) {
-				incrementChecksOnSquare(underCheck, isCheckedByWhite);
-				break;
 			}
 			incrementChecksOnSquare(underCheck, isCheckedByWhite);
-			if (isOppositeColorPieceOn(underCheck, isCheckedByWhite)) {
+			if (isSquareBlockingSlidingPiece(underCheck, isCheckedByWhite)) {
 				break;
 			}
 		}
+	}
+
+	private boolean isSquareBlockingSlidingPiece(Square square, boolean isSlidingPieceWhite) {
+		byte contentAsByte =  (byte)(board[square.ordinal()]
+				& (SquareFormat.PIECE_TYPE_MASK | SquareFormat.IS_WHITE_PIECE_FLAG));
+		if (contentAsByte == Content.EMPTY.asByte) {
+			return false;
+		}
+		byte enemyKing = isSlidingPieceWhite ? Content.BLACK_KING.asByte : Content.WHITE_KING.asByte;
+		return contentAsByte != enemyKing;
 	}
 
 	private void initSquaresInCheckByPawn(Square from, boolean isCheckedByWhite) {
@@ -718,6 +738,17 @@ public class State {
 		return generatePseudoLegalMoves(null);
 	}
 
+	public int countOtherSideLegalMoves() {
+		makeNullMove();
+		int legalMoves = countLegalMoves();
+		makeNullMove();
+		return legalMoves;
+	}
+
+	private void makeNullMove() {
+		flags ^= WHITE_TURN;
+	}
+
 	public List<State> generateLegalMoves() {
 		assert isLegal() : "King is still left in check after previous move!\n" + this;
 		List<State> moves = new ArrayList<>(Config.DEFAULT_MOVES_LIST_CAPACITY);
@@ -758,12 +789,7 @@ public class State {
 		piecesOfOneType = test(WHITE_TURN) ? pieces.whiteKnights : pieces.blackKnights;
 		piecesCount = test(WHITE_TURN) ? pieces.whiteKnightsCount : pieces.blackKnightsCount;
 		for (byte i = 0; i < piecesCount; i++) {
-			try {
 				movesCount += generatePseudoLegalKnightMoves(piecesOfOneType[i], ouputMoves);
-			} catch (AssertionError ae) {
-				System.out.println("asserror!!: " + i);
-				throw ae;
-			}
 		}
 		piecesOfOneType = test(WHITE_TURN) ? pieces.whiteBishops : pieces.blackBishops;
 		piecesCount = test(WHITE_TURN) ? pieces.whiteBishopsCount : pieces.blackBishopsCount;
@@ -996,13 +1022,7 @@ public class State {
 		}
 		to = Square.fromInts(from.file + 2, from.rank - 1);
 		if (to != null && !isSameColorPieceOn(to)) {
-			try {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
-			} catch (AssertionError ae) {
-				System.out.println("asserror!! from: " + from + "to:" + to + "ply:" + plyNumber);
-				System.out.println("failed state: " + this);
-				throw ae;
-			}
 		}
 		to = Square.fromInts(from.file - 2, from.rank + 1);
 		if (to != null && !isSameColorPieceOn(to)) {

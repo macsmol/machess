@@ -139,7 +139,6 @@ public class Scorer {
 	public static int evaluate(State state) {
 		movesEvaluatedInPly++;
 		int legalMoves = state.countLegalMoves();
-//		int mobilityScore = LEGAL_MOVE_SCORE * legalMoves;
 		if (legalMoves == 0) {
 			int terminalNodeScore = terminalNodeScore(state);
 			if (terminalNodeScore != DRAW) {
@@ -148,8 +147,17 @@ public class Scorer {
 			return terminalNodeScore;
 		}
 		int materialScore = evaluateMaterialScore(state);
+		int mobilityScore = mobilityScore(legalMoves, state);
 
-		return materialScore;
+		return materialScore + mobilityScore;
+	}
+
+	private static int mobilityScore(int currSideLegalMoves, State state) {
+		int otherSideLegalMoves = state.countOtherSideLegalMoves();
+		if (state.test(State.WHITE_TURN)) {
+			return (currSideLegalMoves - otherSideLegalMoves) * LEGAL_MOVE_SCORE;
+		}
+		return (otherSideLegalMoves - currSideLegalMoves) * LEGAL_MOVE_SCORE;
 	}
 
 	private static int evaluateMaterialScore(State state) {
