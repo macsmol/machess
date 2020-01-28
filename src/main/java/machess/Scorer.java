@@ -219,14 +219,12 @@ public class Scorer {
 		boolean maximizingTurn = state.test(State.WHITE_TURN);
 		if (maximizingTurn) {
 			if (state.isKingInCheck()) {
-				checkMatesFound++;
 				return MINIMIZING_WIN;
 			} else {
 				return DRAW;
 			}
 		} else {
 			if (state.isKingInCheck()) {
-				checkMatesFound++;
 				return MAXIMIZING_WIN;
 			} else {
 				return DRAW;
