@@ -129,10 +129,9 @@ public class State {
 		initPinnedPieces();
 	}
 
-
-
-	private State fromPseudoLegalPawnDoublePush(Square from, Square to, Square enPassantSquare) {
+	State fromPseudoLegalPawnDoublePush(Square from, Square to, Square enPassantSquare) {
 		assert enPassantSquare != null;
+		// TODO tu sprawdź czy jest pin - jeszcze nie przeniesiono piona więc logika bijącego piona jest ta sama prawie
 		return fromPseudoLegalMove(from, to, null, enPassantSquare, null);
 	}
 
@@ -371,40 +370,96 @@ public class State {
 	}
 
 	private void initPinnedPieces(Square king, boolean isPinnedToWhiteKing) {
-		initPinInOneDirection(king, isPinnedToWhiteKing, -1, -1);
-		initPinInOneDirection(king, isPinnedToWhiteKing, -1, 0);
-		initPinInOneDirection(king, isPinnedToWhiteKing, -1, 1);
-		initPinInOneDirection(king, isPinnedToWhiteKing, 0, -1);
-		initPinInOneDirection(king, isPinnedToWhiteKing, 0, 1);
-		initPinInOneDirection(king, isPinnedToWhiteKing, 1, -1);
-		initPinInOneDirection(king, isPinnedToWhiteKing, 1, 0);
-		initPinInOneDirection(king, isPinnedToWhiteKing, 1, 1);
+		initPinsByBishops(king, isPinnedToWhiteKing);
+		initPinsByRooks(king, isPinnedToWhiteKing);
 	}
 
-	private void initPinInOneDirection(Square king, boolean isPinnedToWhiteKing, int deltaFile, int deltaRank) {
+	private void initPinsByBishops(Square king, boolean isPinnedToWhiteKing) {
+		Square[] bishops = isPinnedToWhiteKing ? pieces.blackBishops : pieces.whiteBishops;
+		int bishopsCount = isPinnedToWhiteKing ? pieces.blackBishopsCount : pieces.whiteBishopsCount;
+
+		for (int i = 0; i < bishopsCount; i++) {
+			byte deltaRank = (byte)(king.rank - bishops[i].rank);
+			byte deltaFile = (byte)(king.file - bishops[i].file);
+
+			if (Math.abs(deltaFile) == Math.abs(deltaRank)) {
+				initPinByBishop(king, isPinnedToWhiteKing, bishops[i]);
+			}
+		}
+	}
+	
+	private void initPinsByRooks(Square king, boolean isPinnedToWhiteKing) {
+		Square[] rooks = isPinnedToWhiteKing ? pieces.blackRooks : pieces.whiteRooks;
+		int rooksCount = isPinnedToWhiteKing ? pieces.blackRooksCount : pieces.whiteRooksCount;
+
+		for (int i = 0; i < rooksCount; i++) {
+			if (king.rank == rooks[i].rank) {
+				initRankPin(king, isPinnedToWhiteKing, rooks[i]);
+			} else if (king.file == rooks[i].file) {
+				initFilePin(king, isPinnedToWhiteKing, rooks[i]);
+			}
+		}
+	}
+
+	private void initPinsByQueens(Square king, boolean isPinnedToWhiteKing) {
+		Square[] queens = isPinnedToWhiteKing ? pieces.blackQueens : pieces.whiteQueens;
+		int queensCount = isPinnedToWhiteKing ? pieces.blackQueensCount : pieces.whiteQueensCount;
+
+		for (int i = 0; i < queensCount; i++) {
+			byte deltaRank = (byte)(king.rank - queens[i].rank);
+			byte deltaFile = (byte)(king.file - queens[i].file);
+			if (Math.abs(deltaFile) == Math.abs(deltaRank)) {
+				initPinByBishop(king, isPinnedToWhiteKing, queens[i]);
+			} else if (king.rank == queens[i].rank) {
+				initRankPin(king, isPinnedToWhiteKing, queens[i]);
+			} else if (king.file == queens[i].file) {
+				initFilePin(king, isPinnedToWhiteKing, queens[i]);
+			}
+		}
+	}
+
+	//TODO make these three methods one 1/3
+	private void initPinByBishop(Square king, boolean isKingWhite, Square bishop) {
+		int deltaFile = bishop.file - king.file > 0 ? 1 : -1;
+		int deltaRank = bishop.rank - king.rank > 0 ? 1 : -1;
+
+		initPin(king, isKingWhite, bishop, deltaFile, deltaRank);
+	}
+
+	//TODO make these three methods one 2/3
+	private void initRankPin(Square king, boolean isKingWhite, Square rook) {
+		int deltaFile = rook.file - king.file > 0 ? 1 : -1;
+		int deltaRank = 0;
+		initPin(king, isKingWhite, rook, deltaFile, deltaRank);
+	}
+
+	//TODO make these three methods one 3/3
+	private void initFilePin(Square king, boolean isKingWhite, Square rook) {
+		int deltaFile = 0;
+		int deltaRank = rook.rank - king.rank > 0 ? 1 : -1;
+
+		initPin(king, isKingWhite, rook, deltaFile, deltaRank);
+	}
+
+	private void initPin(Square king, boolean isKingWhite, Square rook, int deltaFile, int deltaRank) {
 		Square candidate = null;
 		for (int i = 1; true; i++) {
-			Square square = Square.fromInts(king.file + i * deltaFile, king.rank + i * deltaRank);
-
-			if (square == null || (isOppositeColorPieceOn(square, isPinnedToWhiteKing) && candidate == null)) {
+			Square testedSquare = Square.fromInts(king.file + i * deltaFile, king.rank + i * deltaRank);
+			if (testedSquare == rook) {
+				if (candidate != null) {
+					pinnedPieces[candidate.ordinal()] = Pin.fromDeltas(deltaFile, deltaRank);
+				}
 				return;
 			}
-			if (isSameColorPieceOn(square, isPinnedToWhiteKing)) {
-				if (candidate == null) {
-					candidate = square;
-					continue;
-				} else {
+			Content content = getContent(testedSquare);
+			if (content != Content.EMPTY) {
+				if (content.isWhite != isKingWhite) {
 					return;
 				}
-			}
-			if (candidate != null) {
-				Content afterCandidate = getContent(square);
-				Content enemyQueen = isPinnedToWhiteKing ? Content.BLACK_QUEEN : Content.WHITE_QUEEN;
-				Content enemySlider = Content.rookOrBishop(!isPinnedToWhiteKing, deltaFile, deltaRank);
-				if (afterCandidate == enemyQueen || afterCandidate == enemySlider) {
-					pinnedPieces[candidate.ordinal()] = Pin.fromDeltas(deltaFile, deltaRank);
-					return;
-				} else if (afterCandidate != Content.EMPTY) {
+				if (candidate == null && content.isWhite == isKingWhite) {
+					candidate = testedSquare;
+				} else {
+					// found second piece obstructing ray
 					return;
 				}
 			}
