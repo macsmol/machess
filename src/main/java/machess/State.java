@@ -108,7 +108,7 @@ public class State {
 		plyNumber = 1;
 
 		pinnedPieces = new Pin[Square.values().length];
-		initSquaresInCheck();
+		initChecksAroundKings();
 	}
 
 	private State(short[] board, PieceLists pieces, byte flags,
@@ -123,7 +123,7 @@ public class State {
 		pieces.sortOccupiedSquares();
 
 		resetSquaresInCheck();
-		initSquaresInCheck();
+		initChecksAroundKings();
 
 		pinnedPieces = new Pin[Square.values().length];
 		initPinnedPieces();
@@ -131,8 +131,50 @@ public class State {
 
 	State fromPseudoLegalPawnDoublePush(Square from, Square to, Square enPassantSquare) {
 		assert enPassantSquare != null;
-		// TODO tu sprawdź czy jest pin - jeszcze nie przeniesiono piona więc logika bijącego piona jest ta sama prawie
+		if (!isEnPassantLegal(to)) {
+			enPassantSquare = null;
+		}
 		return fromPseudoLegalMove(from, to, null, enPassantSquare, null);
+	}
+
+	/**
+	 * En passant can sometimes be illegal due to an absolute pin, eg.
+	 * 8/8/8/8/RPpk4/8/8/4K3 b - b3 0 1
+	 * Program detects such situation before double-push is made
+	 */
+	private boolean isEnPassantLegal(Square doublePushTo) {
+		Square king = doublePushTo.rank == Rank._4 ? pieces.getBlackKing() : pieces.getWhiteKing();
+		if (king.rank != doublePushTo.rank) {
+			return true;
+		}
+		Square[] rooks = doublePushTo.rank == Rank._4 ? pieces.whiteRooks : pieces.blackRooks;
+		int rooksCount = doublePushTo.rank == Rank._4 ? pieces.whiteRooksCount : pieces.blackRooksCount;
+		if (!isEnPassantLegal(king, rooks, rooksCount)) {
+			return false;
+		}
+		Square[] queens = doublePushTo.rank == Rank._4 ? pieces.whiteQueens : pieces.blackQueens;
+		int queensCount = doublePushTo.rank == Rank._4 ? pieces.whiteQueensCount : pieces.blackQueensCount;
+		return isEnPassantLegal(king, queens, queensCount);
+	}
+
+	private boolean isEnPassantLegal(Square king, Square[] rooklikes, int rooklikesCount) {
+		for (int i = 0; i < rooklikesCount; i++) {
+			if (rooklikes[i].rank != king.rank) {
+				continue;
+			}
+			int fileFrom = Math.min(king.file, rooklikes[i].file) + 1;
+			int fileTo = Math.max(king.file, rooklikes[i].file);
+			int piecesBetweenCount = 0;
+			for (int file = fileFrom; file < fileTo; file++) {
+				if (getContent(file, king.rank) != Content.EMPTY) {
+					piecesBetweenCount++;
+				}
+			}
+			if (piecesBetweenCount == 1) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	private State fromPseudoLegalMoveWithPromotion(Square from, Square to, Content promotion) {
@@ -312,24 +354,10 @@ public class State {
 	}
 
 	/**
-	 * Tells if Square square is occupied by a piece of color isWhite
-	 */
-	boolean isSameColorPieceOn(Square square, boolean isWhite) {
-		return isWhite ? isWhitePieceOn(square) : isBlackPieceOn(square);
-	}
-
-	/**
 	 * Tells if Square square is occupied by a piece of color that's currently taking turn.
 	 */
 	boolean isOppositeColorPieceOn(Square square) {
 		return test(WHITE_TURN) ? isBlackPieceOn(square) : isWhitePieceOn(square);
-	}
-
-	/**
-	 * Tells if Square square is occupied by a piece of color isWhite.
-	 */
-	boolean isOppositeColorPieceOn(Square square, boolean isWhite) {
-		return isWhite ? isBlackPieceOn(square) : isWhitePieceOn(square);
 	}
 
 	private boolean isWhitePieceOn(Square square) {
@@ -349,7 +377,7 @@ public class State {
 		}
 	}
 
-	private void initSquaresInCheck() {
+	private void initChecksAroundKings() {
 		initChecksAroundKing(BLACK);
 		initChecksAroundKing(WHITE);
 		initSquaresInCheckByKings();
@@ -372,6 +400,7 @@ public class State {
 	private void initPinnedPieces(Square king, boolean isPinnedToWhiteKing) {
 		initPinsByBishops(king, isPinnedToWhiteKing);
 		initPinsByRooks(king, isPinnedToWhiteKing);
+		initPinsByQueens(king, isPinnedToWhiteKing);
 	}
 
 	private void initPinsByBishops(Square king, boolean isPinnedToWhiteKing) {
@@ -379,8 +408,8 @@ public class State {
 		int bishopsCount = isPinnedToWhiteKing ? pieces.blackBishopsCount : pieces.whiteBishopsCount;
 
 		for (int i = 0; i < bishopsCount; i++) {
-			byte deltaRank = (byte)(king.rank - bishops[i].rank);
-			byte deltaFile = (byte)(king.file - bishops[i].file);
+			int deltaRank = bishops[i].rank - king.rank;
+			int deltaFile = bishops[i].file - king.file;
 
 			if (Math.abs(deltaFile) == Math.abs(deltaRank)) {
 				initPinByBishop(king, isPinnedToWhiteKing, bishops[i]);
@@ -406,8 +435,9 @@ public class State {
 		int queensCount = isPinnedToWhiteKing ? pieces.blackQueensCount : pieces.whiteQueensCount;
 
 		for (int i = 0; i < queensCount; i++) {
-			byte deltaRank = (byte)(king.rank - queens[i].rank);
-			byte deltaFile = (byte)(king.file - queens[i].file);
+			int deltaRank = queens[i].rank - king.rank;
+			int deltaFile = queens[i].file - king.file;
+
 			if (Math.abs(deltaFile) == Math.abs(deltaRank)) {
 				initPinByBishop(king, isPinnedToWhiteKing, queens[i]);
 			} else if (king.rank == queens[i].rank) {
@@ -418,34 +448,29 @@ public class State {
 		}
 	}
 
-	//TODO make these three methods one 1/3
-	private void initPinByBishop(Square king, boolean isKingWhite, Square bishop) {
-		int deltaFile = bishop.file - king.file > 0 ? 1 : -1;
-		int deltaRank = bishop.rank - king.rank > 0 ? 1 : -1;
-
-		initPin(king, isKingWhite, bishop, deltaFile, deltaRank);
+	private void initPinByBishop(Square king, boolean isKingWhite, Square bishoplike) {
+		int fileDirection = bishoplike.file - king.file > 0 ? 1 : -1;
+		int rankDirection = bishoplike.rank - king.rank > 0 ? 1 : -1;
+		initPin(king, isKingWhite, bishoplike, fileDirection, rankDirection);
 	}
 
-	//TODO make these three methods one 2/3
-	private void initRankPin(Square king, boolean isKingWhite, Square rook) {
-		int deltaFile = rook.file - king.file > 0 ? 1 : -1;
-		int deltaRank = 0;
-		initPin(king, isKingWhite, rook, deltaFile, deltaRank);
+	private void initRankPin(Square king, boolean isKingWhite, Square rooklike) {
+		int fileDirection = rooklike.file - king.file > 0 ? 1 : -1;
+		int rankDirection = 0;
+		initPin(king, isKingWhite, rooklike, fileDirection, rankDirection);
 	}
 
-	//TODO make these three methods one 3/3
-	private void initFilePin(Square king, boolean isKingWhite, Square rook) {
-		int deltaFile = 0;
-		int deltaRank = rook.rank - king.rank > 0 ? 1 : -1;
-
-		initPin(king, isKingWhite, rook, deltaFile, deltaRank);
+	private void initFilePin(Square king, boolean isKingWhite, Square rooklike) {
+		int fileDirection = 0;
+		int rankDirection = rooklike.rank - king.rank > 0 ? 1 : -1;
+		initPin(king, isKingWhite, rooklike, fileDirection, rankDirection);
 	}
 
-	private void initPin(Square king, boolean isKingWhite, Square rook, int deltaFile, int deltaRank) {
+	private void initPin(Square king, boolean isKingWhite, Square slidingPiece, int deltaFile, int deltaRank) {
 		Square candidate = null;
 		for (int i = 1; true; i++) {
 			Square testedSquare = Square.fromInts(king.file + i * deltaFile, king.rank + i * deltaRank);
-			if (testedSquare == rook) {
+			if (testedSquare == slidingPiece) {
 				if (candidate != null) {
 					pinnedPieces[candidate.ordinal()] = Pin.fromDeltas(deltaFile, deltaRank);
 				}
