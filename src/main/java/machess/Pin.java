@@ -7,7 +7,11 @@ enum Pin {
     FILE('|'),          // |
     RANK('_'),          // _
     DIAGONAL('/'),      // /
-    ANTIDIAGONAL('\\');	// \
+    ANTIDIAGONAL('\\'),	// \
+
+    // cases specific for en passant takes - maybe just filter it afterwards? - logic is to iffy
+    NO_QS_EN_PASSANT('{'),
+    NO_KS_EN_PASSANT('}');
 
     char symbol;
 
