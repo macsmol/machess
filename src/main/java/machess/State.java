@@ -111,7 +111,7 @@ public class State {
 		initChecksAroundKings();
 	}
 
-	private State(short[] board, PieceLists pieces, byte flags,
+	State(short[] board, PieceLists pieces, byte flags,
 				  @Nullable Square enPassantSquare, int plyNumber, Square from, Square to) {
 		this.board = board;
 		this.pieces = pieces;
