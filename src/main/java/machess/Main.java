@@ -9,7 +9,6 @@ public class Main {
     public static void main(String[] args) {
 //        FEN.parse("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1");
         State game = new State();
-                //testEnPassantPinWhiteKing();
 
         System.out.println("new game \n" + game);
 

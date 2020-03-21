@@ -37,13 +37,11 @@ public class State {
 
 	// flags
 	private byte flags;
-	static final int WHITE_TURN 			= 0x01;
-	static final int WHITE_KING_MOVED 		= 0x02;
-	static final int BLACK_KING_MOVED 		= 0x04;
-	static final int WHITE_KS_ROOK_MOVED 	= 0x08;
-	static final int WHITE_QS_ROOK_MOVED 	= 0x10;
-	static final int BLACK_KS_ROOK_MOVED 	= 0x20;
-	static final int BLACK_QS_ROOK_MOVED 	= 0x40;
+	public static final int WHITE_TURN 			= 0x01;
+	public static final int WHITE_KS_CASTLE_POSSIBLE = 0x02;
+	public static final int WHITE_QS_CASTLE_POSSIBLE = 0x04;
+	public static final int BLACK_KS_CASTLE_POSSIBLE = 0x08;
+	public static final int BLACK_QS_CASTLE_POSSIBLE = 0x10;
 
 	/**
 	 * one byte per square.
@@ -71,7 +69,9 @@ public class State {
 	 * new game
 	 */
 	State() {
-		flags = WHITE_TURN;
+		flags = WHITE_TURN |
+				WHITE_QS_CASTLE_POSSIBLE | WHITE_KS_CASTLE_POSSIBLE |
+				BLACK_QS_CASTLE_POSSIBLE | BLACK_KS_CASTLE_POSSIBLE;
 		board = new short[Square.values().length];
 		for (int file = File.A; file <= File.H; file++) {
 			board[Square.fromLegalInts(file, Rank._2).ordinal()] = Content.WHITE_PAWN.asByte;
@@ -257,17 +257,17 @@ public class State {
 
 		int flagsCopy = flags ^ WHITE_TURN;
 		if (from == Square.E1) {
-			flagsCopy |= WHITE_KING_MOVED;
+			flagsCopy &= ~(WHITE_KS_CASTLE_POSSIBLE | WHITE_QS_CASTLE_POSSIBLE);
 		} else if (from == Square.E8) {
-			flagsCopy |= BLACK_KING_MOVED;
+			flagsCopy &= ~(BLACK_KS_CASTLE_POSSIBLE | BLACK_QS_CASTLE_POSSIBLE);
 		} else if (from == Square.A1) {
-			flagsCopy |= WHITE_QS_ROOK_MOVED;
+			flagsCopy &= ~WHITE_QS_CASTLE_POSSIBLE;
 		} else if (from == Square.H1) {
-			flagsCopy |= WHITE_KS_ROOK_MOVED;
+			flagsCopy &= ~WHITE_KS_CASTLE_POSSIBLE;
 		} else if (from == Square.A8) {
-			flagsCopy |= BLACK_QS_ROOK_MOVED;
+			flagsCopy &= ~BLACK_QS_CASTLE_POSSIBLE;
 		} else if (from == Square.H8) {
-			flagsCopy |= BLACK_KS_ROOK_MOVED;
+			flagsCopy &= ~BLACK_KS_CASTLE_POSSIBLE;
 		}
 
 		return new State(boardCopy, piecesCopy, (byte) flagsCopy, futureEnPassantSquare, plyNumber + 1,
@@ -281,12 +281,11 @@ public class State {
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 		sb.append("Turn: ").append(test(WHITE_TURN) ? "WHITE" : "BLACK");
-		sb.append(test(WHITE_KING_MOVED) ? "; WHITE_KING_MOVED" : "");
-		sb.append(test(WHITE_QS_ROOK_MOVED) ? "; WHITE_QS_ROOK_MOVED" : "");
-		sb.append(test(WHITE_KS_ROOK_MOVED) ? "; WHITE_KS_ROOK_MOVED" : "");
-		sb.append(test(BLACK_KING_MOVED) ? "; BLACK_KING_MOVED" : "");
-		sb.append(test(BLACK_QS_ROOK_MOVED) ? "; BLACK_QS_ROOK_MOVED" : "");
-		sb.append(test(BLACK_KS_ROOK_MOVED) ? "; BLACK_KS_ROOK_MOVED" : "");
+
+		sb.append(test(WHITE_KS_CASTLE_POSSIBLE) ? "; WHITE_KS_CASTLE_POSSIBLE" : "");
+		sb.append(test(WHITE_QS_CASTLE_POSSIBLE) ? "; WHITE_QS_CASTLE_POSSIBLE" : "");
+		sb.append(test(BLACK_KS_CASTLE_POSSIBLE) ? "; BLACK_KS_CASTLE_POSSIBLE" : "");
+		sb.append(test(BLACK_QS_CASTLE_POSSIBLE) ? "; BLACK_QS_CASTLE_POSSIBLE" : "");
 		sb.append("\n | a  | b  | c  | d  | e  | f  | g  | h  |");
 		sb.append(Config.DEBUG_FIELD_IN_CHECK_FLAGS	? "| a  | b  | c  | d  | e  | f  | g  | h  |" : "");
 		sb.append(Config.DEBUG_PINNED_PIECES 		? "| a  | b  | c  | d  | e  | f  | g  | h  |" : "");
@@ -493,30 +492,33 @@ public class State {
 
 	private void initChecksAroundKing(boolean isCheckedByWhite) {
 		Square king = isCheckedByWhite ? pieces.getBlackKing() : pieces.getWhiteKing();
-		int kingMovedFlag = isCheckedByWhite ? BLACK_KING_MOVED : WHITE_KING_MOVED;
-		boolean hasKingMoved = test(kingMovedFlag);
+		boolean castlingImpossible;
+		if (isCheckedByWhite) {
+			castlingImpossible = !(test(BLACK_KS_CASTLE_POSSIBLE) || test(BLACK_QS_CASTLE_POSSIBLE));
+		} else {
+			castlingImpossible = !(test(WHITE_KS_CASTLE_POSSIBLE) || test(WHITE_QS_CASTLE_POSSIBLE));
+		}
 
 		if (isCheckedByWhite) {
-			initChecksByPawns(king, hasKingMoved, isCheckedByWhite, pieces.whitePawns, pieces.whitePawnsCount);
-			initChecksByKnights(king, hasKingMoved, isCheckedByWhite, pieces.whiteKnights, pieces.whiteKnightsCount);
+			initChecksByPawns(king, castlingImpossible, isCheckedByWhite, pieces.whitePawns, pieces.whitePawnsCount);
+			initChecksByKnights(king, castlingImpossible, isCheckedByWhite, pieces.whiteKnights, pieces.whiteKnightsCount);
 			initChecksByBishops(king, isCheckedByWhite, pieces.whiteBishops, pieces.whiteBishopsCount);
 			initChecksByRooks(king, isCheckedByWhite, pieces.whiteRooks, pieces.whiteRooksCount);
 			initChecksByQueens(king, isCheckedByWhite, pieces.whiteQueens, pieces.whiteQueensCount);
 		} else {
-			initChecksByPawns(king, hasKingMoved, isCheckedByWhite, pieces.blackPawns, pieces.blackPawnsCount);
-			initChecksByKnights(king, hasKingMoved, isCheckedByWhite, pieces.blackKnights, pieces.blackKnightsCount);
+			initChecksByPawns(king, castlingImpossible, isCheckedByWhite, pieces.blackPawns, pieces.blackPawnsCount);
+			initChecksByKnights(king, castlingImpossible, isCheckedByWhite, pieces.blackKnights, pieces.blackKnightsCount);
 			initChecksByBishops(king, isCheckedByWhite, pieces.blackBishops, pieces.blackBishopsCount);
 			initChecksByRooks(king, isCheckedByWhite, pieces.blackRooks, pieces.blackRooksCount);
 			initChecksByQueens(king, isCheckedByWhite, pieces.blackQueens, pieces.blackQueensCount);
 		}
 	}
 
-
-	private void initChecksByPawns(Square king, boolean hasKingMoved, boolean isCheckedByWhite,
+	private void initChecksByPawns(Square king, boolean castlingImpossible, boolean isCheckedByWhite,
 								   Square[] pawns, byte pawnsCount) {
 		Arrays.sort(pawns, 0, pawnsCount, Comparator.comparingInt(sq -> sq.file));
 
-		byte minKingSafeDistance = (byte)(hasKingMoved ? 2 : 3);
+		byte minKingSafeDistance = (byte)(castlingImpossible ? 2 : 3);
 		for (int i = pawnsCount / 2; i >= 0; i--) {
 			if (pawns[i].file < king.file - minKingSafeDistance) {
 				break;
@@ -531,9 +533,9 @@ public class State {
 		}
 	}
 
-	private void initChecksByKnights(Square king, boolean hasKingMoved, boolean isCheckedByWhite, Square[] knights,
+	private void initChecksByKnights(Square king, boolean castlingImpossible, boolean isCheckedByWhite, Square[] knights,
 			byte knightsCount) {
-		byte minKingSafeDistance = (byte)(hasKingMoved ? 4 : 5);
+		byte minKingSafeDistance = (byte)(castlingImpossible ? 4 : 5);
 		for (int i = 0; i < knightsCount; i++) {
 			if (Math.abs(knights[i].file - king.file) < minKingSafeDistance && Math.abs(knights[i].rank - king.rank) < minKingSafeDistance) {
 				initSquaresInCheckByKnight(knights[i],isCheckedByWhite);
@@ -919,25 +921,22 @@ public class State {
 		if (to != null && !isSameColorPieceOn(to) && isSquareOkForKing(to, isWhiteTurn)) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
-		int kingMovedBitflag = isWhiteTurn ? WHITE_KING_MOVED : BLACK_KING_MOVED;
 
-		if (!test(kingMovedBitflag) && !isSquareCheckedBy(from, !isWhiteTurn)) {
-			Content rook = isWhiteTurn ? Content.WHITE_ROOK : Content.BLACK_ROOK;
-			int qsRookMovedBitflag = isWhiteTurn ? WHITE_QS_ROOK_MOVED : BLACK_QS_ROOK_MOVED;
-			int ksRookMovedBitflag = isWhiteTurn ? WHITE_KS_ROOK_MOVED : BLACK_KS_ROOK_MOVED;
+		int qsCastlePossible = isWhiteTurn ? WHITE_QS_CASTLE_POSSIBLE : BLACK_QS_CASTLE_POSSIBLE;
+		int ksCastlePossible = isWhiteTurn ? WHITE_KS_CASTLE_POSSIBLE : BLACK_KS_CASTLE_POSSIBLE;
+
+		if (!isSquareCheckedBy(from, !isWhiteTurn)) {
 			Square kingQsTo = isWhiteTurn ? Square.C1 : Square.C8;
 			Square kingKsTo = isWhiteTurn ? Square.G1 : Square.G8;
-			Square qsRook = isWhiteTurn ? Square.A1 : Square.A8;
-			Square ksRook = isWhiteTurn ? Square.H1 : Square.H8;
 
-			if (squaresOkForQsCastling(isWhiteTurn) && getContent(qsRook) == rook && !test(qsRookMovedBitflag)) {
+			if (test(qsCastlePossible) && squaresOkForQsCastling(isWhiteTurn)) {
 				if (outputMoves != null) {
 					outputMoves.add(fromLegalQueensideCastling(from, kingQsTo));
 				} else {
 					movesCount++;
 				}
 			}
-			if (squaresOkForKsCastling(isWhiteTurn) && getContent(ksRook) == rook && !test(ksRookMovedBitflag)) {
+			if (test(ksCastlePossible) && squaresOkForKsCastling(isWhiteTurn)) {
 				if (outputMoves != null) {
 					outputMoves.add(fromLegalKingsideCastling(from, kingKsTo));
 				} else {
