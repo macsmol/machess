@@ -29,10 +29,10 @@ public class FEN {
     private static final String WHITE_TURN = "w";
     private static final String BLACK_TURN = "b";
 
-    private static final char WHITE_KS_CASTLE_ALLOWED = 'K';
-    private static final char WHITE_QS_CASTLE_ALLOWED = 'Q';
-    private static final char BLACK_KS_CASTLE_ALLOWED = 'k';
-    private static final char BLACK_QS_CASTLE_ALLOWED = 'q';
+    private static final String WHITE_KS_CASTLE_ALLOWED = "K";
+    private static final String WHITE_QS_CASTLE_ALLOWED = "Q";
+    private static final String BLACK_KS_CASTLE_ALLOWED = "k";
+    private static final String BLACK_QS_CASTLE_ALLOWED = "q";
 
 
 
@@ -125,36 +125,44 @@ public class FEN {
             }
         }
 
+        int flags = initFlags(turnStr, castlingRightsStr);
+        Square enPassantSquare = initEnPassantSquare(epSquareStr);
+        byte halfmoveClock = Byte.parseByte(halfMoveClockStr);
+        int fullmoveCounter = Integer.parseInt(fullMoveCounterStr);
+
+        return new State(board, pieces.build(), (byte)flags, enPassantSquare, halfmoveClock, fullmoveCounter,
+                null, null);
+    }
+
+    private static Square initEnPassantSquare(String epSquareStr) {
+        int file = epSquareStr.toLowerCase().charAt(0) - 'a';
+        if (file < File.A || file > File.H) {
+            throw new IllegalArgumentException("Invalid file in en passant square: " + epSquareStr);
+        }
+        int rank = Character.getNumericValue(epSquareStr.charAt(1));
+        if (rank != 3 && rank != 6) {
+            throw new IllegalArgumentException("Invalid rank in en passant square: " + epSquareStr);
+        }
+        return Square.fromLegalInts(file, rank);
+    }
+
+    private static int initFlags(String turnStr, String castlingRightsStr) {
         int flags = 0;
         if (turnStr == WHITE_TURN) {
             flags |= State.WHITE_TURN;
         }
-
-//        if () {
-//
-//        }
-        ////
-//        private static final char WHITE_KS_CASTLE_ALLOWED = 'K';
-//        private static final char WHITE_QS_CASTLE_ALLOWED = 'Q';
-//        private static final char BLACK_KS_CASTLE_ALLOWED = 'k';
-//        private static final char BLACK_QS_CASTLE_ALLOWED = 'q';
-        ////
-//TODO change these flags to isWHITE_KS_ALLOWED etc then you gain 2 bits
-//        public static final int WHITE_KING_MOVED 		= 0x02;
-//        public static final int BLACK_KING_MOVED 		= 0x04;
-//        public static final int WHITE_KS_ROOK_MOVED 	= 0x08;
-//        public static final int WHITE_QS_ROOK_MOVED 	= 0x10;
-//        public static final int BLACK_KS_ROOK_MOVED 	= 0x20;
-//        public static final int BLACK_QS_ROOK_MOVED 	= 0x40;
-
-//        State(short[] board,
-//        PieceLists pieces,
-//        byte flags,
-//        @Nullable Square enPassantSquare,
-//        int plyNumber,
-//        Square from,
-//        Square to)
-//        new State()
-        return null;
+        if (castlingRightsStr.contains(WHITE_KS_CASTLE_ALLOWED)) {
+            flags |= State.WHITE_KS_CASTLE_POSSIBLE;
+        }
+        if (castlingRightsStr.contains(WHITE_QS_CASTLE_ALLOWED)) {
+            flags |= State.WHITE_QS_CASTLE_POSSIBLE;
+        }
+        if (castlingRightsStr.contains(BLACK_KS_CASTLE_ALLOWED)) {
+            flags |= State.BLACK_KS_CASTLE_POSSIBLE;
+        }
+        if (castlingRightsStr.contains(BLACK_QS_CASTLE_ALLOWED)) {
+            flags |= State.BLACK_QS_CASTLE_POSSIBLE;
+        }
+        return flags;
     }
 }

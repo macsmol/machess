@@ -1,5 +1,6 @@
 package machess;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -394,16 +395,16 @@ public class PieceLists {
     public static class Builder {
         private Square whiteKing;
         private Square blackKing;
-        private List<Square> whitePawns;
-        private List<Square> blackPawns;
-        private List<Square> whiteKnights;
-        private List<Square> blackKnights;
-        private List<Square> whiteBishops;
-        private List<Square> blackBishops;
-        private List<Square> whiteRooks;
-        private List<Square> blackRooks;
-        private List<Square> whiteQueens;
-        private List<Square> blackQueens;
+        private List<Square> whitePawns = new ArrayList<>();
+        private List<Square> blackPawns = new ArrayList<>();
+        private List<Square> whiteKnights = new ArrayList<>();
+        private List<Square> blackKnights = new ArrayList<>();
+        private List<Square> whiteBishops = new ArrayList<>();
+        private List<Square> blackBishops = new ArrayList<>();
+        private List<Square> whiteRooks = new ArrayList<>();
+        private List<Square> blackRooks = new ArrayList<>();
+        private List<Square> whiteQueens = new ArrayList<>();
+        private List<Square> blackQueens = new ArrayList<>();
 
         public void addWhitePawn(Square piece) {
             whitePawns.add(piece);

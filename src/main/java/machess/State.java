@@ -53,8 +53,12 @@ public class State {
 	 * If not null it means there is a possibility to en-passant on this square
 	 */
 	private final Square enPassantSquare;
+
+	// TODO 50 move draw rule
+	private final byte halfmoveClock;
+
 	// not really necessary - only for debug purposes
-	private final int plyNumber;
+	private final int fullMoveCounter;
 
 	/**
 	 * Board with absolutely pinned pieces. It's indexed by Square.ordinal()
@@ -105,19 +109,21 @@ public class State {
 		}
 		pieces = new PieceLists();
 		enPassantSquare = null;
-		plyNumber = 1;
+		halfmoveClock = 0;
+		fullMoveCounter = 1;
 
 		pinnedPieces = new Pin[Square.values().length];
 		initChecksAroundKings();
 	}
 
-	State(short[] board, PieceLists pieces, byte flags,
-				  @Nullable Square enPassantSquare, int plyNumber, Square from, Square to) {
+	public State(short[] board, PieceLists pieces, byte flags,
+		  @Nullable Square enPassantSquare, byte halfmoveClock, int fullMoveCounter, Square from, Square to) {
 		this.board = board;
 		this.pieces = pieces;
 		this.flags = flags;
 		this.enPassantSquare = enPassantSquare;
-		this.plyNumber = plyNumber;
+		this.halfmoveClock = halfmoveClock;
+		this.fullMoveCounter = fullMoveCounter;
 		this.from = from;
 		this.to = to;
 		pieces.sortOccupiedSquares();
@@ -270,7 +276,8 @@ public class State {
 			flagsCopy &= ~BLACK_KS_CASTLE_POSSIBLE;
 		}
 
-		return new State(boardCopy, piecesCopy, (byte) flagsCopy, futureEnPassantSquare, plyNumber + 1,
+		int newFullMoveClock = test(WHITE_TURN) ? fullMoveCounter : fullMoveCounter + 1;
+		return new State(boardCopy, piecesCopy, (byte) flagsCopy, futureEnPassantSquare, (byte)0, newFullMoveClock,
 				from, to);
 	}
 
@@ -325,7 +332,7 @@ public class State {
 		}
 		sb.append(pieces);
 		sb.append("enPassantSquare: ").append(enPassantSquare).append('\n');
-		sb.append("plyNumber: ").append(plyNumber).append('\n');
+		sb.append("fullmoveClock: ").append(fullMoveCounter).append('\n');
 		return sb.toString();
 	}
 
