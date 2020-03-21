@@ -26,8 +26,8 @@ public class FEN {
     private static final char BLACK_QUEEN = 'q';
     private static final char BLACK_KING = 'k';
 
-    private static final char WHITE_TURN = 'w';
-    private static final char BLACK_TURN = 'b';
+    private static final String WHITE_TURN = "w";
+    private static final String BLACK_TURN = "b";
 
     private static final char WHITE_KS_CASTLE_ALLOWED = 'K';
     private static final char WHITE_QS_CASTLE_ALLOWED = 'Q';
@@ -63,46 +63,89 @@ public class FEN {
                 String rankStr = rankStrings[rank];
                 for (int j = 0; j < rankStr.length(); j++) {
                     char c = rankStr.charAt(j);
-                    if (c >='1' && c <= '8') {
+                    if (c >= '1' && c <= '8') {
                         file += Character.getNumericValue(c);
                         System.out.println("file: " + file);
                         continue;
                     }
+                    Square square = Square.fromLegalInts(file, rank);
                     switch (c) {
-                        case 'p':
+                        case BLACK_PAWN:
+                            board[square.ordinal()] = Content.BLACK_PAWN.asByte;
+                            pieces.addBlackPawn(square);
                             break;
-                        case 'n':
+                        case BLACK_KNIGHT:
+                            board[square.ordinal()] = Content.BLACK_KNIGHT.asByte;
+                            pieces.addBlackKnight(square);
                             break;
-                        case 'b':
+                        case BLACK_BISHOP:
+                            board[square.ordinal()] = Content.BLACK_BISHOP.asByte;
+                            pieces.addBlackBishop(square);
                             break;
-                        case 'r':
+                        case BLACK_ROOK:
+                            board[square.ordinal()] = Content.BLACK_ROOK.asByte;
+                            pieces.addBlackRook(square);
                             break;
-                        case 'q':
+                        case BLACK_QUEEN:
+                            board[square.ordinal()] = Content.BLACK_QUEEN.asByte;
+                            pieces.addBlackQueen(square);
                             break;
-                        case 'k':
+                        case BLACK_KING:
+                            board[square.ordinal()] = Content.BLACK_KING.asByte;
+                            pieces.setBlackKing(square);
                             break;
-                        case 'P':
+                        case WHITE_PAWN:
+                            board[square.ordinal()] = Content.WHITE_PAWN.asByte;
+                            pieces.addWhitePawn(square);
                             break;
-                        case 'N':
+                        case WHITE_KNIGHT:
+                            board[square.ordinal()] = Content.WHITE_KNIGHT.asByte;
+                            pieces.addWhiteKnight(square);
                             break;
-                        case 'B':
+                        case WHITE_BISHOP:
+                            board[square.ordinal()] = Content.WHITE_BISHOP.asByte;
+                            pieces.addWhiteBishop(square);
                             break;
-                        case 'R':
+                        case WHITE_ROOK:
+                            board[square.ordinal()] = Content.WHITE_ROOK.asByte;
+                            pieces.addWhiteRook(square);
                             break;
-                        case 'Q':
+                        case WHITE_QUEEN:
+                            board[square.ordinal()] = Content.WHITE_QUEEN.asByte;
+                            pieces.addWhiteQueen(square);
                             break;
-                        case 'K':
+                        case WHITE_KING:
+                            board[square.ordinal()] = Content.WHITE_KING.asByte;
+                            pieces.setWhiteKing(square);
                             break;
                         default:
                             throw new IllegalArgumentException("Character '" + c + "' isn't a known piece.");
                    }
                 }
-                System.out.println(rankStr);
-//                board[board[Square.fromLegalInts(file, rank).ordinal()]] =
-
             }
         }
 
+        int flags = 0;
+        if (turnStr == WHITE_TURN) {
+            flags |= State.WHITE_TURN;
+        }
+
+//        if () {
+//
+//        }
+        ////
+//        private static final char WHITE_KS_CASTLE_ALLOWED = 'K';
+//        private static final char WHITE_QS_CASTLE_ALLOWED = 'Q';
+//        private static final char BLACK_KS_CASTLE_ALLOWED = 'k';
+//        private static final char BLACK_QS_CASTLE_ALLOWED = 'q';
+        ////
+//TODO change these flags to isWHITE_KS_ALLOWED etc then you gain 2 bits
+//        public static final int WHITE_KING_MOVED 		= 0x02;
+//        public static final int BLACK_KING_MOVED 		= 0x04;
+//        public static final int WHITE_KS_ROOK_MOVED 	= 0x08;
+//        public static final int WHITE_QS_ROOK_MOVED 	= 0x10;
+//        public static final int BLACK_KS_ROOK_MOVED 	= 0x20;
+//        public static final int BLACK_QS_ROOK_MOVED 	= 0x40;
 
 //        State(short[] board,
 //        PieceLists pieces,
@@ -114,6 +157,4 @@ public class FEN {
 //        new State()
         return null;
     }
-
-    private
 }

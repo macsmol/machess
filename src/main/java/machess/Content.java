@@ -27,7 +27,7 @@ public enum Content {
             WHITE_BISHOP, WHITE_ROOK, WHITE_BISHOP, WHITE_ROOK, null, WHITE_ROOK, WHITE_BISHOP, WHITE_ROOK, WHITE_BISHOP
     };
 
-    final byte asByte;
+    public final byte asByte;
     /**
      * printable symbol for toString()
      */
