@@ -153,7 +153,7 @@ public class PieceLists {
                        List<Square> whiteQueens, List<Square> blackQueens
                        ) {
         this.whiteKing = whiteKing;
-        this.whiteKing = blackKing;
+        this.blackKing = blackKing;
         this.whitePawns = toArray(whitePawns, whitePawns.size());
         whitePawnsCount = (byte)whitePawns.size();
         this.blackPawns = toArray(blackPawns, blackPawns.size());

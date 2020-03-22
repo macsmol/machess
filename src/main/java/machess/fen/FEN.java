@@ -38,7 +38,7 @@ public class FEN {
 
     public static State parse(String fen) {
         String[] strings = fen.split("\\s+");
-        if (strings.length != 6) {
+        if (strings.length < 4) {
             throw new IllegalArgumentException("Invalid FEN string");
         }
 //        rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1
@@ -46,8 +46,8 @@ public class FEN {
         String turnStr = strings[1];
         String castlingRightsStr = strings[2];
         String epSquareStr = strings[3];
-        String halfMoveClockStr = strings[4];
-        String fullMoveCounterStr = strings[5];
+        String halfMoveClockStr = strings.length >=5 ? strings[4] : "0";
+        String fullMoveCounterStr = strings.length >=6 ? strings[5] : "777";
 
         short[] board = new short[Square.values().length];
         PieceLists.Builder pieces = new PieceLists.Builder();
@@ -60,12 +60,11 @@ public class FEN {
                 int rank = Rank._8 - i;
                 int file = File.A;
 
-                String rankStr = rankStrings[rank];
+                String rankStr = rankStrings[i];
                 for (int j = 0; j < rankStr.length(); j++) {
                     char c = rankStr.charAt(j);
                     if (c >= '1' && c <= '8') {
                         file += Character.getNumericValue(c);
-                        System.out.println("file: " + file);
                         continue;
                     }
                     Square square = Square.fromLegalInts(file, rank);
@@ -121,6 +120,7 @@ public class FEN {
                         default:
                             throw new IllegalArgumentException("Character '" + c + "' isn't a known piece.");
                    }
+                   file++;
                 }
             }
         }
@@ -135,12 +135,15 @@ public class FEN {
     }
 
     private static Square initEnPassantSquare(String epSquareStr) {
+        if (epSquareStr.equals("-")) {
+            return null;
+        }
         int file = epSquareStr.toLowerCase().charAt(0) - 'a';
         if (file < File.A || file > File.H) {
             throw new IllegalArgumentException("Invalid file in en passant square: " + epSquareStr);
         }
-        int rank = Character.getNumericValue(epSquareStr.charAt(1));
-        if (rank != 3 && rank != 6) {
+        int rank = Character.getNumericValue(epSquareStr.charAt(1)) - 1;
+        if (rank != Rank._3 && rank != Rank._6) {
             throw new IllegalArgumentException("Invalid rank in en passant square: " + epSquareStr);
         }
         return Square.fromLegalInts(file, rank);
@@ -148,7 +151,7 @@ public class FEN {
 
     private static int initFlags(String turnStr, String castlingRightsStr) {
         int flags = 0;
-        if (turnStr == WHITE_TURN) {
+        if (turnStr.equals(WHITE_TURN)) {
             flags |= State.WHITE_TURN;
         }
         if (castlingRightsStr.contains(WHITE_KS_CASTLE_ALLOWED)) {
