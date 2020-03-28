@@ -1,4 +1,4 @@
-package machess.fen;
+package machess.interfaces;
 
 
 import machess.*;
