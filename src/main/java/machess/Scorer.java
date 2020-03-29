@@ -127,6 +127,7 @@ public class Scorer {
 			System.out.println("nothing to divide");
 			return;
 		}
+		System.out.println("divide(" + depth + "):");
 		for (State child : legalMoves) {
 			long movesCount = perft(child, depth - 1);
 			System.out.println(child.printMove() + " " + movesCount);
@@ -135,7 +136,6 @@ public class Scorer {
 
 	/**
 	 * call this on child nodes to encourage choosing earlier wins
-	 * @param score
 	 */
 	private static int discourageLaterWin(int score) {
 		return score * 1023 / 1024;
