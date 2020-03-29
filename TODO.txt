@@ -1,8 +1,4 @@
 Release 1:
--perft tests
-
--perft divide
-
 -TODOs in code
 
 -0x88 array

@@ -41,7 +41,6 @@ public class FEN {
         if (strings.length < 4) {
             throw new IllegalArgumentException("Invalid FEN string");
         }
-//        rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1
         String boardStr = strings[0];
         String turnStr = strings[1];
         String castlingRightsStr = strings[2];
