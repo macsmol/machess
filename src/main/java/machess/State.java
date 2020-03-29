@@ -820,7 +820,7 @@ public class State {
 		return (byte) ((board[square.ordinal()] >> bitOffset) & SquareFormat.CHECKS_COUNT_MASK);
 	}
 
-	private boolean isSquareOkForKing(Square square, boolean isKingWhite) {
+	private boolean canKingWalkOnSquare(Square square, boolean isKingWhite) {
 		return !isSquareCheckedBy(square, !isKingWhite) && (board[square.ordinal()] & SquareFormat.NO_KINGS_FLAG) == 0;
 	}
 
@@ -913,35 +913,35 @@ public class State {
 		int movesCount = 0;
 		Square to = Square.fromInts(from.file, from.rank + 1);
 		boolean isWhiteTurn = test(WHITE_TURN);
-		if (to != null && !isSameColorPieceOn(to) && isSquareOkForKing(to, isWhiteTurn)) {
+		if (to != null && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
 		to = Square.fromInts(from.file + 1, from.rank + 1);
-		if (to != null && !isSameColorPieceOn(to) && isSquareOkForKing(to, isWhiteTurn)) {
+		if (to != null && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
 		to = Square.fromInts(from.file + 1, from.rank);
-		if (to != null && !isSameColorPieceOn(to) && isSquareOkForKing(to, isWhiteTurn)) {
+		if (to != null && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
 		to = Square.fromInts(from.file + 1, from.rank - 1);
-		if (to != null && !isSameColorPieceOn(to) && isSquareOkForKing(to, isWhiteTurn)) {
+		if (to != null && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
 		to = Square.fromInts(from.file, from.rank - 1);
-		if (to != null && !isSameColorPieceOn(to) && isSquareOkForKing(to, isWhiteTurn)) {
+		if (to != null && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
 		to = Square.fromInts(from.file - 1, from.rank - 1);
-		if (to != null && !isSameColorPieceOn(to) && isSquareOkForKing(to, isWhiteTurn)) {
+		if (to != null && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
 		to = Square.fromInts(from.file - 1, from.rank);
-		if (to != null && !isSameColorPieceOn(to) && isSquareOkForKing(to, isWhiteTurn)) {
+		if (to != null && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
 		to = Square.fromInts(from.file - 1, from.rank + 1);
-		if (to != null && !isSameColorPieceOn(to) && isSquareOkForKing(to, isWhiteTurn)) {
+		if (to != null && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
 
@@ -973,7 +973,7 @@ public class State {
 	private boolean squaresOkForQsCastling(boolean isWhiteKingCastling) {
 		for (int file = File.D; file >= File.C; file--) {
 			Square square = Square.fromLegalInts(file, isWhiteKingCastling ? Rank._1 : Rank._8);
-			if (getContent(square) != Content.EMPTY || isSquareCheckedBy(square, !isWhiteKingCastling)) {
+			if (getContent(square) != Content.EMPTY || !canKingWalkOnSquare(square, isWhiteKingCastling)) {
 				return false;
 			}
 		}
@@ -983,7 +983,7 @@ public class State {
 	private boolean squaresOkForKsCastling(boolean isWhiteKingCastling) {
 		for (int file = File.F; file <= File.G; file++) {
 			Square square = Square.fromLegalInts(file, isWhiteKingCastling ? Rank._1 : Rank._8);
-			if (getContent(square) != Content.EMPTY || isSquareCheckedBy(square, !isWhiteKingCastling)) {
+			if (getContent(square) != Content.EMPTY || !canKingWalkOnSquare(square, isWhiteKingCastling)) {
 				return false;
 			}
 		}
