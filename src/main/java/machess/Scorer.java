@@ -110,6 +110,29 @@ public class Scorer {
 		return resultScore;
 	}
 
+	public static long perft(State state, int depth) {
+		long movesCount = 0;
+		if (depth == 0) {
+			return 1;
+		}
+		for (State child : state.generateLegalMoves()) {
+			movesCount += perft(child, depth - 1);
+		}
+		return movesCount;
+	}
+
+	public static void perftDivide(State state, int depth) {
+		List<State> legalMoves = state.generateLegalMoves();
+		if (depth <= 1) {
+			System.out.println("nothing to divide");
+			return;
+		}
+		for (State child : legalMoves) {
+			long movesCount = perft(child, depth - 1);
+			System.out.println(child.printMove() + " " + movesCount);
+		}
+	}
+
 	/**
 	 * call this on child nodes to encourage choosing earlier wins
 	 * @param score

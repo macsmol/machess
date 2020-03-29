@@ -336,6 +336,10 @@ public class State {
 		return sb.toString();
 	}
 
+	public String printMove() {
+		return "" + from + to;
+	}
+
 	private Content getContent(int file, int rank) {
 		return getContent(Square.fromLegalInts(file, rank));
 	}
