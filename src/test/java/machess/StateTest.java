@@ -144,7 +144,6 @@ public class StateTest {
         testPosition("n1n5/1Pk5/8/8/8/8/5Kp1/5N1N b - - 0 1", new long[] { 24,  421,  7421,  124608,  2193768,  37665329});
         testPosition("8/PPPk4/8/8/8/8/4Kppp/8 b - - 0 1", new long[] { 18,  270,  4699,  79355,  1533145,  28859283});
         testPosition("n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1", new long[] { 24,  496,  9483,  182838,  3605103,  71179139});
-
     }
 
     private void testPosition(State position, int depth, long expectedLegalMoves) {

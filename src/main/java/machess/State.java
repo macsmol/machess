@@ -16,32 +16,35 @@ public class State {
 
 	/**
 	 * Bit layout of each square is
-	 * bbbbwwww---ncppp
+	 * bbbbwwww--BWcppp
 	 *
 	 * p - piece type
 	 * c - is piece white flag
-	 * n - no kings flag (for squares adjacent to two kings at once)
+	 * W - check by white king
+	 * B - check by black king
 	 * w - checks by white count
 	 * b - checks by black count
 	 */
 	public static final class SquareFormat {
-		static final byte PIECE_TYPE_MASK = 0x07;
-		static final byte IS_WHITE_PIECE_FLAG = 0x08;
-		// neither king can walk onto a square with this flag set - squares adjacent to both kings at once
-		static final byte NO_KINGS_FLAG = 0x10;
+		static final short PIECE_TYPE_MASK 		= 0x07;
+		static final short IS_WHITE_PIECE_FLAG 	= 0x08;
+
+		static final short CHECK_BY_WHITE_KING 	= 0x10;
+		static final short CHECK_BY_BLACK_KING 	= 0x20;
+
 		// mask to get checks count by black or white. Four MSBits are checks by black, next 4 bits are checks by white.
-		static final byte CHECKS_COUNT_MASK = 0x0F;
+		static final short CHECKS_COUNT_MASK 	= 0x0F;
 		static final byte CHECKS_BY_WHITE_BIT_OFFSET = 8;
 		static final byte CHECKS_BY_BLACK_BIT_OFFSET = 12;
 	}
 
 	// flags
 	private byte flags;
-	public static final int WHITE_TURN 			= 0x01;
-	public static final int WHITE_KS_CASTLE_POSSIBLE = 0x02;
-	public static final int WHITE_QS_CASTLE_POSSIBLE = 0x04;
-	public static final int BLACK_KS_CASTLE_POSSIBLE = 0x08;
-	public static final int BLACK_QS_CASTLE_POSSIBLE = 0x10;
+	public static final int WHITE_TURN					= 0x01;
+	public static final int WHITE_KS_CASTLE_POSSIBLE	= 0x02;
+	public static final int WHITE_QS_CASTLE_POSSIBLE 	= 0x04;
+	public static final int BLACK_KS_CASTLE_POSSIBLE 	= 0x08;
+	public static final int BLACK_QS_CASTLE_POSSIBLE 	= 0x10;
 
 	/**
 	 * one byte per square.
@@ -658,67 +661,44 @@ public class State {
 		assert Math.abs(blackKing.rank - whiteKing.rank) > 1
 				|| Math.abs(blackKing.file - whiteKing.file) > 1 : "Kings to close. w: " + whiteKing + ", b: " + blackKing;
 
-		Set<Square> whiteNeighbourhood = getKingNeighbourhood(whiteKing);
-		Set<Square> blackNeighbourhood = getKingNeighbourhood(blackKing);
-
-		Set<Square> noKingsZone = new HashSet<>(whiteNeighbourhood);
-		if (noKingsZone.retainAll(blackNeighbourhood)) {
-			for (Square square : noKingsZone) {
-				setNoKingFlagOnSquare(square);
-			}
-			whiteNeighbourhood.removeAll(noKingsZone);
-			blackNeighbourhood.removeAll(noKingsZone);
-		}
-		for (Square square : whiteNeighbourhood) {
-			setCheckFlagOnSquareByKing(square, WHITE);
-		}
-		for (Square square : blackNeighbourhood) {
-			setCheckFlagOnSquareByKing(square, BLACK);
-		}
+		initSquareInCheckByKing(whiteKing, WHITE);
+		initSquareInCheckByKing(blackKing, BLACK);
 	}
 
-	private void setCheckFlagOnSquareByKing(Square square, boolean isKingWhite) {
-		if (!isSquareCheckedBy(square, !isKingWhite)) {
-			incrementChecksOnSquare(square, isKingWhite);
-		}
-	}
-
-	private Set<Square> getKingNeighbourhood(Square king) {
-		// TODO use spare flags in SquareFormat to find NO_KING_SQUARES
-		Set<Square> neighbourhood = new HashSet<>();
+	private void initSquareInCheckByKing(Square king, boolean isKingWhite) {
+		short checkFlag = isKingWhite ? SquareFormat.CHECK_BY_WHITE_KING : SquareFormat.CHECK_BY_BLACK_KING;
 		Square to = Square.fromInts(king.file, king.rank + 1);
 		if (to != null) {
-			neighbourhood.add(to);
+			setFlag(to, checkFlag);
 		}
 		to = Square.fromInts(king.file + 1, king.rank + 1);
 		if (to != null) {
-			neighbourhood.add(to);
+			setFlag(to, checkFlag);
 		}
 		to = Square.fromInts(king.file + 1, king.rank);
 		if (to != null) {
-			neighbourhood.add(to);
+			setFlag(to, checkFlag);
 		}
 		to = Square.fromInts(king.file + 1, king.rank - 1);
 		if (to != null) {
-			neighbourhood.add(to);
+			setFlag(to, checkFlag);
 		}
 		to = Square.fromInts(king.file, king.rank - 1);
 		if (to != null) {
-			neighbourhood.add(to);
+			setFlag(to, checkFlag);
 		}
 		to = Square.fromInts(king.file - 1, king.rank - 1);
 		if (to != null) {
-			neighbourhood.add(to);
+			setFlag(to, checkFlag);
 		}
 		to = Square.fromInts(king.file - 1, king.rank);
 		if (to != null) {
-			neighbourhood.add(to);
+			setFlag(to, checkFlag);
 		}
 		to = Square.fromInts(king.file - 1, king.rank + 1);
 		if (to != null) {
-			neighbourhood.add(to);
+			setFlag(to, checkFlag);
 		}
-		return neighbourhood;
 	}
 
 	private void initCheckFlagsBySlidingPiece(Square from, boolean isCheckedByWhite, int deltaFile, int deltaRank) {
@@ -806,9 +786,9 @@ public class State {
 		board[square.ordinal()] = (short) (contentAsShort | checksCount);
 	}
 
-	private void setNoKingFlagOnSquare(Square square) {
+	private void setFlag(Square square, short flag) {
 		short contentAsShort = board[square.ordinal()];
-		board[square.ordinal()] = (byte) (contentAsShort | SquareFormat.NO_KINGS_FLAG);
+		board[square.ordinal()] = (short) (contentAsShort | flag);
 	}
 
 	boolean isSquareCheckedBy(Square square, boolean testChecksByWhite) {
@@ -821,7 +801,8 @@ public class State {
 	}
 
 	private boolean canKingWalkOnSquare(Square square, boolean isKingWhite) {
-		return !isSquareCheckedBy(square, !isKingWhite) && (board[square.ordinal()] & SquareFormat.NO_KINGS_FLAG) == 0;
+		short checkedByKingFlag = isKingWhite ? SquareFormat.CHECK_BY_BLACK_KING : SquareFormat.CHECK_BY_WHITE_KING;
+		return !isSquareCheckedBy(square, !isKingWhite) && (board[square.ordinal()] & checkedByKingFlag) == 0;
 	}
 
 	public State chooseMove(int moveIndex) {
