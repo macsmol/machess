@@ -266,13 +266,13 @@ public class State {
 			flagsCopy &= ~(WHITE_KS_CASTLE_POSSIBLE | WHITE_QS_CASTLE_POSSIBLE);
 		} else if (from == Square.E8) {
 			flagsCopy &= ~(BLACK_KS_CASTLE_POSSIBLE | BLACK_QS_CASTLE_POSSIBLE);
-		} else if (from == Square.A1) {
+		} else if (from == Square.A1 || to == Square.A1) {
 			flagsCopy &= ~WHITE_QS_CASTLE_POSSIBLE;
-		} else if (from == Square.H1) {
+		} else if (from == Square.H1 || to == Square.H1) {
 			flagsCopy &= ~WHITE_KS_CASTLE_POSSIBLE;
-		} else if (from == Square.A8) {
+		} else if (from == Square.A8 || to == Square.A8) {
 			flagsCopy &= ~BLACK_QS_CASTLE_POSSIBLE;
-		} else if (from == Square.H8) {
+		} else if (from == Square.H8 || to == Square.H8) {
 			flagsCopy &= ~BLACK_KS_CASTLE_POSSIBLE;
 		}
 

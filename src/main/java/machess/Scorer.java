@@ -123,7 +123,7 @@ public class Scorer {
 
 	public static void perftDivide(State state, int depth) {
 		List<State> legalMoves = state.generateLegalMoves();
-		if (depth <= 1) {
+		if (depth < 1) {
 			System.out.println("nothing to divide");
 			return;
 		}
