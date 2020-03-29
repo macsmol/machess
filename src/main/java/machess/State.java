@@ -527,6 +527,9 @@ public class State {
 
 	private void initChecksByPawns(Square king, boolean castlingImpossible, boolean isCheckedByWhite,
 								   Square[] pawns, byte pawnsCount) {
+		if (pawnsCount == 0) {
+			return;
+		}
 		Arrays.sort(pawns, 0, pawnsCount, Comparator.comparingInt(sq -> sq.file));
 
 		byte minKingSafeDistance = (byte)(castlingImpossible ? 2 : 3);
