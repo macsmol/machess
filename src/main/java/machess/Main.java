@@ -5,7 +5,7 @@ public class Main {
         State game = new State();
         System.out.println("new game \n" + game);
 
-        for (int ply = 1; ply < 150; ply++) {
+        for (int ply = 1; ply <= 150; ply++) {
             Scorer.MoveScore bestMove = Scorer.miniMax(game);
 
             if (bestMove.moveIndex == -1) {

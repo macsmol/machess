@@ -33,7 +33,7 @@ public enum Square {
 		this.rank = (byte) rank;
 	}
 
-	static Square fromLegalInts(int file, int rank) {
+	public static Square fromLegalInts(int file, int rank) {
 		assert file >= File.A && file <=  File.H : "invalid file in: " + file + ", " + rank;
 		assert rank >= Rank._1 && rank <= Rank._8 : "invalid rank in: " + file + ", " + rank;
 		return INTS_TO_SQUARES[file * FILES_COUNT + rank];

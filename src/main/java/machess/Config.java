@@ -20,5 +20,8 @@ public class Config {
 	 */
 	public static final int BLACK_PLY_HANDICAP = 1;
 
-	public static final int PIECE_LIST_CAPACITY = 4;
+	/**
+	 * moveGenerationTest() fail if this is below 5.
+ 	 */
+	public static final int PIECE_LIST_CAPACITY = 5;
 }

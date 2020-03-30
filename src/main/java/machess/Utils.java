@@ -5,11 +5,15 @@ import java.math.BigInteger;
 public class Utils {
 	public static String checkCountsToString(short number) {
 		StringBuilder sb = new StringBuilder();
-		boolean isNoKing = (State.SquareFormat.NO_KINGS_FLAG & number) != 0;
-		sb.append(isNoKing ? '1' : '.');
+
+		boolean checkedByBlackKing = (State.SquareFormat.CHECK_BY_BLACK_KING & number) != 0;
+		sb.append(checkedByBlackKing ? 'B' : '.');
+		boolean checkedByWhiteKing = (State.SquareFormat.CHECK_BY_WHITE_KING & number) != 0;
+		sb.append(checkedByWhiteKing ? 'W' : '.');
+
 		number = (short)(number >>> 8);
 
-		sb.append(String.format(" %02X", number).replace('0','.'));
+		sb.append(String.format("%02X", number).replace('0','.'));
 		return sb.toString();
 	}
 

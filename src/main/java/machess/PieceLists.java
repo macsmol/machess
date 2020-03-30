@@ -1,11 +1,13 @@
 package machess;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.List;
 
 import static machess.Square.*;
 
-class PieceLists {
+public class PieceLists {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
@@ -141,6 +143,50 @@ class PieceLists {
         blackQueens = new Square[Config.PIECE_LIST_CAPACITY];
         blackQueensCount = 1;
         blackQueens[0] = D8;
+    }
+
+    private PieceLists(Square whiteKing, Square blackKing,
+                       List<Square> whitePawns, List<Square> blackPawns,
+                       List<Square> whiteKnights, List<Square> blackKnights,
+                       List<Square> whiteBishops, List<Square> blackBishops,
+                       List<Square> whiteRooks, List<Square> blackRooks,
+                       List<Square> whiteQueens, List<Square> blackQueens
+                       ) {
+        this.whiteKing = whiteKing;
+        this.blackKing = blackKing;
+        this.whitePawns = toArray(whitePawns, whitePawns.size());
+        whitePawnsCount = (byte)whitePawns.size();
+        this.blackPawns = toArray(blackPawns, blackPawns.size());
+        blackPawnsCount = (byte)blackPawns.size();
+
+        this.whiteKnights = toArray(whiteKnights, capacity(whiteKnights.size(), whitePawnsCount));
+        whiteKnightsCount = (byte)whiteKnights.size();
+        this.blackKnights = toArray(blackKnights, capacity(blackKnights.size(), blackPawnsCount));
+        blackKnightsCount = (byte)blackKnights.size();
+
+        this.whiteBishops = toArray(whiteBishops, capacity(whiteBishops.size(), whitePawnsCount));
+        whiteBishopsCount = (byte)whiteBishops.size();
+        this.blackBishops = toArray(blackBishops, capacity(blackBishops.size(), blackPawnsCount));
+        blackBishopsCount = (byte)blackBishops.size();
+        
+        this.whiteRooks = toArray(whiteRooks, capacity(whiteRooks.size(), whitePawnsCount));
+        whiteRooksCount = (byte)whiteRooks.size();
+        this.blackRooks = toArray(blackRooks, capacity(blackRooks.size(), blackPawnsCount));
+        blackRooksCount = (byte)blackRooks.size();
+        
+        this.whiteQueens = toArray(whiteQueens, capacity(whiteQueens.size(), whitePawnsCount));
+        whiteQueensCount = (byte)whiteQueens.size();
+        this.blackQueens = toArray(blackQueens, capacity(blackQueens.size(), blackPawnsCount));
+        blackQueensCount = (byte)blackQueens.size();
+    }
+
+    private Square[] toArray(List<Square> list, int capacity) {
+        Square[] array = new Square[capacity];
+        return list.toArray(array);
+    }
+
+    private int capacity(int piecesCount, int pawnsCount) {
+        return Math.min(piecesCount + pawnsCount, Config.PIECE_LIST_CAPACITY);
     }
 
     public void sortOccupiedSquares() {
@@ -344,5 +390,70 @@ class PieceLists {
 
     public Square getBlackKing() {
         return blackKing;
+    }
+    
+    public static class Builder {
+        private Square whiteKing;
+        private Square blackKing;
+        private List<Square> whitePawns = new ArrayList<>();
+        private List<Square> blackPawns = new ArrayList<>();
+        private List<Square> whiteKnights = new ArrayList<>();
+        private List<Square> blackKnights = new ArrayList<>();
+        private List<Square> whiteBishops = new ArrayList<>();
+        private List<Square> blackBishops = new ArrayList<>();
+        private List<Square> whiteRooks = new ArrayList<>();
+        private List<Square> blackRooks = new ArrayList<>();
+        private List<Square> whiteQueens = new ArrayList<>();
+        private List<Square> blackQueens = new ArrayList<>();
+
+        public void addWhitePawn(Square piece) {
+            whitePawns.add(piece);
+        }
+        public void addBlackPawn(Square piece) {
+            blackPawns.add(piece);
+        }
+        public void addWhiteKnight(Square piece) {
+            whiteKnights.add(piece);
+        }
+        public void addBlackKnight(Square piece) {
+            blackKnights.add(piece);
+        }
+        public void addWhiteBishop(Square piece) {
+            whiteBishops.add(piece);
+        }
+        public void addBlackBishop(Square piece) {
+            blackBishops.add(piece);
+        }
+        public void addWhiteRook(Square piece) {
+            whiteRooks.add(piece);
+        }
+        public void addBlackRook(Square piece) {
+            blackRooks.add(piece);
+        }
+        public void addWhiteQueen(Square piece) {
+            whiteQueens.add(piece);
+        }
+        public void addBlackQueen(Square piece) {
+            blackQueens.add(piece);
+        }
+        public void setWhiteKing(Square piece) {
+            if (whiteKing != null) {
+                throw new IllegalStateException("Duplicate white king: "+ whiteKing +" " + piece);
+            }
+            whiteKing = piece;
+        }
+        
+        public void setBlackKing(Square piece) {
+            if (blackKing != null) {
+                throw new IllegalStateException("Duplicate black king: "+ blackKing +" " + piece);
+            }
+            blackKing = piece;
+        }
+        
+        public PieceLists build() {
+            return new PieceLists(whiteKing,blackKing, whitePawns, blackPawns,
+                    whiteKnights, blackKnights, whiteBishops, blackBishops,
+                    whiteRooks, blackRooks, whiteQueens,blackQueens);
+        }
     }
 }
