@@ -10,4 +10,5 @@ Release 1:
 LATER IDEAS:
 -init sliding-checks around king and pins in one loop OR init pins per sliding piece, not per direction.
 
+--testing git - can't push that directly to master?
 
