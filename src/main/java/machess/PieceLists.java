@@ -1,11 +1,13 @@
 package machess;
 
+import machess.board8x8.Square;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
-import static machess.Square.*;
+import static machess.board8x8.Square.*;
 
 public class PieceLists {
     @Override

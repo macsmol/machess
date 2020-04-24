@@ -1,4 +1,4 @@
-package machess;
+package machess.board8x8;
 
 public interface Rank {
 	int _1 = 0;

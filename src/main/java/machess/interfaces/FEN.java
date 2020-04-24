@@ -2,6 +2,9 @@ package machess.interfaces;
 
 
 import machess.*;
+import machess.board8x8.File;
+import machess.board8x8.Rank;
+import machess.board8x8.Square;
 
 /**
  * Parses position Forsyth–Edwards Notation strings

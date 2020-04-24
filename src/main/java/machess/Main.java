@@ -4,7 +4,6 @@ public class Main {
     public static void main(String[] args) {
         State game = new State();
         System.out.println("new game \n" + game);
-
         for (int ply = 1; ply <= 150; ply++) {
             Scorer.MoveScore bestMove = Scorer.miniMax(game);
 

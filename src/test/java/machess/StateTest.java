@@ -7,14 +7,10 @@ import static org.junit.Assert.*;
 
 public class StateTest {
 
-    @Test
-    public void moveGenerationTestDebug() {
-//        testPosition("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", new long[] {48, 2039, 97862,   4085603, 193690690});
-//        testPosition("n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1",                              new long[] {24, 496, 9483,     182838, 3605103});
-//        testPosition(FEN.parse("4k2r/8/8/8/8/8/8/5K2 b k - 1 1")
-//                .fromPseudoLegalMove(Square.H8, Square.H1)
-//                .fromPseudoLegalMove(Square.F1, Square.F2), 1, 19);
-    }
+//    @Test
+//    public void moveGenerationTestDebug() {
+////
+//    }
 
     @Test
     public void moveGenerationTest() {

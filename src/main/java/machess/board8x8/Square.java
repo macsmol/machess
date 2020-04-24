@@ -1,7 +1,8 @@
-package machess;
+package machess.board8x8;
 
 import com.sun.istack.internal.Nullable;
 
+@Deprecated
 public enum Square {
 	A1(0, 0), A2(0, 1), A3(0, 2), A4(0, 3), A5(0, 4), A6(0, 5), A7(0, 6), A8(0, 7),
 	B1(1, 0), B2(1, 1), B3(1, 2), B4(1, 3), B5(1, 4), B6(1, 5), B7(1, 6), B8(1, 7),
@@ -40,7 +41,7 @@ public enum Square {
 	}
 
 	@Nullable
-	static Square fromInts(int file, int rank) {
+	public static Square fromInts(int file, int rank) {
 		if (file < File.A || file > File.H || rank < Rank._1 || rank > Rank._8) {
 			return null;
 		}
