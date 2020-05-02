@@ -1015,7 +1015,7 @@ public class State {
 	private int generateSlidingPieceMoves(byte from0x88, List<State> outputMoves, byte direction) {
 		int movesCount = 0;
 		if (pieceIsFreeToMove(Square0x88.to8x8Square(from0x88), Pin.fromDirection(direction))) {
-			byte to = (byte) (from0x88 + direction);
+			byte to = Direction.move(from0x88, direction);
 			while (inBounds(to)) {
 				if (isSameColorPieceOn(to)) {
 					break;
@@ -1024,7 +1024,7 @@ public class State {
 				if (isOppositeColorPieceOn(to)) {
 					break;
 				}
-				to = (byte) (from0x88 + direction);
+				to = Direction.move(to, direction);
 			}
 		}
 		return movesCount;
