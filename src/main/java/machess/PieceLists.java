@@ -186,7 +186,7 @@ public class PieceLists {
 
     private byte[] toArray(List<Byte> list, int capacity) {
         byte[] array = new byte[capacity];
-        for (int i = 0; i < capacity; i++) {
+        for (int i = 0; i < list.size(); i++) {
             array[i] = list.get(i);
         }
         return array;
