@@ -1034,8 +1034,8 @@ public class State {
 		int movesCount = 0;
 		byte pawnDisplacement = test(WHITE_TURN) ? Direction.N : Direction.S;
 		int pawnDoubleDisplacement = test(WHITE_TURN) ? 2 * Direction.N : 2 * Direction.S;
-		byte pawnQsTake = test(WHITE_TURN) ? Direction.NW : 2 * Direction.SW;
-		byte pawnKsTake = test(WHITE_TURN) ? Direction.NE : 2 * Direction.SE;
+		byte pawnQsTake = test(WHITE_TURN) ? Direction.NW : Direction.SW;
+		byte pawnKsTake = test(WHITE_TURN) ? Direction.NE : Direction.SE;
 
 		byte to = Direction.move(from, pawnDisplacement);
 		// head-on move
