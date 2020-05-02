@@ -29,7 +29,7 @@ public final class Direction {
     public static final byte NWW = 0x0E;
     public static final byte SEE = -NWW;
 
-    public static byte move(byte from, byte direction) {
-        return (byte) (from + direction);
+    public static byte move(byte from0x88, byte direction) {
+        return (byte) (from0x88 + direction);
     }
 }

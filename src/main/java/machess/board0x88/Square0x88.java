@@ -1,9 +1,20 @@
 package machess.board0x88;
 
+import machess.board8x8.File;
+import machess.board8x8.Rank;
+import machess.board8x8.Square;
+
 /**
  * https://www.chessprogramming.org/0x88
  */
 public interface Square0x88 {
+    /**
+     * Invalid value. Also used as an out of bounds mask.
+     */
+    byte NULL = (byte) 0x88;
+
+    int FILES_COUNT = 8;
+
     byte A8 = 0x70; byte B8 = 0x71; byte C8 = 0x72; byte D8 = 0x73; byte E8 = 0x74; byte F8 = 0x75; byte G8 = 0x76; byte H8 = 0x77;
     byte A7 = 0x60; byte B7 = 0x61; byte C7 = 0x62; byte D7 = 0x63; byte E7 = 0x64; byte F7 = 0x65; byte G7 = 0x66; byte H7 = 0x67;
     byte A6 = 0x50; byte B6 = 0x51; byte C6 = 0x52; byte D6 = 0x53; byte E6 = 0x54; byte F6 = 0x55; byte G6 = 0x56; byte H6 = 0x57;
@@ -14,7 +25,11 @@ public interface Square0x88 {
     byte A1 = 0x00; byte B1 = 0x01; byte C1 = 0x02; byte D1 = 0x03; byte E1 = 0x04; byte F1 = 0x05; byte G1 = 0x06; byte H1 = 0x07;
 
 
+    @Deprecated
     static byte from07(int file07, int rank07) {
+        assert file07 >= File.A && file07 <=  File.H : "invalid file in: " + file07 + ", " + rank07;
+        assert rank07 >= Rank._1 && rank07 <= Rank._8 : "invalid rank in: " + file07 + ", " + rank07;
+
         return (byte)(16 * rank07 + file07);
     }
 
@@ -25,10 +40,23 @@ public interface Square0x88 {
         return (byte)(square0x88 & 7);
     }
 
+    static boolean inBounds(byte square0x88) {
+        return (square0x88 & NULL) == 0;
+    }
+
     /**
      * @return rank in 0-7 range
      */
     static byte getRank(byte square0x88) {
         return (byte)(square0x88 >> 4);
+    }
+
+    static String toString(byte square0x88) {
+        return Square.fromLegalInts(getFile(square0x88), getRank(square0x88)).toString();
+    }
+
+    static int to8x8Square(byte square0x88) {
+        //TODO can be made faster?
+        return getFile(square0x88) * FILES_COUNT + getRank(square0x88);
     }
 }

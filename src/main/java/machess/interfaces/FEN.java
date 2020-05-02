@@ -2,9 +2,12 @@ package machess.interfaces;
 
 
 import machess.*;
+import machess.board0x88.Square0x88;
 import machess.board8x8.File;
 import machess.board8x8.Rank;
 import machess.board8x8.Square;
+
+import static machess.board0x88.Square0x88.NULL;
 
 /**
  * Parses position Forsyth–Edwards Notation strings
@@ -51,7 +54,7 @@ public class FEN {
         String halfMoveClockStr = strings.length >=5 ? strings[4] : "0";
         String fullMoveCounterStr = strings.length >=6 ? strings[5] : "777";
 
-        short[] board = new short[Square.values().length];
+        short[] board0x88 = new short[128];
         PieceLists.Builder pieces = new PieceLists.Builder();
         {
             String[] rankStrings = boardStr.split("/");
@@ -69,55 +72,55 @@ public class FEN {
                         file += Character.getNumericValue(c);
                         continue;
                     }
-                    Square square = Square.fromLegalInts(file, rank);
+                    byte square0x88 = Square0x88.from07(file, rank);
                     switch (c) {
                         case BLACK_PAWN:
-                            board[square.ordinal()] = Content.BLACK_PAWN.asByte;
-                            pieces.addBlackPawn(square);
+                            board0x88[square0x88] = Content.BLACK_PAWN.asByte;
+                            pieces.addBlackPawn(square0x88);
                             break;
                         case BLACK_KNIGHT:
-                            board[square.ordinal()] = Content.BLACK_KNIGHT.asByte;
-                            pieces.addBlackKnight(square);
+                            board0x88[square0x88] = Content.BLACK_KNIGHT.asByte;
+                            pieces.addBlackKnight(square0x88);
                             break;
                         case BLACK_BISHOP:
-                            board[square.ordinal()] = Content.BLACK_BISHOP.asByte;
-                            pieces.addBlackBishop(square);
+                            board0x88[square0x88] = Content.BLACK_BISHOP.asByte;
+                            pieces.addBlackBishop(square0x88);
                             break;
                         case BLACK_ROOK:
-                            board[square.ordinal()] = Content.BLACK_ROOK.asByte;
-                            pieces.addBlackRook(square);
+                            board0x88[square0x88] = Content.BLACK_ROOK.asByte;
+                            pieces.addBlackRook(square0x88);
                             break;
                         case BLACK_QUEEN:
-                            board[square.ordinal()] = Content.BLACK_QUEEN.asByte;
-                            pieces.addBlackQueen(square);
+                            board0x88[square0x88] = Content.BLACK_QUEEN.asByte;
+                            pieces.addBlackQueen(square0x88);
                             break;
                         case BLACK_KING:
-                            board[square.ordinal()] = Content.BLACK_KING.asByte;
-                            pieces.setBlackKing(square);
+                            board0x88[square0x88] = Content.BLACK_KING.asByte;
+                            pieces.setBlackKing(square0x88);
                             break;
                         case WHITE_PAWN:
-                            board[square.ordinal()] = Content.WHITE_PAWN.asByte;
-                            pieces.addWhitePawn(square);
+                            board0x88[square0x88] = Content.WHITE_PAWN.asByte;
+                            pieces.addWhitePawn(square0x88);
                             break;
                         case WHITE_KNIGHT:
-                            board[square.ordinal()] = Content.WHITE_KNIGHT.asByte;
-                            pieces.addWhiteKnight(square);
+                            board0x88[square0x88] = Content.WHITE_KNIGHT.asByte;
+                            pieces.addWhiteKnight(square0x88);
                             break;
                         case WHITE_BISHOP:
-                            board[square.ordinal()] = Content.WHITE_BISHOP.asByte;
-                            pieces.addWhiteBishop(square);
+                            board0x88[square0x88] = Content.WHITE_BISHOP.asByte;
+                            pieces.addWhiteBishop(square0x88);
                             break;
                         case WHITE_ROOK:
-                            board[square.ordinal()] = Content.WHITE_ROOK.asByte;
-                            pieces.addWhiteRook(square);
+                            board0x88[square0x88] = Content.WHITE_ROOK.asByte;
+                            pieces.addWhiteRook(square0x88);
                             break;
                         case WHITE_QUEEN:
-                            board[square.ordinal()] = Content.WHITE_QUEEN.asByte;
-                            pieces.addWhiteQueen(square);
+                            board0x88[square0x88] = Content.WHITE_QUEEN.asByte;
+                            pieces.addWhiteQueen(square0x88);
                             break;
                         case WHITE_KING:
-                            board[square.ordinal()] = Content.WHITE_KING.asByte;
-                            pieces.setWhiteKing(square);
+                            board0x88[square0x88] = Content.WHITE_KING.asByte;
+                            pieces.setWhiteKing(square0x88);
                             break;
                         default:
                             throw new IllegalArgumentException("Character '" + c + "' isn't a known piece.");
@@ -128,17 +131,17 @@ public class FEN {
         }
 
         int flags = initFlags(turnStr, castlingRightsStr);
-        Square enPassantSquare = initEnPassantSquare(epSquareStr);
+        byte enPassantSquare = initEnPassantSquare(epSquareStr);
         byte halfmoveClock = Byte.parseByte(halfMoveClockStr);
         int fullmoveCounter = Integer.parseInt(fullMoveCounterStr);
 
-        return new State(board, pieces.build(), (byte)flags, enPassantSquare, halfmoveClock, fullmoveCounter,
-                null, null);
+        return new State(board0x88, pieces.build(), (byte)flags, enPassantSquare, halfmoveClock, fullmoveCounter,
+                NULL, NULL);
     }
 
-    private static Square initEnPassantSquare(String epSquareStr) {
+    private static byte initEnPassantSquare(String epSquareStr) {
         if (epSquareStr.equals("-")) {
-            return null;
+            return NULL;
         }
         int file = epSquareStr.toLowerCase().charAt(0) - 'a';
         if (file < File.A || file > File.H) {
@@ -148,7 +151,7 @@ public class FEN {
         if (rank != Rank._3 && rank != Rank._6) {
             throw new IllegalArgumentException("Invalid rank in en passant square: " + epSquareStr);
         }
-        return Square.fromLegalInts(file, rank);
+        return Square0x88.from07(file, rank);
     }
 
     private static int initFlags(String turnStr, String castlingRightsStr) {

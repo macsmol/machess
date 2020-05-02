@@ -1,10 +1,15 @@
 package machess;
 
 import com.sun.istack.internal.Nullable;
+import machess.board0x88.Direction;
+import machess.board0x88.Square0x88;
+import machess.board8x8.File;
+import machess.board8x8.Rank;
+import machess.board8x8.Square;
 
 import java.util.*;
 
-import static machess.Square.*;
+import static machess.board0x88.Square0x88.*;
 
 /**
  * Game state seen as game board rather than a list of figures.
@@ -47,15 +52,15 @@ public class State {
 	public static final int BLACK_QS_CASTLE_POSSIBLE 	= 0x10;
 
 	/**
-	 * one byte per square.
+	 * https://www.chessprogramming.org/0x88
 	 */
-	final short[] board;
+	final short[] board0x88;
 
 	final PieceLists pieces;
 	/**
 	 * If not null it means there is a possibility to en-passant on this square
 	 */
-	private final Square enPassantSquare;
+	private final byte enPassantSquare;
 
 	// TODO 50 move draw rule
 	private final byte halfmoveClock;
@@ -69,8 +74,8 @@ public class State {
 	private final Pin[] pinnedPieces;
 
 
-	private Square from;
-	private Square to;
+	private byte from;
+	private byte to;
 
 	/**
 	 * new game
@@ -79,39 +84,39 @@ public class State {
 		flags = WHITE_TURN |
 				WHITE_QS_CASTLE_POSSIBLE | WHITE_KS_CASTLE_POSSIBLE |
 				BLACK_QS_CASTLE_POSSIBLE | BLACK_KS_CASTLE_POSSIBLE;
-		board = new short[Square.values().length];
+		board0x88 = new short[128];
 		for (int file = File.A; file <= File.H; file++) {
-			board[Square.fromLegalInts(file, Rank._2).ordinal()] = Content.WHITE_PAWN.asByte;
-			board[Square.fromLegalInts(file, Rank._7).ordinal()] = Content.BLACK_PAWN.asByte;
+			board0x88[Square0x88.from07(file, Rank._2)] = Content.WHITE_PAWN.asByte;
+			board0x88[Square0x88.from07(file, Rank._7)] = Content.BLACK_PAWN.asByte;
 
 			switch (file) {
 				case File.A:
 				case File.H:
-					board[Square.fromLegalInts(file, Rank._1).ordinal()] = Content.WHITE_ROOK.asByte;
-					board[Square.fromLegalInts(file, Rank._8).ordinal()] = Content.BLACK_ROOK.asByte;
+					board0x88[Square0x88.from07(file, Rank._1)] = Content.WHITE_ROOK.asByte;
+					board0x88[Square0x88.from07(file, Rank._8)] = Content.BLACK_ROOK.asByte;
 					break;
 				case File.B:
 				case File.G:
-					board[Square.fromLegalInts(file, Rank._1).ordinal()] = Content.WHITE_KNIGHT.asByte;
-					board[Square.fromLegalInts(file, Rank._8).ordinal()] = Content.BLACK_KNIGHT.asByte;
+					board0x88[Square0x88.from07(file, Rank._1)] = Content.WHITE_KNIGHT.asByte;
+					board0x88[Square0x88.from07(file, Rank._8)] = Content.BLACK_KNIGHT.asByte;
 					break;
 				case File.C:
 				case File.F:
-					board[Square.fromLegalInts(file, Rank._1).ordinal()] = Content.WHITE_BISHOP.asByte;
-					board[Square.fromLegalInts(file, Rank._8).ordinal()] = Content.BLACK_BISHOP.asByte;
+					board0x88[Square0x88.from07(file, Rank._1)] = Content.WHITE_BISHOP.asByte;
+					board0x88[Square0x88.from07(file, Rank._8)] = Content.BLACK_BISHOP.asByte;
 					break;
 				case File.D:
-					board[Square.fromLegalInts(file, Rank._1).ordinal()] = Content.WHITE_QUEEN.asByte;
-					board[Square.fromLegalInts(file, Rank._8).ordinal()] = Content.BLACK_QUEEN.asByte;
+					board0x88[Square0x88.from07(file, Rank._1)] = Content.WHITE_QUEEN.asByte;
+					board0x88[Square0x88.from07(file, Rank._8)] = Content.BLACK_QUEEN.asByte;
 					break;
 				case File.E:
-					board[Square.fromLegalInts(file, Rank._1).ordinal()] = Content.WHITE_KING.asByte;
-					board[Square.fromLegalInts(file, Rank._8).ordinal()] = Content.BLACK_KING.asByte;
+					board0x88[Square0x88.from07(file, Rank._1)] = Content.WHITE_KING.asByte;
+					board0x88[Square0x88.from07(file, Rank._8)] = Content.BLACK_KING.asByte;
 					break;
 			}
 		}
 		pieces = new PieceLists();
-		enPassantSquare = null;
+		enPassantSquare = NULL;
 		halfmoveClock = 0;
 		fullMoveCounter = 1;
 
@@ -119,9 +124,9 @@ public class State {
 		initChecksAroundKings();
 	}
 
-	public State(short[] board, PieceLists pieces, byte flags,
-		  @Nullable Square enPassantSquare, byte halfmoveClock, int fullMoveCounter, Square from, Square to) {
-		this.board = board;
+	public State(short[] board0x88, PieceLists pieces, byte flags,
+		  @Nullable byte enPassantSquare, byte halfmoveClock, int fullMoveCounter, byte from, byte to) {
+		this.board0x88 = board0x88;
 		this.pieces = pieces;
 		this.flags = flags;
 		this.enPassantSquare = enPassantSquare;
@@ -129,7 +134,6 @@ public class State {
 		this.fullMoveCounter = fullMoveCounter;
 		this.from = from;
 		this.to = to;
-		pieces.sortOccupiedSquares();
 
 		resetSquaresInCheck();
 		initChecksAroundKings();
@@ -138,12 +142,12 @@ public class State {
 		initPinnedPieces();
 	}
 
-	State fromPseudoLegalPawnDoublePush(Square from, Square to, Square enPassantSquare) {
-		assert enPassantSquare != null;
+	State fromPseudoLegalPawnDoublePush(byte from, byte to, byte enPassantSquare) {
+		assert inBounds(enPassantSquare);
 		if (!isEnPassantLegal(to)) {
-			enPassantSquare = null;
+			enPassantSquare = NULL;
 		}
-		return fromPseudoLegalMove(from, to, null, enPassantSquare, null);
+		return fromPseudoLegalMove(from, to, null, enPassantSquare, NULL);
 	}
 
 	/**
@@ -151,31 +155,31 @@ public class State {
 	 * 8/8/8/8/RPpk4/8/8/4K3 b - b3 0 1
 	 * Program detects such situation before double-push is made
 	 */
-	private boolean isEnPassantLegal(Square doublePushTo) {
-		Square king = doublePushTo.rank == Rank._4 ? pieces.getBlackKing() : pieces.getWhiteKing();
-		if (king.rank != doublePushTo.rank) {
+	private boolean isEnPassantLegal(byte doublePushTo) {
+		byte king = getRank(doublePushTo) == Rank._4 ? pieces.getBlackKing() : pieces.getWhiteKing();
+		if (getRank(king) != getRank(doublePushTo)) {
 			return true;
 		}
-		Square[] rooks = doublePushTo.rank == Rank._4 ? pieces.whiteRooks : pieces.blackRooks;
-		int rooksCount = doublePushTo.rank == Rank._4 ? pieces.whiteRooksCount : pieces.blackRooksCount;
+		byte[] rooks = getRank(doublePushTo) == Rank._4 ? pieces.whiteRooks : pieces.blackRooks;
+		int rooksCount = getRank(doublePushTo) == Rank._4 ? pieces.whiteRooksCount : pieces.blackRooksCount;
 		if (!isEnPassantLegal(king, rooks, rooksCount)) {
 			return false;
 		}
-		Square[] queens = doublePushTo.rank == Rank._4 ? pieces.whiteQueens : pieces.blackQueens;
-		int queensCount = doublePushTo.rank == Rank._4 ? pieces.whiteQueensCount : pieces.blackQueensCount;
+		byte[] queens = getRank(doublePushTo) == Rank._4 ? pieces.whiteQueens : pieces.blackQueens;
+		int queensCount = getRank(doublePushTo) == Rank._4 ? pieces.whiteQueensCount : pieces.blackQueensCount;
 		return isEnPassantLegal(king, queens, queensCount);
 	}
 
-	private boolean isEnPassantLegal(Square king, Square[] rooklikes, int rooklikesCount) {
+	private boolean isEnPassantLegal(byte king, byte[] rooklikes, int rooklikesCount) {
 		for (int i = 0; i < rooklikesCount; i++) {
-			if (rooklikes[i].rank != king.rank) {
+			if (getRank(rooklikes[i]) != getRank(king)) {
 				continue;
 			}
-			int fileFrom = Math.min(king.file, rooklikes[i].file) + 1;
-			int fileTo = Math.max(king.file, rooklikes[i].file);
+			int fileFrom = Math.min(getFile(king), getFile(rooklikes[i])) + 1;
+			int fileTo = Math.max(getFile(king), getFile(rooklikes[i]));
 			int piecesBetweenCount = 0;
 			for (int file = fileFrom; file < fileTo; file++) {
-				if (getContent(file, king.rank) != Content.EMPTY) {
+				if (getContent(file, getRank(king)) != Content.EMPTY) {
 					piecesBetweenCount++;
 				}
 			}
@@ -186,96 +190,98 @@ public class State {
 		return true;
 	}
 
-	private State fromPseudoLegalMoveWithPromotion(Square from, Square to, Content promotion) {
+	private State fromPseudoLegalMoveWithPromotion(byte from, byte to, Content promotion) {
 		assert promotion != null;
-		return fromPseudoLegalMove(from, to, promotion, null, null);
+		return fromPseudoLegalMove(from, to, promotion, NULL, NULL);
 	}
 
-	private State fromLegalQueensideCastling(Square kingFrom, Square kingTo) {
-		Square rookToCastle = Square.fromLegalInts(File.A, kingFrom.rank);
-		return fromPseudoLegalMove(kingFrom, kingTo, null, null, rookToCastle);
+	private State fromLegalQueensideCastling(byte kingFrom, byte kingTo) {
+		byte rookToCastle = Square0x88.from07(File.A,  getRank(kingFrom));
+		return fromPseudoLegalMove(kingFrom, kingTo, null, NULL, rookToCastle);
 	}
 
-	private State fromLegalKingsideCastling(Square kingFrom, Square kingTo) {
-		Square rookToCastle = Square.fromLegalInts(File.H, kingFrom.rank);
-		return fromPseudoLegalMove(kingFrom, kingTo, null, null, rookToCastle);
+	private State fromLegalKingsideCastling(byte kingFrom, byte kingTo) {
+		byte rookToCastle = Square0x88.from07(File.H, getRank(kingFrom));
+		return fromPseudoLegalMove(kingFrom, kingTo, null, NULL, rookToCastle);
 	}
 
 	/**
 	 * Generates new BoardState based on move. Typical move without special events.
 	 */
-	State fromPseudoLegalMove(Square from, Square to) {
-		return fromPseudoLegalMove(from, to, null, null, null);
+	State fromPseudoLegalMove(byte from, byte to) {
+		return fromPseudoLegalMove(from, to, null, NULL, NULL);
 	}
 
 	/**
 	 * Generates new BoardState based on move. It does not verify game rules - assumes input is a legal move.
 	 * This is the root method - it covers all cases. All 'overload' methods should call this one.
 	 */
-	private State fromPseudoLegalMove(Square from, Square to, @Nullable Content promotion, @Nullable Square futureEnPassantSquare,
-									  @Nullable Square rookCastleFrom) {
+	private State fromPseudoLegalMove(byte from, byte to, @Nullable Content promotion, @Nullable byte futureEnPassantSquare,
+									  byte rookCastleFrom) {
 		assert from != to : from + "->" + to + " is no move";
-		short[] boardCopy = board.clone();
+		assert inBounds(from) : "invalid from square: " + from;
+		assert inBounds(to) : "invalid to square: " + to;
+		short[] board0x88Copy = board0x88.clone();
 		PieceLists piecesCopy = pieces.clone();
 
 		//  update boardCopy
-		Content movedPiece = Content.fromShort(boardCopy[from.ordinal()]);
+		Content movedPiece = Content.fromShort(board0x88Copy[from]);
 		assert movedPiece != Content.EMPTY : from + "->" + to + " moves nothing";
 		assert movedPiece.isWhite == test(WHITE_TURN) : "Moved " + movedPiece + " on " + (test(WHITE_TURN) ? "white" : "black") + " turn";
-		boardCopy[from.ordinal()] = Content.EMPTY.asByte;
+		board0x88Copy[from] = Content.EMPTY.asByte;
 
-		Content takenPiece = Content.fromShort(boardCopy[to.ordinal()]);
+		Content takenPiece = Content.fromShort(board0x88Copy[to]);
 		assert takenPiece != Content.BLACK_KING && takenPiece != Content.WHITE_KING : from + "->" + to + " is taking king";
-		boardCopy[to.ordinal()] = movedPiece.asByte;
+		board0x88Copy[to] = movedPiece.asByte;
 
 		piecesCopy.move(movedPiece, from, to);
 
-		Square squareWithPawnTakenEnPassant = null;
+		byte squareWithPawnTakenEnPassant = NULL;
 		if (enPassantSquare == to) {
 			if (movedPiece == Content.WHITE_PAWN) {
-				squareWithPawnTakenEnPassant = Square.fromLegalInts(to.file, to.rank - 1);
-				takenPiece = Content.fromShort(boardCopy[squareWithPawnTakenEnPassant.ordinal()]);
-				boardCopy[squareWithPawnTakenEnPassant.ordinal()] = Content.EMPTY.asByte;
+				squareWithPawnTakenEnPassant = Direction.move(to, Direction.S);
+				takenPiece = Content.fromShort(board0x88Copy[squareWithPawnTakenEnPassant]);
+				board0x88Copy[squareWithPawnTakenEnPassant] = Content.EMPTY.asByte;
 			} else if (movedPiece == Content.BLACK_PAWN) {
-				squareWithPawnTakenEnPassant = Square.fromLegalInts(to.file, to.rank + 1);
-				takenPiece = Content.fromShort(boardCopy[squareWithPawnTakenEnPassant.ordinal()]);
-				boardCopy[squareWithPawnTakenEnPassant.ordinal()] = Content.EMPTY.asByte;
+				squareWithPawnTakenEnPassant = Direction.move(to, Direction.N);
+				takenPiece = Content.fromShort(board0x88Copy[squareWithPawnTakenEnPassant]);
+				board0x88Copy[squareWithPawnTakenEnPassant] = Content.EMPTY.asByte;
 			}
-		} else if (rookCastleFrom != null) {
-			boardCopy[rookCastleFrom.ordinal()] = Content.EMPTY.asByte;
+		} else if (rookCastleFrom != NULL) {
+			board0x88Copy[rookCastleFrom] = Content.EMPTY.asByte;
 			Content rook = test(WHITE_TURN) ? Content.WHITE_ROOK : Content.BLACK_ROOK;
-			Square rookDestination;
-			if (rookCastleFrom.file == 0) {
-				rookDestination = test(WHITE_TURN) ? Square.D1 : Square.D8;
-				boardCopy[rookDestination.ordinal()] = rook.asByte;
+			byte rookDestination;
+			if (getFile(rookCastleFrom) == File.A) {
+				rookDestination = test(WHITE_TURN) ? Square0x88.D1 : Square0x88.D8;
+				board0x88Copy[rookDestination] = rook.asByte;
 			} else {
-				rookDestination = test(WHITE_TURN) ? Square.F1 : Square.F8;
-				boardCopy[rookDestination.ordinal()] = rook.asByte;
+				rookDestination = test(WHITE_TURN) ? Square0x88.F1 : Square0x88.F8;
+				board0x88Copy[rookDestination] = rook.asByte;
 			}
 			// update pieces lists
 			piecesCopy.move(rook, rookCastleFrom, rookDestination);
 		} else if (promotion != null) {
-			boardCopy[to.ordinal()] = promotion.asByte;
+			board0x88Copy[to] = promotion.asByte;
 			piecesCopy.promote(to, promotion);
 		}
 
 		if (takenPiece != Content.EMPTY) {
 			assert movedPiece.isWhite != takenPiece.isWhite : from + "->" + to + " is a friendly take";
-			piecesCopy.kill(takenPiece, squareWithPawnTakenEnPassant != null ? squareWithPawnTakenEnPassant : to);
+			piecesCopy.kill(takenPiece, squareWithPawnTakenEnPassant != NULL ? squareWithPawnTakenEnPassant : to);
 		}
 
 		int flagsCopy = flags ^ WHITE_TURN;
-		if (from == Square.E1) {
+		if (from == Square0x88.E1) {
 			flagsCopy &= ~(WHITE_KS_CASTLE_POSSIBLE | WHITE_QS_CASTLE_POSSIBLE);
-		} else if (from == Square.E8) {
+		} else if (from == Square0x88.E8) {
 			flagsCopy &= ~(BLACK_KS_CASTLE_POSSIBLE | BLACK_QS_CASTLE_POSSIBLE);
-		} else if (from == Square.A1) {
+		} else if (from == Square0x88.A1) {
 			flagsCopy &= ~WHITE_QS_CASTLE_POSSIBLE;
-		} else if (from == Square.H1) {
+		} else if (from == Square0x88.H1) {
 			flagsCopy &= ~WHITE_KS_CASTLE_POSSIBLE;
-		} else if (from == Square.A8) {
+		} else if (from == Square0x88.A8) {
 			flagsCopy &= ~BLACK_QS_CASTLE_POSSIBLE;
-		} else if (from == Square.H8) {
+		} else if (from == Square0x88.H8) {
 			flagsCopy &= ~BLACK_KS_CASTLE_POSSIBLE;
 		}
 		if (to == A1) {
@@ -289,7 +295,7 @@ public class State {
 		}
 
 		int newFullMoveClock = test(WHITE_TURN) ? fullMoveCounter : fullMoveCounter + 1;
-		return new State(boardCopy, piecesCopy, (byte) flagsCopy, futureEnPassantSquare, (byte)0, newFullMoveClock,
+		return new State(board0x88Copy, piecesCopy, (byte) flagsCopy, futureEnPassantSquare, (byte)0, newFullMoveClock,
 				from, to);
 	}
 
@@ -318,7 +324,7 @@ public class State {
 			StringBuilder sbPins = 			new StringBuilder(Config.DEBUG_PINNED_PIECES 			? "|" : "");
 			sb.append(rank + 1).append("|");
 			for (byte file = File.A; file <= File.H; file++) {
-				Square square = Square.fromLegalInts(file, rank);
+				byte square = Square0x88.from07(file, rank);
 				Content content = getContent(file, rank);
 				sb.append(content.symbol);
 				if (square == to || square == from) {
@@ -328,11 +334,11 @@ public class State {
 				}
 
 				if (Config.DEBUG_FIELD_IN_CHECK_FLAGS) {
-					short contentAsShort = board[square.ordinal()];
+					short contentAsShort = board0x88[Square0x88.from07(file,rank)];
 					sbCheckFlags.append(Utils.checkCountsToString(contentAsShort)).append('|');
 				}
 				if (Config.DEBUG_PINNED_PIECES) {
-					Pin pinType = pinnedPieces[square.ordinal()];
+					Pin pinType = pinnedPieces[Square0x88.to8x8Square(square)];
 					sbPins.append(" ").append(pinType != null ? pinType.symbol : ' ').append("  |");
 				}
 			}
@@ -353,49 +359,49 @@ public class State {
 	}
 
 	private Content getContent(int file, int rank) {
-		return getContent(Square.fromLegalInts(file, rank));
+		return getContent(Square0x88.from07(file, rank));
 	}
 
-	Content getContent(Square square) {
-		return Content.fromShort(board[square.ordinal()]);
+	Content getContent(byte square0x88) {
+		return Content.fromShort(board0x88[square0x88]);
 	}
 
-	private boolean isPromotingSquare(Square square) {
-		return test(WHITE_TURN) ? square.rank == Rank.WHITE_PROMOTION_RANK : square.rank == Rank.BLACK_PROMOTION_RANK;
+	private boolean isPromotingSquare(byte square0x88) {
+		return test(WHITE_TURN) ? getRank(square0x88) == Rank.WHITE_PROMOTION_RANK : getRank(square0x88) == Rank.BLACK_PROMOTION_RANK;
 	}
 
-	private boolean isInitialSquareOfPawn(Square square) {
-		return test(WHITE_TURN) ? square.rank == Rank.WHITE_PAWN_INITIAL_RANK : square.rank == Rank.BLACK_PAWN_INITIAL_RANK;
-	}
-
-	/**
-	 * Tells if Square square is occupied by a piece of color that's currently taking turn.
-	 */
-	boolean isSameColorPieceOn(Square square) {
-		return test(WHITE_TURN) ? isWhitePieceOn(square) : isBlackPieceOn(square);
+	private boolean isInitialSquareOfPawn(byte square0x88) {
+		return test(WHITE_TURN) ? getRank(square0x88) == Rank.WHITE_PAWN_INITIAL_RANK : getRank(square0x88) == Rank.BLACK_PAWN_INITIAL_RANK;
 	}
 
 	/**
 	 * Tells if Square square is occupied by a piece of color that's currently taking turn.
 	 */
-	boolean isOppositeColorPieceOn(Square square) {
-		return test(WHITE_TURN) ? isBlackPieceOn(square) : isWhitePieceOn(square);
+	boolean isSameColorPieceOn(byte square0x88) {
+		return test(WHITE_TURN) ? isWhitePieceOn(square0x88) : isBlackPieceOn(square0x88);
 	}
 
-	private boolean isWhitePieceOn(Square square) {
-		short contentAsShort = board[square.ordinal()];
+	/**
+	 * Tells if Square square is occupied by a piece of color that's currently taking turn.
+	 */
+	boolean isOppositeColorPieceOn(byte square0x88) {
+		return test(WHITE_TURN) ? isBlackPieceOn(square0x88) : isWhitePieceOn(square0x88);
+	}
+
+	private boolean isWhitePieceOn(byte square0x88) {
+		short contentAsShort = board0x88[square0x88];
 		return (contentAsShort & SquareFormat.IS_WHITE_PIECE_FLAG) != 0 && (contentAsShort & SquareFormat.PIECE_TYPE_MASK) != 0;
 	}
 
-	private boolean isBlackPieceOn(Square square) {
-		short contentAsShort = board[square.ordinal()];
+	private boolean isBlackPieceOn(byte square0x88) {
+		short contentAsShort = board0x88[square0x88];
 		return (contentAsShort & SquareFormat.IS_WHITE_PIECE_FLAG) == 0 && (contentAsShort & SquareFormat.PIECE_TYPE_MASK) != 0;
 	}
 
 	private void resetSquaresInCheck() {
-		for (int i = 0; i < board.length; i++) {
-			short contentAsShort = board[i];
-			board[i] = (byte) (contentAsShort & (SquareFormat.PIECE_TYPE_MASK | SquareFormat.IS_WHITE_PIECE_FLAG));
+		for (int i = 0; i < board0x88.length; i++) {
+			short contentAsShort = board0x88[i];
+			board0x88[i] = (byte) (contentAsShort & (SquareFormat.PIECE_TYPE_MASK | SquareFormat.IS_WHITE_PIECE_FLAG));
 		}
 	}
 
@@ -406,8 +412,8 @@ public class State {
 	}
 
 	private void initPinnedPieces() {
-		Square whiteKing = pieces.getWhiteKing();
-		Square blackKing = pieces.getBlackKing();
+		byte whiteKing = pieces.getWhiteKing();
+		byte blackKing = pieces.getBlackKing();
 		assert getContent(whiteKing) == Content.WHITE_KING : "Corrupted white king position";
 		assert getContent(blackKing) == Content.BLACK_KING : "Corrupted black king position";
 
@@ -419,19 +425,21 @@ public class State {
 		initPinnedPieces(blackKing, BLACK);
 	}
 
-	private void initPinnedPieces(Square king, boolean isPinnedToWhiteKing) {
+	private void initPinnedPieces(byte king, boolean isPinnedToWhiteKing) {
 		initPinsByBishops(king, isPinnedToWhiteKing);
 		initPinsByRooks(king, isPinnedToWhiteKing);
 		initPinsByQueens(king, isPinnedToWhiteKing);
 	}
 
-	private void initPinsByBishops(Square king, boolean isPinnedToWhiteKing) {
-		Square[] bishops = isPinnedToWhiteKing ? pieces.blackBishops : pieces.whiteBishops;
+	// TODO could use some smarter 0x88 arithmetic for this?
+	private void initPinsByBishops(byte king, boolean isPinnedToWhiteKing) {
+
+		byte[] bishops = isPinnedToWhiteKing ? pieces.blackBishops : pieces.whiteBishops;
 		int bishopsCount = isPinnedToWhiteKing ? pieces.blackBishopsCount : pieces.whiteBishopsCount;
 
 		for (int i = 0; i < bishopsCount; i++) {
-			int deltaRank = bishops[i].rank - king.rank;
-			int deltaFile = bishops[i].file - king.file;
+			int deltaRank = getRank(bishops[i]) - getRank(king);
+			int deltaFile = getFile(bishops[i]) - getFile(king);
 
 			if (Math.abs(deltaFile) == Math.abs(deltaRank)) {
 				initPinByBishop(king, isPinnedToWhiteKing, bishops[i]);
@@ -439,82 +447,93 @@ public class State {
 		}
 	}
 	
-	private void initPinsByRooks(Square king, boolean isPinnedToWhiteKing) {
-		Square[] rooks = isPinnedToWhiteKing ? pieces.blackRooks : pieces.whiteRooks;
+	private void initPinsByRooks(byte king0x88, boolean isPinnedToWhiteKing) {
+		byte[] rooks = isPinnedToWhiteKing ? pieces.blackRooks : pieces.whiteRooks;
 		int rooksCount = isPinnedToWhiteKing ? pieces.blackRooksCount : pieces.whiteRooksCount;
 
 		for (int i = 0; i < rooksCount; i++) {
-			if (king.rank == rooks[i].rank) {
-				initRankPin(king, isPinnedToWhiteKing, rooks[i]);
-			} else if (king.file == rooks[i].file) {
-				initFilePin(king, isPinnedToWhiteKing, rooks[i]);
+			if (getRank(king0x88) == getRank(rooks[i])) {
+				initRankPin(king0x88, isPinnedToWhiteKing, rooks[i]);
+			} else if (getFile(king0x88) == getFile(rooks[i])) {
+				initFilePin(king0x88, isPinnedToWhiteKing, rooks[i]);
 			}
 		}
 	}
 
-	private void initPinsByQueens(Square king, boolean isPinnedToWhiteKing) {
-		Square[] queens = isPinnedToWhiteKing ? pieces.blackQueens : pieces.whiteQueens;
+	private void initPinsByQueens(byte king, boolean isPinnedToWhiteKing) {
+		byte[] queens = isPinnedToWhiteKing ? pieces.blackQueens : pieces.whiteQueens;
 		int queensCount = isPinnedToWhiteKing ? pieces.blackQueensCount : pieces.whiteQueensCount;
 
 		for (int i = 0; i < queensCount; i++) {
-			int deltaRank = queens[i].rank - king.rank;
-			int deltaFile = queens[i].file - king.file;
+			int deltaRank = getRank(queens[i]) - getRank(king);
+			int deltaFile = getFile(queens[i]) - getFile(king);
 
 			if (Math.abs(deltaFile) == Math.abs(deltaRank)) {
 				initPinByBishop(king, isPinnedToWhiteKing, queens[i]);
-			} else if (king.rank == queens[i].rank) {
+			} else if (getRank(king) == getRank(queens[i])) {
 				initRankPin(king, isPinnedToWhiteKing, queens[i]);
-			} else if (king.file == queens[i].file) {
+			} else if (getFile(king) == getFile(queens[i])) {
 				initFilePin(king, isPinnedToWhiteKing, queens[i]);
 			}
 		}
 	}
 
-	private void initPinByBishop(Square king, boolean isKingWhite, Square bishoplike) {
-		int fileDirection = bishoplike.file - king.file > 0 ? 1 : -1;
-		int rankDirection = bishoplike.rank - king.rank > 0 ? 1 : -1;
-		initPin(king, isKingWhite, bishoplike, fileDirection, rankDirection);
+	private void initPinByBishop(byte king0x88, boolean isKingWhite, byte bishoplike0x88) {
+		if (getFile(bishoplike0x88) - getFile(king0x88) > 0) {
+			if (getRank(bishoplike0x88) - getRank(king0x88) > 0) {
+				initPin(king0x88, isKingWhite, bishoplike0x88, Direction.NE);
+			} else {
+				initPin(king0x88, isKingWhite, bishoplike0x88, Direction.SE);
+			}
+		} else {
+			if (getRank(bishoplike0x88) - getRank(king0x88) > 0) {
+				initPin(king0x88, isKingWhite, bishoplike0x88, Direction.NW);
+			} else {
+				initPin(king0x88, isKingWhite, bishoplike0x88, Direction.SW);
+			}
+		}
 	}
 
-	private void initRankPin(Square king, boolean isKingWhite, Square rooklike) {
-		int fileDirection = rooklike.file - king.file > 0 ? 1 : -1;
-		int rankDirection = 0;
-		initPin(king, isKingWhite, rooklike, fileDirection, rankDirection);
+	private void initRankPin(byte king0x88, boolean isKingWhite, byte rooklike0x88) {
+		byte direction = getFile(rooklike0x88) - getFile(king0x88) > 0 ? Direction.E : Direction.W;
+		initPin(king0x88, isKingWhite, rooklike0x88, direction);
 	}
 
-	private void initFilePin(Square king, boolean isKingWhite, Square rooklike) {
-		int fileDirection = 0;
-		int rankDirection = rooklike.rank - king.rank > 0 ? 1 : -1;
-		initPin(king, isKingWhite, rooklike, fileDirection, rankDirection);
+	private void initFilePin(byte king0x88, boolean isKingWhite, byte rooklike0x88) {
+		byte direction = getRank(rooklike0x88) - getRank(king0x88) > 0 ? Direction.N : Direction.S;
+		initPin(king0x88, isKingWhite, rooklike0x88, direction);
 	}
 
-	private void initPin(Square king, boolean isKingWhite, Square slidingPiece, int deltaFile, int deltaRank) {
-		Square candidate = null;
-		for (int i = 1; true; i++) {
-			Square testedSquare = Square.fromInts(king.file + i * deltaFile, king.rank + i * deltaRank);
-			if (testedSquare == slidingPiece) {
-				if (candidate != null) {
-					pinnedPieces[candidate.ordinal()] = Pin.fromDeltas(deltaFile, deltaRank);
+	private void initPin(byte king, boolean isKingWhite, byte slidingPieceSquare, byte direction) {
+		int candidate8x8index = -1;
+		byte testedSquare = Direction.move(king, direction);
+		while (true) {
+			if (testedSquare == slidingPieceSquare) {
+				if (candidate8x8index != -1) {
+					pinnedPieces[candidate8x8index] = Pin.fromDirection(direction);
 				}
 				return;
 			}
 			Content content = getContent(testedSquare);
 			if (content != Content.EMPTY) {
 				if (content.isWhite != isKingWhite) {
+					// obstructed by piece of same color as sliding piece
 					return;
 				}
-				if (candidate == null && content.isWhite == isKingWhite) {
-					candidate = testedSquare;
+				if (candidate8x8index == -1) {
+					candidate8x8index = Square0x88.to8x8Square(testedSquare);
 				} else {
 					// found second piece obstructing ray
 					return;
 				}
 			}
+			testedSquare = Direction.move(testedSquare, direction);
 		}
 	}
 
+	// TODO can it be improved with 'smart' 0x88 arithmetic?
 	private void initChecksAroundKing(boolean isCheckedByWhite) {
-		Square king = isCheckedByWhite ? pieces.getBlackKing() : pieces.getWhiteKing();
+		byte king = isCheckedByWhite ? pieces.getBlackKing() : pieces.getWhiteKing();
 		boolean castlingImpossible;
 		if (isCheckedByWhite) {
 			castlingImpossible = !(test(BLACK_KS_CASTLE_POSSIBLE) || test(BLACK_QS_CASTLE_POSSIBLE));
@@ -537,72 +556,74 @@ public class State {
 		}
 	}
 
-	private void initChecksByPawns(Square king, boolean castlingImpossible, boolean isCheckedByWhite,
-								   Square[] pawns, byte pawnsCount) {
+	private void initChecksByPawns(byte king, boolean castlingImpossible, boolean isCheckedByWhite,
+								   byte[] pawns, byte pawnsCount) {
 		if (pawnsCount == 0) {
 			return;
 		}
-		Arrays.sort(pawns, 0, pawnsCount, Comparator.comparingInt(sq -> sq.file));
+
+		// todo does this work?
+		Utils.sortByFiles(pawns, pawnsCount);
 
 		byte minKingSafeDistance = (byte)(castlingImpossible ? 2 : 3);
 		for (int i = pawnsCount / 2; i >= 0; i--) {
-			if (pawns[i].file < king.file - minKingSafeDistance) {
+			if (getFile(pawns[i]) < getFile(king) - minKingSafeDistance) {
 				break;
 			}
 			initSquaresInCheckByPawn(pawns[i], isCheckedByWhite);
 		}
 		for (int i = pawnsCount / 2 + 1; i < pawnsCount; i++) {
-			if (pawns[i].file > king.file + minKingSafeDistance) {
+			if (getFile(pawns[i]) > getFile(king) + minKingSafeDistance) {
 				break;
 			}
 			initSquaresInCheckByPawn(pawns[i], isCheckedByWhite);
 		}
 	}
 
-	private void initChecksByKnights(Square king, boolean castlingImpossible, boolean isCheckedByWhite, Square[] knights,
+	private void initChecksByKnights(byte king, boolean castlingImpossible, boolean isCheckedByWhite, byte[] knights,
 			byte knightsCount) {
 		byte minKingSafeDistance = (byte)(castlingImpossible ? 4 : 5);
 		for (int i = 0; i < knightsCount; i++) {
-			if (Math.abs(knights[i].file - king.file) < minKingSafeDistance && Math.abs(knights[i].rank - king.rank) < minKingSafeDistance) {
+			if (Math.abs(getFile(knights[i]) - getFile(king)) < minKingSafeDistance && Math.abs(getRank(knights[i]) - getRank(king)) < minKingSafeDistance) {
 				initSquaresInCheckByKnight(knights[i],isCheckedByWhite);
 			}
 		}
 	}
 
-	private void initChecksByBishops(Square king, boolean isCheckedByWhite, Square[] bishops, byte bishopsCount) {
+	private void initChecksByBishops(byte king0x88, boolean isCheckedByWhite, byte[] bishops, byte bishopsCount) {
 		for (int i = 0; i < bishopsCount; i++) {
-			byte deltaRank = (byte)(king.rank - bishops[i].rank);
+			byte deltaRank = (byte)(getRank(king0x88) - getRank(bishops[i]));
 
 			if (deltaRank > 0) {
 				// king above
-				initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, 1, 1);
-				initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, -1, 1);
+				initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, Direction.NW);
+				initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, Direction.NE);
 			} else if (deltaRank < 0) {
 				//king below
-				initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, 1, -1);
-				initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, -1, -1);
+				initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, Direction.SW);
+				initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, Direction.SE);
 			} else {
-				byte deltaFile = (byte) (king.file - bishops[i].file);
+				byte deltaFile = (byte) (getFile(king0x88) - getFile(bishops[i]));
 				if (deltaFile > 0) { // king to the right
-					initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, 1, 1);
-					initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, 1, -1);
+					initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, Direction.NE);
+					initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, Direction.SE);
 				} else {
-					initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, -1, 1);
-					initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, -1, -1);
+					initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, Direction.NW);
+					initCheckFlagsBySlidingPiece(bishops[i], isCheckedByWhite, Direction.SW);
 				}
 			}
 		}
 	}
 
-	private void initChecksByRooks(Square king, boolean isCheckedByWhite, Square[] rooks, byte rooksCount) {
+	private void initChecksByRooks(byte king0x88, boolean isCheckedByWhite, byte[] rooks, byte rooksCount) {
 		for (int i = 0; i < rooksCount; i++) {
-			initCheckFlagsBySlidingPiece(rooks[i], isCheckedByWhite, 0, 1);
-			initCheckFlagsBySlidingPiece(rooks[i], isCheckedByWhite, 0, -1);
+			initCheckFlagsBySlidingPiece(rooks[i], isCheckedByWhite, Direction.N);
+			initCheckFlagsBySlidingPiece(rooks[i], isCheckedByWhite, Direction.S);
 
-			byte deltaRank = (byte)(king.rank - rooks[i].rank);
+			byte deltaRank = (byte)(getRank(king0x88) - getRank(rooks[i]));
 			if (isCloseEnoughToRank(deltaRank)) {
-				initCheckFlagsBySlidingPiece(rooks[i], isCheckedByWhite, 1, 0);
-				initCheckFlagsBySlidingPiece(rooks[i], isCheckedByWhite, -1, 0);
+				initCheckFlagsBySlidingPiece(rooks[i], isCheckedByWhite, Direction.E);
+				initCheckFlagsBySlidingPiece(rooks[i], isCheckedByWhite, Direction.W);
 			}
 		}
 	}
@@ -611,111 +632,144 @@ public class State {
 		return Math.abs(deltaRank) <= 1;
 	}
 
-	private void initChecksByQueens(Square king, boolean isCheckedByWhite, Square[] queens, byte queensCount) {
+	private void initChecksByQueens(byte king, boolean isCheckedByWhite, byte[] queens, byte queensCount) {
 		for (int i = 0; i < queensCount; i++) {
-			byte deltaRank = (byte) (king.rank - queens[i].rank);
+			byte deltaRank = (byte) (getRank(king) - getRank(queens[i]));
 			if (deltaRank > 1) { // king at least two ranks above
-				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, -1, 1);
-				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, 1);
-				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 1, 1);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, Direction.NE);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, Direction.N);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, Direction.NW);
 			} else if (deltaRank < -1) { // king at least two ranks below
-				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, -1, -1);
-				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, -1);
-				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 1, -1);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, Direction.SE);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, Direction.S);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, Direction.SW);
 			} else if (deltaRank > 0) { // king just above
-				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, -1, 1);
-				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, 1);
-				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 1, 1);
-				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, -1, 0);
-				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 1, 0);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, Direction.NE);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, Direction.N);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, Direction.NW);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, Direction.E);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, Direction.W);
 			} else if (deltaRank < 0) { // king just below
-				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, -1, -1);
-				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, -1);
-				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 1, -1);
-				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, -1, 0);
-				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 1, 0);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, Direction.SE);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, Direction.S);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, Direction.SW);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, Direction.E);
+				initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, Direction.W);
 			} else { // same rank
-				byte deltaFile = (byte) (king.file - queens[i].file);
+				byte deltaFile = (byte) (getFile(king) - getFile(queens[i]));
 				if (deltaFile > 0) { // king to the right
-					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 1, 1);
-					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 1, 0);
-					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 1, -1);
-					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, 1);
-					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, -1);
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, Direction.N);
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, Direction.NE);
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, Direction.E);
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, Direction.SE);
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, Direction.S);
 				} else { // king to the left
-					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, -1, 1);
-					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, -1, 0);
-					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, -1, -1);
-					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, 1);
-					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, 0, -1);
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, Direction.N);
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, Direction.NW);
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, Direction.W);
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, Direction.SW);
+					initCheckFlagsBySlidingPiece(queens[i], isCheckedByWhite, Direction.S);
 				}
 			}
 		}
 	}
 
+	private void initSquaresInCheckByKnight(byte knightSquare0x88, boolean isCheckedByWhite) {
+		byte to = Direction.move(knightSquare0x88,Direction.NNE);
+		if (inBounds(to)) {
+			incrementChecksOnSquare(to, isCheckedByWhite);
+		}
+		to = Direction.move(knightSquare0x88,Direction.NEE);
+		if (inBounds(to)) {
+			incrementChecksOnSquare(to, isCheckedByWhite);
+		}
+		to = Direction.move(knightSquare0x88,Direction.SEE);
+		if (inBounds(to)) {
+			incrementChecksOnSquare(to, isCheckedByWhite);
+		}
+		to = Direction.move(knightSquare0x88,Direction.SSE);
+		if (inBounds(to)) {
+			incrementChecksOnSquare(to, isCheckedByWhite);
+		}
+		to = Direction.move(knightSquare0x88,Direction.SSW);
+		if (inBounds(to)) {
+			incrementChecksOnSquare(to, isCheckedByWhite);
+		}
+		to = Direction.move(knightSquare0x88,Direction.SWW);
+		if (inBounds(to)) {
+			incrementChecksOnSquare(to, isCheckedByWhite);
+		}
+		to = Direction.move(knightSquare0x88,Direction.NWW);
+		if (inBounds(to)) {
+			incrementChecksOnSquare(to, isCheckedByWhite);
+		}
+		to = Direction.move(knightSquare0x88,Direction.NNW);
+		if (inBounds(to)) {
+			incrementChecksOnSquare(to, isCheckedByWhite);
+		}
+	}
+
 	private void initSquaresInCheckByKings() {
-		Square whiteKing = pieces.getWhiteKing();
-		Square blackKing = pieces.getBlackKing();
-		assert getContent(whiteKing) == Content.WHITE_KING : "Corrupted white king position";
-		assert getContent(blackKing) == Content.BLACK_KING : "Corrupted black king position";
-		assert Math.abs(blackKing.rank - whiteKing.rank) > 1
-				|| Math.abs(blackKing.file - whiteKing.file) > 1 : "Kings to close. w: " + whiteKing + ", b: " + blackKing;
+		byte whiteKing0x88 = pieces.getWhiteKing();
+		byte blackKing0x88 = pieces.getBlackKing();
+		assert getContent(whiteKing0x88) == Content.WHITE_KING : "Corrupted white king position";
+		assert getContent(blackKing0x88) == Content.BLACK_KING : "Corrupted black king position";
+		assert Math.abs(getRank(blackKing0x88) - getRank(whiteKing0x88)) > 1
+				|| Math.abs(getFile(blackKing0x88) - getFile(whiteKing0x88)) > 1 : "Kings to close. w: " + whiteKing0x88 + ", b: " + blackKing0x88;
 
-		initSquareInCheckByKing(whiteKing, WHITE);
-		initSquareInCheckByKing(blackKing, BLACK);
+		initSquareInCheckByKing(whiteKing0x88, WHITE);
+		initSquareInCheckByKing(blackKing0x88, BLACK);
 	}
 
-	private void initSquareInCheckByKing(Square king, boolean isKingWhite) {
+	private void initSquareInCheckByKing(byte king0x88, boolean isKingWhite) {
 		short checkFlag = isKingWhite ? SquareFormat.CHECK_BY_WHITE_KING : SquareFormat.CHECK_BY_BLACK_KING;
-		Square to = Square.fromInts(king.file, king.rank + 1);
-		if (to != null) {
+		byte to = Direction.move(king0x88, Direction.E);
+		if (inBounds(to)) {
 			setFlag(to, checkFlag);
 		}
-		to = Square.fromInts(king.file + 1, king.rank + 1);
-		if (to != null) {
+		to = Direction.move(king0x88, Direction.NE);
+		if (inBounds(to)) {
 			setFlag(to, checkFlag);
 		}
-		to = Square.fromInts(king.file + 1, king.rank);
-		if (to != null) {
+		to = Direction.move(king0x88, Direction.N);
+		if (inBounds(to)) {
 			setFlag(to, checkFlag);
 		}
-		to = Square.fromInts(king.file + 1, king.rank - 1);
-		if (to != null) {
+		to = Direction.move(king0x88, Direction.NW);
+		if (inBounds(to)) {
 			setFlag(to, checkFlag);
 		}
-		to = Square.fromInts(king.file, king.rank - 1);
-		if (to != null) {
+		to = Direction.move(king0x88, Direction.W);
+		if (inBounds(to)) {
 			setFlag(to, checkFlag);
 		}
-		to = Square.fromInts(king.file - 1, king.rank - 1);
-		if (to != null) {
+		to = Direction.move(king0x88, Direction.SW);
+		if (inBounds(to)) {
 			setFlag(to, checkFlag);
 		}
-		to = Square.fromInts(king.file - 1, king.rank);
-		if (to != null) {
+		to = Direction.move(king0x88, Direction.S);
+		if (inBounds(to)) {
 			setFlag(to, checkFlag);
 		}
-		to = Square.fromInts(king.file - 1, king.rank + 1);
-		if (to != null) {
+		to = Direction.move(king0x88, Direction.SE);
+		if (inBounds(to)) {
 			setFlag(to, checkFlag);
 		}
 	}
 
-	private void initCheckFlagsBySlidingPiece(Square from, boolean isCheckedByWhite, int deltaFile, int deltaRank) {
-		for (int i = 1; true; i++) {
-			Square underCheck = Square.fromInts(from.file + deltaFile * i, from.rank + i * deltaRank);
-			if (underCheck == null) {
+	private void initCheckFlagsBySlidingPiece(byte from, boolean isCheckedByWhite, byte direction) {
+		byte squareUnderCheck = Direction.move(from, direction);
+		while (inBounds(squareUnderCheck)) {
+			incrementChecksOnSquare(squareUnderCheck, isCheckedByWhite);
+			if (isSquareBlockingSlidingPiece(squareUnderCheck, isCheckedByWhite)) {
 				break;
 			}
-			incrementChecksOnSquare(underCheck, isCheckedByWhite);
-			if (isSquareBlockingSlidingPiece(underCheck, isCheckedByWhite)) {
-				break;
-			}
+			squareUnderCheck = Direction.move(squareUnderCheck, direction);
 		}
 	}
 
-	private boolean isSquareBlockingSlidingPiece(Square square, boolean isSlidingPieceWhite) {
-		byte contentAsByte =  (byte)(board[square.ordinal()]
+	private boolean isSquareBlockingSlidingPiece(byte square0x88, boolean isSlidingPieceWhite) {
+		byte contentAsByte = (byte)(board0x88[square0x88]
 				& (SquareFormat.PIECE_TYPE_MASK | SquareFormat.IS_WHITE_PIECE_FLAG));
 		if (contentAsByte == Content.EMPTY.asByte) {
 			return false;
@@ -724,57 +778,19 @@ public class State {
 		return contentAsByte != enemyKing;
 	}
 
-	private void initSquaresInCheckByPawn(Square from, boolean isCheckedByWhite) {
-		int pawnDisplacement = isCheckedByWhite ? 1 : -1;
-		// check to the queen side
-		Square to = Square.fromInts(from.file - 1, from.rank + pawnDisplacement);
-		if (to != null) {
-			incrementChecksOnSquare(to, isCheckedByWhite);
+	private void initSquaresInCheckByPawn(byte from, boolean isCheckedByWhite) {
+		byte queensideCheck = Direction.move(from, isCheckedByWhite ? Direction.NW : Direction.SW);
+		if (inBounds(queensideCheck)) {
+			incrementChecksOnSquare(queensideCheck, isCheckedByWhite);
 		}
-		// check to the king side
-		to = Square.fromInts(from.file + 1, from.rank + pawnDisplacement);
-		if (to != null) {
-			incrementChecksOnSquare(to, isCheckedByWhite);
+		byte kingsideCheck = Direction.move(from, isCheckedByWhite ? Direction.NE : Direction.SE);
+		if (inBounds(kingsideCheck)) {
+			incrementChecksOnSquare(queensideCheck, isCheckedByWhite);
 		}
 	}
 
-	private void initSquaresInCheckByKnight(Square knightSquare, boolean isCheckedByWhite) {
-		Square to = Square.fromInts(knightSquare.file + 1, knightSquare.rank + 2);
-		if (to != null) {
-			incrementChecksOnSquare(to, isCheckedByWhite);
-		}
-		to = Square.fromInts(knightSquare.file + 1, knightSquare.rank - 2);
-		if (to != null) {
-			incrementChecksOnSquare(to, isCheckedByWhite);
-		}
-		to = Square.fromInts(knightSquare.file - 1, knightSquare.rank + 2);
-		if (to != null) {
-			incrementChecksOnSquare(to, isCheckedByWhite);
-		}
-		to = Square.fromInts(knightSquare.file - 1, knightSquare.rank - 2);
-		if (to != null) {
-			incrementChecksOnSquare(to, isCheckedByWhite);
-		}
-		to = Square.fromInts(knightSquare.file + 2, knightSquare.rank + 1);
-		if (to != null) {
-			incrementChecksOnSquare(to, isCheckedByWhite);
-		}
-		to = Square.fromInts(knightSquare.file + 2, knightSquare.rank - 1);
-		if (to != null) {
-			incrementChecksOnSquare(to, isCheckedByWhite);
-		}
-		to = Square.fromInts(knightSquare.file - 2, knightSquare.rank + 1);
-		if (to != null) {
-			incrementChecksOnSquare(to, isCheckedByWhite);
-		}
-		to = Square.fromInts(knightSquare.file - 2, knightSquare.rank - 1);
-		if (to != null) {
-			incrementChecksOnSquare(to, isCheckedByWhite);
-		}
-	}
-
-	private void incrementChecksOnSquare(Square square, boolean isCheckedByWhite) {
-		short contentAsShort = board[square.ordinal()];
+	private void incrementChecksOnSquare(byte square0x88, boolean isCheckedByWhite) {
+		short contentAsShort = board0x88[square0x88];
 		byte bitOffset = isCheckedByWhite ? SquareFormat.CHECKS_BY_WHITE_BIT_OFFSET : SquareFormat.CHECKS_BY_BLACK_BIT_OFFSET;
 		short checksCount = (short) ((contentAsShort >>> bitOffset) & SquareFormat.CHECKS_COUNT_MASK);
 		checksCount++;
@@ -783,26 +799,26 @@ public class State {
 		short resettingMask = (short) ~(SquareFormat.CHECKS_COUNT_MASK << bitOffset);
 		contentAsShort = (short) (contentAsShort & resettingMask);
 
-		board[square.ordinal()] = (short) (contentAsShort | checksCount);
+		board0x88[square0x88] = (short) (contentAsShort | checksCount);
 	}
 
-	private void setFlag(Square square, short flag) {
-		short contentAsShort = board[square.ordinal()];
-		board[square.ordinal()] = (short) (contentAsShort | flag);
+	private void setFlag(byte square0x88, short flag) {
+		short contentAsShort = board0x88[square0x88];
+		board0x88[square0x88] = (short) (contentAsShort | flag);
 	}
 
-	boolean isSquareCheckedBy(Square square, boolean testChecksByWhite) {
-		return getChecksCount(square, testChecksByWhite) > 0;
+	boolean isSquareCheckedBy(byte square0x88, boolean testChecksByWhite) {
+		return getChecksCount(square0x88, testChecksByWhite) > 0;
 	}
 
-	private byte getChecksCount(Square square, boolean checksByWhite) {
+	private byte getChecksCount(byte square, boolean checksByWhite) {
 		byte bitOffset = checksByWhite ? SquareFormat.CHECKS_BY_WHITE_BIT_OFFSET : SquareFormat.CHECKS_BY_BLACK_BIT_OFFSET;
-		return (byte) ((board[square.ordinal()] >> bitOffset) & SquareFormat.CHECKS_COUNT_MASK);
+		return (byte) ((board0x88[square] >> bitOffset) & SquareFormat.CHECKS_COUNT_MASK);
 	}
 
-	private boolean canKingWalkOnSquare(Square square, boolean isKingWhite) {
+	private boolean canKingWalkOnSquare(byte square0x88, boolean isKingWhite) {
 		short checkedByKingFlag = isKingWhite ? SquareFormat.CHECK_BY_BLACK_KING : SquareFormat.CHECK_BY_WHITE_KING;
-		return !isSquareCheckedBy(square, !isKingWhite) && (board[square.ordinal()] & checkedByKingFlag) == 0;
+		return !isSquareCheckedBy(square0x88, !isKingWhite) && (board0x88[square0x88] & checkedByKingFlag) == 0;
 	}
 
 	public State chooseMove(int moveIndex) {
@@ -811,7 +827,7 @@ public class State {
 
 	public int countLegalMoves() {
 		if (isKingInCheck()) {
-			Square checkedKing = test(WHITE_TURN) ? pieces.getWhiteKing() : pieces.getBlackKing();
+			byte checkedKing = test(WHITE_TURN) ? pieces.getWhiteKing() : pieces.getBlackKing();
 			return generateLegalMovesWhenKingInCheck(null, checkedKing);
 		}
 		return generatePseudoLegalMoves(null);
@@ -834,7 +850,7 @@ public class State {
 		try {
 
 			if (isKingInCheck()) {
-				Square checkedKing = test(WHITE_TURN) ? pieces.getWhiteKing() : pieces.getBlackKing();
+				byte checkedKing = test(WHITE_TURN) ? pieces.getWhiteKing() : pieces.getBlackKing();
 				generateLegalMovesWhenKingInCheck(moves, checkedKing);
 				return moves;
 			}
@@ -860,7 +876,7 @@ public class State {
 	 */
 	private int generatePseudoLegalMoves(List<State> ouputMoves) {
 		int movesCount = 0;
-		Square[] piecesOfOneType = test(WHITE_TURN) ? pieces.whitePawns : pieces.blackPawns;
+		byte[] piecesOfOneType = test(WHITE_TURN) ? pieces.whitePawns : pieces.blackPawns;
 		byte piecesCount = test(WHITE_TURN) ? pieces.whitePawnsCount : pieces.blackPawnsCount;
 		for (byte i = 0; i < piecesCount; i++) {
 			movesCount += generatePseudoLegalPawnMoves(piecesOfOneType[i], ouputMoves);
@@ -890,39 +906,39 @@ public class State {
 		return movesCount;
 	}
 
-	private int generateLegalKingMoves(Square from, List<State> outputMoves) {
+	private int generateLegalKingMoves(byte from, List<State> outputMoves) {
 		int movesCount = 0;
-		Square to = Square.fromInts(from.file, from.rank + 1);
 		boolean isWhiteTurn = test(WHITE_TURN);
-		if (to != null && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
+		byte to = Direction.move(from, Direction.NE);
+		if (inBounds(to) && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
-		to = Square.fromInts(from.file + 1, from.rank + 1);
-		if (to != null && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
+		to = Direction.move(from, Direction.E);
+		if (inBounds(to) && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
-		to = Square.fromInts(from.file + 1, from.rank);
-		if (to != null && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
+		to = Direction.move(from, Direction.SE);
+		if (inBounds(to) && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
-		to = Square.fromInts(from.file + 1, from.rank - 1);
-		if (to != null && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
+		to = Direction.move(from, Direction.S);
+		if (inBounds(to) && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
-		to = Square.fromInts(from.file, from.rank - 1);
-		if (to != null && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
+		to = Direction.move(from, Direction.SW);
+		if (inBounds(to) && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
-		to = Square.fromInts(from.file - 1, from.rank - 1);
-		if (to != null && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
+		to = Direction.move(from, Direction.W);
+		if (inBounds(to) && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
-		to = Square.fromInts(from.file - 1, from.rank);
-		if (to != null && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
+		to = Direction.move(from, Direction.NW);
+		if (inBounds(to) && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
-		to = Square.fromInts(from.file - 1, from.rank + 1);
-		if (to != null && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
+		to = Direction.move(from, Direction.N);
+		if (inBounds(to) && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
 
@@ -930,8 +946,8 @@ public class State {
 		int ksCastlePossible = isWhiteTurn ? WHITE_KS_CASTLE_POSSIBLE : BLACK_KS_CASTLE_POSSIBLE;
 
 		if (!isSquareCheckedBy(from, !isWhiteTurn)) {
-			Square kingQsTo = isWhiteTurn ? Square.C1 : Square.C8;
-			Square kingKsTo = isWhiteTurn ? Square.G1 : Square.G8;
+			byte kingQsTo = isWhiteTurn ? Square0x88.C1 : Square0x88.C8;
+			byte kingKsTo = isWhiteTurn ? Square0x88.G1 : Square0x88.G8;
 
 			if (test(qsCastlePossible) && squaresOkForQsCastling(isWhiteTurn)) {
 				if (outputMoves != null) {
@@ -953,17 +969,17 @@ public class State {
 
 	private boolean squaresOkForQsCastling(boolean isWhiteKingCastling) {
 		for (int file = File.D; file >= File.C; file--) {
-			Square square = Square.fromLegalInts(file, isWhiteKingCastling ? Rank._1 : Rank._8);
+			byte square = Square0x88.from07(file, isWhiteKingCastling ? Rank._1 : Rank._8);
 			if (getContent(square) != Content.EMPTY || !canKingWalkOnSquare(square, isWhiteKingCastling)) {
 				return false;
 			}
 		}
-		return getContent(isWhiteKingCastling ? B1 : Square.B8) == Content.EMPTY;
+		return getContent(isWhiteKingCastling ? Square0x88.B1 : Square0x88.B8) == Content.EMPTY;
 	}
 
 	private boolean squaresOkForKsCastling(boolean isWhiteKingCastling) {
 		for (int file = File.F; file <= File.G; file++) {
-			Square square = Square.fromLegalInts(file, isWhiteKingCastling ? Rank._1 : Rank._8);
+			byte square = Square0x88.from07(file, isWhiteKingCastling ? Rank._1 : Rank._8);
 			if (getContent(square) != Content.EMPTY || !canKingWalkOnSquare(square, isWhiteKingCastling)) {
 				return false;
 			}
@@ -971,63 +987,67 @@ public class State {
 		return true;
 	}
 
-	private int generatePseudoLegalQueenMoves(Square from, List<State> outputMoves) {
+	private int generatePseudoLegalQueenMoves(byte from, List<State> outputMoves) {
 		int movesCount = 0;
 		movesCount += generatePseudoLegalRookMoves(from, outputMoves);
 		movesCount += generatePseudoLegalBishopMoves(from, outputMoves);
 		return movesCount;
 	}
 
-	private int generatePseudoLegalRookMoves(Square from, List<State> outputMoves) {
+	private int generatePseudoLegalRookMoves(byte from, List<State> outputMoves) {
 		int movesCount = 0;
-		movesCount += generateSlidingPieceMoves(from, 1, 0, outputMoves);
-		movesCount += generateSlidingPieceMoves(from, -1, 0, outputMoves);
-		movesCount += generateSlidingPieceMoves(from, 0, 1, outputMoves);
-		movesCount += generateSlidingPieceMoves(from, 0, -1, outputMoves);
+		movesCount += generateSlidingPieceMoves(from, outputMoves, Direction.N);
+		movesCount += generateSlidingPieceMoves(from, outputMoves, Direction.E);
+		movesCount += generateSlidingPieceMoves(from, outputMoves, Direction.S);
+		movesCount += generateSlidingPieceMoves(from, outputMoves, Direction.W);
 		return movesCount;
 	}
 
-	private int generatePseudoLegalBishopMoves(Square from, List<State> outputMoves) {
+	private int generatePseudoLegalBishopMoves(byte from, List<State> outputMoves) {
 		int movesCount = 0;
-		movesCount += generateSlidingPieceMoves(from, 1, 1, outputMoves);
-		movesCount += generateSlidingPieceMoves(from, 1, -1, outputMoves);
-		movesCount += generateSlidingPieceMoves(from, -1, 1, outputMoves);
-		movesCount += generateSlidingPieceMoves(from, -1, -1, outputMoves);
+		movesCount += generateSlidingPieceMoves(from, outputMoves, Direction.NE);
+		movesCount += generateSlidingPieceMoves(from, outputMoves, Direction.SE);
+		movesCount += generateSlidingPieceMoves(from, outputMoves, Direction.SW);
+		movesCount += generateSlidingPieceMoves(from, outputMoves, Direction.NW);
 		return movesCount;
 	}
 
-	private int generateSlidingPieceMoves(Square from, int deltaFile, int deltaRank, List<State> outputMoves) {
+	private int generateSlidingPieceMoves(byte from0x88, List<State> outputMoves, byte direction) {
 		int movesCount = 0;
-		if (pieceIsFreeToMove(from, Pin.fromDeltas(deltaFile, deltaRank))) {
-			for (int i = 1; true; i++) {
-				Square to = Square.fromInts(from.file + deltaFile * i, from.rank + i * deltaRank);
-				if (to == null || isSameColorPieceOn(to)) {
+		if (pieceIsFreeToMove(Square0x88.to8x8Square(from0x88), Pin.fromDirection(direction))) {
+			byte to = (byte) (from0x88 + direction);
+			while (inBounds(to)) {
+				if (isSameColorPieceOn(to)) {
 					break;
 				}
-				movesCount = createOrCountMove(from, to, outputMoves, movesCount);
+				movesCount = createOrCountMove(from0x88, to, outputMoves, movesCount);
 				if (isOppositeColorPieceOn(to)) {
 					break;
 				}
+				to = (byte) (from0x88 + direction);
 			}
 		}
 		return movesCount;
 	}
 
-	private int generatePseudoLegalPawnMoves(Square from, List<State> outputMoves) {
+	private int generatePseudoLegalPawnMoves(byte from, List<State> outputMoves) {
 		int movesCount = 0;
-		int pawnDisplacement = test(WHITE_TURN) ? 1 : -1;
-		int pawnDoubleDisplacement = test(WHITE_TURN) ? 2 : -2;
-		Square to = Square.fromLegalInts(from.file, from.rank + pawnDisplacement);
+		byte pawnDisplacement = test(WHITE_TURN) ? Direction.N : Direction.S;
+		int pawnDoubleDisplacement = test(WHITE_TURN) ? 2 * Direction.N : 2 * Direction.S;
+		byte pawnQsTake = test(WHITE_TURN) ? Direction.NW : 2 * Direction.SW;
+		byte pawnKsTake = test(WHITE_TURN) ? Direction.NE : 2 * Direction.SE;
+
+		byte to = Direction.move(from, pawnDisplacement);
 		// head-on move
-		if (getContent(to) == Content.EMPTY && pieceIsFreeToMove(from, Pin.FILE)) {
+		if (getContent(to) == Content.EMPTY && pieceIsFreeToMove(Square0x88.to8x8Square(from), Pin.FILE)) {
 			if (isPromotingSquare(to)) {
 				movesCount += generatePromotionMoves(from, to, outputMoves);
 			} else {
 				movesCount = createOrCountMove(from, to, outputMoves, movesCount);
-				to = Square.fromLegalInts(from.file, from.rank + pawnDoubleDisplacement);
+				to = Direction.move(from, (byte) pawnDoubleDisplacement);
 				if (isInitialSquareOfPawn(from) && getContent(to) == Content.EMPTY) {
 					if (outputMoves != null) {
-						outputMoves.add(fromPseudoLegalPawnDoublePush(from, to, Square.fromLegalInts(from.file, from.rank + pawnDisplacement)));
+						outputMoves.add(fromPseudoLegalPawnDoublePush(from, to, (byte)(from + pawnDisplacement)));
 					} else {
 						movesCount++;
 					}
@@ -1035,11 +1055,10 @@ public class State {
 			}
 		}
 		// move with take to the queen-side
-		int deltaFile = -1;
-		to = Square.fromInts(from.file + deltaFile, from.rank + pawnDisplacement);
+		to = Direction.move(from, pawnQsTake);
 
-		if (to != null && (isOppositeColorPieceOn(to) || to == enPassantSquare)
-				&& pieceIsFreeToMove(from, Pin.fromDeltas(deltaFile, pawnDisplacement))) {
+		if (Square0x88.inBounds(to) && (isOppositeColorPieceOn(to) || to == enPassantSquare)
+				&& pieceIsFreeToMove(from, Pin.fromDirection(pawnQsTake))) {
 			if (isPromotingSquare(to)) {
 				movesCount += generatePromotionMoves(from, to, outputMoves);
 			} else {
@@ -1047,10 +1066,9 @@ public class State {
 			}
 		}
 		// move with take to the king side
-		deltaFile = 1;
-		to = Square.fromInts(from.file + deltaFile, from.rank + pawnDisplacement);
-		if (to != null && (isOppositeColorPieceOn(to) || to == enPassantSquare)
-				&& pieceIsFreeToMove(from, Pin.fromDeltas(deltaFile, pawnDisplacement))) {
+		to = Direction.move(from, pawnKsTake);
+		if (Square0x88.inBounds(to) && (isOppositeColorPieceOn(to) || to == enPassantSquare)
+				&& pieceIsFreeToMove(from, Pin.fromDirection(pawnKsTake))) {
 			if (isPromotingSquare(to)) {
 				movesCount += generatePromotionMoves(from, to, outputMoves);
 			} else {
@@ -1060,7 +1078,7 @@ public class State {
 		return movesCount;
 	}
 
-	private int generatePromotionMoves(Square from, Square to, List<State> outputMoves) {
+	private int generatePromotionMoves(byte from, byte to, List<State> outputMoves) {
 		if (outputMoves == null) {
 			return 4;
 		}
@@ -1071,47 +1089,48 @@ public class State {
 		return 4;
 	}
 
-	private int generatePseudoLegalKnightMoves(Square from, List<State> outputMoves) {
-		if (!pieceIsFreeToMove(from, null)) {
+	private int generatePseudoLegalKnightMoves(byte from, List<State> outputMoves) {
+		if (!pieceIsFreeToMove(Square0x88.to8x8Square(from), null)) {
 			return 0;
 		}
 		int movesCount = 0;
-		Square to = Square.fromInts(from.file + 1, from.rank + 2);
-		if (to != null && !isSameColorPieceOn(to)) {
+		byte to = Direction.move(from, Direction.NNE);
+		if (inBounds(to) && !isSameColorPieceOn(to)) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
-		to = Square.fromInts(from.file + 1, from.rank - 2);
-		if (to != null && !isSameColorPieceOn(to)) {
+		to = Direction.move(from, Direction.NEE);
+		if (inBounds(to) && !isSameColorPieceOn(to)) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
-		to = Square.fromInts(from.file - 1, from.rank + 2);
-		if (to != null && !isSameColorPieceOn(to)) {
+		to = Direction.move(from, Direction.SEE);
+		if (inBounds(to) && !isSameColorPieceOn(to)) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
-		to = Square.fromInts(from.file - 1, from.rank - 2);
-		if (to != null && !isSameColorPieceOn(to)) {
+		to = Direction.move(from, Direction.SSE);
+		if (inBounds(to) && !isSameColorPieceOn(to)) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
-		to = Square.fromInts(from.file + 2, from.rank + 1);
-		if (to != null && !isSameColorPieceOn(to)) {
+		to = Direction.move(from, Direction.SSW);
+		if (inBounds(to) && !isSameColorPieceOn(to)) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
-		to = Square.fromInts(from.file + 2, from.rank - 1);
-		if (to != null && !isSameColorPieceOn(to)) {
+		to = Direction.move(from, Direction.SWW);
+		if (inBounds(to) && !isSameColorPieceOn(to)) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
-		to = Square.fromInts(from.file - 2, from.rank + 1);
-		if (to != null && !isSameColorPieceOn(to)) {
+		to = Direction.move(from, Direction.NWW);
+		if (inBounds(to) && !isSameColorPieceOn(to)) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
-		to = Square.fromInts(from.file - 2, from.rank - 1);
-		if (to != null && !isSameColorPieceOn(to)) {
+		to = Direction.move(from, Direction.NNW);
+		if (inBounds(to) && !isSameColorPieceOn(to)) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
+
 		return movesCount;
 	}
 
-	private int createOrCountMove(Square from, Square to, List<State> outputMoves, int movesCount) {
+	private int createOrCountMove(byte from, byte to, List<State> outputMoves, int movesCount) {
 		if (outputMoves != null) {
 			outputMoves.add(fromPseudoLegalMove(from, to));
 			return 0;
@@ -1120,15 +1139,15 @@ public class State {
 	}
 
 	/**
-	 * Returns true if piece at pieceLocation can move along the movementDirection line (is not absolutely pinned).
-	 * @param movementDirection - leave this null in case of knight at pieceLocation
+	 * Returns true if piece at pieceLocation8x8 can move along the movementDirection line (is not absolutely pinned).
+	 * @param movementDirection - leave this null in case of knight at pieceLocation8x8
 	 */
-	private boolean pieceIsFreeToMove(Square pieceLocation, Pin movementDirection) {
-		Pin pin = pinnedPieces[pieceLocation.ordinal()];
+	private boolean pieceIsFreeToMove(int pieceLocation8x8, Pin movementDirection) {
+		Pin pin = pinnedPieces[pieceLocation8x8];
 		return pin == null || pin == movementDirection;
 	}
 
-	private int generateLegalMovesWhenKingInCheck(List<State> outputMoves, Square checkedKing) {
+	private int generateLegalMovesWhenKingInCheck(List<State> outputMoves, byte checkedKing) {
 		int movesCount = 0;
 		if (getChecksCount(checkedKing, !test(WHITE_TURN)) < 2) {
 			List<State> pseudoLegalMoves = new ArrayList<>(Config.DEFAULT_MOVES_LIST_CAPACITY);
@@ -1153,7 +1172,7 @@ public class State {
 	 */
 	private boolean isLegal() {
 		boolean isWhiteTurn = test(WHITE_TURN);
-		Square king = isWhiteTurn ? pieces.getBlackKing() : pieces.getWhiteKing();
+		byte king = isWhiteTurn ? pieces.getBlackKing() : pieces.getWhiteKing();
 		return !isSquareCheckedBy(king, isWhiteTurn);
 	}
 }
