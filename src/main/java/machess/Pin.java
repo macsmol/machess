@@ -44,7 +44,7 @@ enum Pin {
             case Direction.SE:
                 return ANTIDIAGONAL;
             default:
-                assert false : "Expected a sliding piece direction";
+                assert false : "Expected a sliding piece direction " + direction;
                 return null;
         }
     }

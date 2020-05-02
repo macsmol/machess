@@ -1030,24 +1030,24 @@ public class State {
 		return movesCount;
 	}
 
-	private int generatePseudoLegalPawnMoves(byte from, List<State> outputMoves) {
+	private int generatePseudoLegalPawnMoves(byte from0x88, List<State> outputMoves) {
 		int movesCount = 0;
 		byte pawnDisplacement = test(WHITE_TURN) ? Direction.N : Direction.S;
 		int pawnDoubleDisplacement = test(WHITE_TURN) ? 2 * Direction.N : 2 * Direction.S;
 		byte pawnQsTake = test(WHITE_TURN) ? Direction.NW : Direction.SW;
 		byte pawnKsTake = test(WHITE_TURN) ? Direction.NE : Direction.SE;
 
-		byte to = Direction.move(from, pawnDisplacement);
+		byte to0x88 = Direction.move(from0x88, pawnDisplacement);
 		// head-on move
-		if (getContent(to) == Content.EMPTY && pieceIsFreeToMove(Square0x88.to8x8Square(from), Pin.FILE)) {
-			if (isPromotingSquare(to)) {
-				movesCount += generatePromotionMoves(from, to, outputMoves);
+		if (getContent(to0x88) == Content.EMPTY && pieceIsFreeToMove(Square0x88.to8x8Square(from0x88), Pin.FILE)) {
+			if (isPromotingSquare(to0x88)) {
+				movesCount += generatePromotionMoves(from0x88, to0x88, outputMoves);
 			} else {
-				movesCount = createOrCountMove(from, to, outputMoves, movesCount);
-				to = Direction.move(from, (byte) pawnDoubleDisplacement);
-				if (isInitialSquareOfPawn(from) && getContent(to) == Content.EMPTY) {
+				movesCount = createOrCountMove(from0x88, to0x88, outputMoves, movesCount);
+				to0x88 = Direction.move(from0x88, (byte) pawnDoubleDisplacement);
+				if (isInitialSquareOfPawn(from0x88) && getContent(to0x88) == Content.EMPTY) {
 					if (outputMoves != null) {
-						outputMoves.add(fromPseudoLegalPawnDoublePush(from, to, (byte)(from + pawnDisplacement)));
+						outputMoves.add(fromPseudoLegalPawnDoublePush(from0x88, to0x88, (byte)(from0x88 + pawnDisplacement)));
 					} else {
 						movesCount++;
 					}
@@ -1055,24 +1055,24 @@ public class State {
 			}
 		}
 		// move with take to the queen-side
-		to = Direction.move(from, pawnQsTake);
+		to0x88 = Direction.move(from0x88, pawnQsTake);
 
-		if (Square0x88.inBounds(to) && (isOppositeColorPieceOn(to) || to == enPassantSquare)
-				&& pieceIsFreeToMove(from, Pin.fromDirection(pawnQsTake))) {
-			if (isPromotingSquare(to)) {
-				movesCount += generatePromotionMoves(from, to, outputMoves);
+		if (Square0x88.inBounds(to0x88) && (isOppositeColorPieceOn(to0x88) || to0x88 == enPassantSquare)
+				&& pieceIsFreeToMove(Square0x88.to8x8Square(from0x88), Pin.fromDirection(pawnQsTake))) {
+			if (isPromotingSquare(to0x88)) {
+				movesCount += generatePromotionMoves(from0x88, to0x88, outputMoves);
 			} else {
-				movesCount = createOrCountMove(from, to, outputMoves, movesCount);
+				movesCount = createOrCountMove(from0x88, to0x88, outputMoves, movesCount);
 			}
 		}
 		// move with take to the king side
-		to = Direction.move(from, pawnKsTake);
-		if (Square0x88.inBounds(to) && (isOppositeColorPieceOn(to) || to == enPassantSquare)
-				&& pieceIsFreeToMove(from, Pin.fromDirection(pawnKsTake))) {
-			if (isPromotingSquare(to)) {
-				movesCount += generatePromotionMoves(from, to, outputMoves);
+		to0x88 = Direction.move(from0x88, pawnKsTake);
+		if (Square0x88.inBounds(to0x88) && (isOppositeColorPieceOn(to0x88) || to0x88 == enPassantSquare)
+				&& pieceIsFreeToMove(Square0x88.to8x8Square(from0x88), Pin.fromDirection(pawnKsTake))) {
+			if (isPromotingSquare(to0x88)) {
+				movesCount += generatePromotionMoves(from0x88, to0x88, outputMoves);
 			} else {
-				movesCount = createOrCountMove(from, to, outputMoves, movesCount);
+				movesCount = createOrCountMove(from0x88, to0x88, outputMoves, movesCount);
 			}
 		}
 		return movesCount;
