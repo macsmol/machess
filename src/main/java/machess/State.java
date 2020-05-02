@@ -355,7 +355,7 @@ public class State {
 	}
 
 	public String printMove() {
-		return "" + from + to;
+		return "" + Square0x88.toString(from) + Square0x88.toString(to);
 	}
 
 	private Content getContent(int file, int rank) {
@@ -785,7 +785,7 @@ public class State {
 		}
 		byte kingsideCheck = Direction.move(from, isCheckedByWhite ? Direction.NE : Direction.SE);
 		if (inBounds(kingsideCheck)) {
-			incrementChecksOnSquare(queensideCheck, isCheckedByWhite);
+			incrementChecksOnSquare(kingsideCheck, isCheckedByWhite);
 		}
 	}
 
