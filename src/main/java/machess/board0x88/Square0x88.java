@@ -52,6 +52,9 @@ public interface Square0x88 {
     }
 
     static String toString(byte square0x88) {
+        if (!Square0x88.inBounds(square0x88)) {
+           return "-";
+        }
         return Square.fromLegalInts(getFile(square0x88), getRank(square0x88)).toString();
     }
 

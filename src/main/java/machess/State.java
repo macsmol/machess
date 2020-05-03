@@ -349,7 +349,7 @@ public class State {
 					.append('\n');
 		}
 		sb.append(pieces);
-		sb.append("enPassantSquare: ").append(enPassantSquare).append('\n');
+		sb.append("enPassantSquare: ").append(Square0x88.toString(enPassantSquare)).append('\n');
 		sb.append("fullmoveClock: ").append(fullMoveCounter).append('\n');
 		return sb.toString();
 	}
