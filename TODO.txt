@@ -1,11 +1,13 @@
 Release 1:
--TODOs in code
-
--0x88 array
-
+-UCI
 -alpha-beta-pruning
+-TODOs in code
+-oscillation when playing against itself (threefold repetition draw)
 
--oscillation when playing against itself
+Later:
+-try out incremental check-flags update
+-improve evaluation (piece-square table, pins, pawn structure)
+
 
 LATER IDEAS:
 -init sliding-checks around king and pins in one loop OR init pins per sliding piece, not per direction.

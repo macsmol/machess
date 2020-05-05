@@ -1,11 +1,9 @@
 package machess;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
+import machess.board0x88.Square0x88;
 
-import static machess.Square.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class PieceLists {
     @Override
@@ -29,49 +27,50 @@ public class PieceLists {
                 .append('\n').toString();
     }
 
-    private StringBuilder toString(String header, Square[] pieceList, int piecesCount) {
+    private StringBuilder toString(String header, byte[] pieceList, int piecesCount) {
         StringBuilder sb = new StringBuilder(header);
         sb.append('(').append(piecesCount).append(")[");
         for (int i = 0; i < piecesCount; i++) {
-            sb.append(pieceList[i]).append(',');
+            sb.append(Square0x88.toString(pieceList[i])).append(',');
         }
         return sb.append("] ");
     }
 
-    private Square whiteKing;
-    private Square blackKing;
+    private byte whiteKing;
+    private byte blackKing;
 
-    final Square[] whitePawns;
+    final byte[] whitePawns;
+    // TODO remove count and capacity for all pieces. No need for it as the arrays are copied for every makeMove() anyway.
     byte whitePawnsCount;
-    final Square[] blackPawns;
+    final byte[] blackPawns;
     byte blackPawnsCount;
     
-    final Square[] whiteKnights;
+    final byte[] whiteKnights;
     byte whiteKnightsCount;
-    final Square[] blackKnights;
+    final byte[] blackKnights;
     byte blackKnightsCount;
     
-    final Square[] whiteBishops;
+    final byte[] whiteBishops;
     byte whiteBishopsCount;
-    final Square[] blackBishops;
+    final byte[] blackBishops;
     byte blackBishopsCount;
     
-    final Square[] whiteRooks;
+    final byte[] whiteRooks;
     byte whiteRooksCount;
-    final Square[] blackRooks;
+    final byte[] blackRooks;
     byte blackRooksCount;
     
-    final Square[] whiteQueens;
+    final byte[] whiteQueens;
     byte whiteQueensCount;
-    final Square[] blackQueens;
+    final byte[] blackQueens;
     byte blackQueensCount;
 
-    private PieceLists(Square whiteKing, Square blackKing, 
-               Square[] whitePawns, byte whitePawnsCount, Square[] blackPawns, byte blackPawnsCount,
-               Square[] whiteKnights, byte whiteKnightsCount, Square[] blackKnights, byte blackKnightsCount,
-               Square[] whiteBishops, byte whiteBishopsCount, Square[] blackBishops, byte blackBishopsCount, 
-               Square[] whiteRooks, byte whiteRooksCount, Square[] blackRooks, byte blackRooksCount,
-               Square[] whiteQueens, byte whiteQueensCount, Square[] blackQueens, byte blackQueensCount) {
+    private PieceLists(byte whiteKing, byte blackKing,
+               byte[] whitePawns, byte whitePawnsCount, byte[] blackPawns, byte blackPawnsCount,
+               byte[] whiteKnights, byte whiteKnightsCount, byte[] blackKnights, byte blackKnightsCount,
+               byte[] whiteBishops, byte whiteBishopsCount, byte[] blackBishops, byte blackBishopsCount,
+               byte[] whiteRooks, byte whiteRooksCount, byte[] blackRooks, byte blackRooksCount,
+               byte[] whiteQueens, byte whiteQueensCount, byte[] blackQueens, byte blackQueensCount) {
         this.whiteKing = whiteKing;
         this.blackKing = blackKing;
         this.whitePawns = whitePawns;
@@ -97,60 +96,60 @@ public class PieceLists {
     }
 
     public PieceLists() {
-        whiteKing = Square.E1;
-        blackKing = Square.E8;
+        whiteKing = Square0x88.E1;
+        blackKing = Square0x88.E8;
 
-        whitePawns = new Square[]{
-                Square.A2, Square.B2, Square.C2, Square.D2, Square.E2, Square.F2, Square.G2, Square.H2
+        whitePawns = new byte[] {
+                Square0x88.A2, Square0x88.B2, Square0x88.C2, Square0x88.D2, Square0x88.E2, Square0x88.F2, Square0x88.G2, Square0x88.H2
         };
         whitePawnsCount = 8;
 
-        blackPawns = new Square[]{
-                Square.A7, Square.B7, Square.C7, Square.D7, Square.E7, Square.F7, Square.G7, Square.H7
+        blackPawns = new byte[] {
+                Square0x88.A7, Square0x88.B7, Square0x88.C7, Square0x88.D7, Square0x88.E7, Square0x88.F7, Square0x88.G7, Square0x88.H7
         };
         blackPawnsCount = 8;
 
-        whiteKnights = new Square[Config.PIECE_LIST_CAPACITY];
+        whiteKnights = new byte[Config.PIECE_LIST_CAPACITY];
         whiteKnightsCount = 2;
-        whiteKnights[0] = B1;
-        whiteKnights[1] = G1;
-        blackKnights = new Square[Config.PIECE_LIST_CAPACITY];
+        whiteKnights[0] = Square0x88.B1;
+        whiteKnights[1] = Square0x88.G1;
+        blackKnights = new byte[Config.PIECE_LIST_CAPACITY];
         blackKnightsCount = 2;
-        blackKnights[0] = B8;
-        blackKnights[1] = G8;
+        blackKnights[0] = Square0x88.B8;
+        blackKnights[1] = Square0x88.G8;
 
-        whiteBishops = new Square[Config.PIECE_LIST_CAPACITY];
+        whiteBishops = new byte[Config.PIECE_LIST_CAPACITY];
         whiteBishopsCount = 2;
-        whiteBishops[0] = C1;
-        whiteBishops[1] = F1;
-        blackBishops = new Square[Config.PIECE_LIST_CAPACITY];
+        whiteBishops[0] = Square0x88.C1;
+        whiteBishops[1] = Square0x88.F1;
+        blackBishops = new byte[Config.PIECE_LIST_CAPACITY];
         blackBishopsCount = 2;
-        blackBishops[0] = C8;
-        blackBishops[1] = F8;
+        blackBishops[0] = Square0x88.C8;
+        blackBishops[1] = Square0x88.F8;
 
-        whiteRooks = new Square[Config.PIECE_LIST_CAPACITY];
+        whiteRooks = new byte[Config.PIECE_LIST_CAPACITY];
         whiteRooksCount = 2;
-        whiteRooks[0] = A1;
-        whiteRooks[1] = H1;
-        blackRooks = new Square[Config.PIECE_LIST_CAPACITY];
+        whiteRooks[0] = Square0x88.A1;
+        whiteRooks[1] = Square0x88.H1;
+        blackRooks = new byte[Config.PIECE_LIST_CAPACITY];
         blackRooksCount = 2;
-        blackRooks[0] = A8;
-        blackRooks[1] = H8;
+        blackRooks[0] = Square0x88.A8;
+        blackRooks[1] = Square0x88.H8;
 
-        whiteQueens = new Square[Config.PIECE_LIST_CAPACITY];
+        whiteQueens = new byte[Config.PIECE_LIST_CAPACITY];
         whiteQueensCount = 1;
-        whiteQueens[0] = D1;
-        blackQueens = new Square[Config.PIECE_LIST_CAPACITY];
+        whiteQueens[0] = Square0x88.D1;
+        blackQueens = new byte[Config.PIECE_LIST_CAPACITY];
         blackQueensCount = 1;
-        blackQueens[0] = D8;
+        blackQueens[0] = Square0x88.D8;
     }
 
-    private PieceLists(Square whiteKing, Square blackKing,
-                       List<Square> whitePawns, List<Square> blackPawns,
-                       List<Square> whiteKnights, List<Square> blackKnights,
-                       List<Square> whiteBishops, List<Square> blackBishops,
-                       List<Square> whiteRooks, List<Square> blackRooks,
-                       List<Square> whiteQueens, List<Square> blackQueens
+    private PieceLists(byte whiteKing, byte blackKing,
+                       List<Byte> whitePawns, List<Byte> blackPawns,
+                       List<Byte> whiteKnights, List<Byte> blackKnights,
+                       List<Byte> whiteBishops, List<Byte> blackBishops,
+                       List<Byte> whiteRooks, List<Byte> blackRooks,
+                       List<Byte> whiteQueens, List<Byte> blackQueens
                        ) {
         this.whiteKing = whiteKing;
         this.blackKing = blackKing;
@@ -180,33 +179,18 @@ public class PieceLists {
         blackQueensCount = (byte)blackQueens.size();
     }
 
-    private Square[] toArray(List<Square> list, int capacity) {
-        Square[] array = new Square[capacity];
-        return list.toArray(array);
+    private byte[] toArray(List<Byte> list, int capacity) {
+        byte[] array = new byte[capacity];
+        for (int i = 0; i < list.size(); i++) {
+            array[i] = list.get(i);
+        }
+        return array;
     }
 
     private int capacity(int piecesCount, int pawnsCount) {
         return Math.min(piecesCount + pawnsCount, Config.PIECE_LIST_CAPACITY);
     }
 
-    public void sortOccupiedSquares() {
-        if (!Config.SORT_OCCUPIED_SQUARES) {
-            return;
-        }
-        Comparator<Square> comparator = Comparator.comparingInt(Enum::ordinal);
-
-        Arrays.sort(whitePawns, 0, whitePawnsCount, comparator);
-        Arrays.sort(blackPawns, 0, blackPawnsCount, comparator);
-        Arrays.sort(whiteKnights, 0, whiteKnightsCount, comparator);
-        Arrays.sort(blackKnights, 0, blackKnightsCount, comparator);
-        Arrays.sort(whiteBishops, 0, whiteBishopsCount, comparator);
-        Arrays.sort(blackBishops, 0, blackBishopsCount, comparator);
-        Arrays.sort(whiteRooks, 0, whiteRooksCount, comparator);
-        Arrays.sort(blackRooks, 0, blackRooksCount, comparator);
-        Arrays.sort(whiteQueens, 0, whiteQueensCount, comparator);
-        Arrays.sort(blackQueens, 0, blackQueensCount, comparator);
-    }
-    
     @Override
     public PieceLists clone() {
         return new PieceLists(whiteKing, blackKing,
@@ -217,8 +201,8 @@ public class PieceLists {
                 whiteQueens.clone(), whiteQueensCount, blackQueens.clone(), blackQueensCount);
     }
 
-    void move(Content piece, Square from, Square to) {
-        Square[] movingPieces = null;
+    void move(Content piece, byte from, byte to) {
+        byte[] movingPieces = null;
         int movingPiecesCount = 0;
         switch (piece) {
             case WHITE_PAWN:
@@ -280,8 +264,8 @@ public class PieceLists {
         }
     }
 
-    void kill(Content piece, Square killedOn) {
-        Square[] listWithKilledPiece = null;
+    void kill(Content piece, byte killedOn) {
+        byte[] listWithKilledPiece = null;
         int piecesCount = -1;
         switch(piece) {
             case BLACK_PAWN:
@@ -337,8 +321,8 @@ public class PieceLists {
         assert false : "Didn't find piece to kill on piece list " + piece + " " + killedOn;
     }
 
-    public void promote(Square where, Content toWhat) {
-        Square[] pieces = toWhat.isWhite ? whitePawns : blackPawns;
+    public void promote(byte where, Content toWhat) {
+        byte[] pieces = toWhat.isWhite ? whitePawns : blackPawns;
         byte piecesCount = toWhat.isWhite ? whitePawnsCount-- : blackPawnsCount--;
         for (int i = 0; i < piecesCount; i++) {
             if (pieces[i] == where) {
@@ -384,67 +368,67 @@ public class PieceLists {
         pieces[piecesCount] = where;
     }
 
-    public Square getWhiteKing() {
+    public byte getWhiteKing() {
         return whiteKing;
     }
 
-    public Square getBlackKing() {
+    public byte getBlackKing() {
         return blackKing;
     }
     
     public static class Builder {
-        private Square whiteKing;
-        private Square blackKing;
-        private List<Square> whitePawns = new ArrayList<>();
-        private List<Square> blackPawns = new ArrayList<>();
-        private List<Square> whiteKnights = new ArrayList<>();
-        private List<Square> blackKnights = new ArrayList<>();
-        private List<Square> whiteBishops = new ArrayList<>();
-        private List<Square> blackBishops = new ArrayList<>();
-        private List<Square> whiteRooks = new ArrayList<>();
-        private List<Square> blackRooks = new ArrayList<>();
-        private List<Square> whiteQueens = new ArrayList<>();
-        private List<Square> blackQueens = new ArrayList<>();
+        private byte whiteKing = Square0x88.NULL;
+        private byte blackKing = Square0x88.NULL;
+        private List<Byte> whitePawns = new ArrayList<>();
+        private List<Byte> blackPawns = new ArrayList<>();
+        private List<Byte> whiteKnights = new ArrayList<>();
+        private List<Byte> blackKnights = new ArrayList<>();
+        private List<Byte> whiteBishops = new ArrayList<>();
+        private List<Byte> blackBishops = new ArrayList<>();
+        private List<Byte> whiteRooks = new ArrayList<>();
+        private List<Byte> blackRooks = new ArrayList<>();
+        private List<Byte> whiteQueens = new ArrayList<>();
+        private List<Byte> blackQueens = new ArrayList<>();
 
-        public void addWhitePawn(Square piece) {
+        public void addWhitePawn(byte piece) {
             whitePawns.add(piece);
         }
-        public void addBlackPawn(Square piece) {
+        public void addBlackPawn(byte piece) {
             blackPawns.add(piece);
         }
-        public void addWhiteKnight(Square piece) {
+        public void addWhiteKnight(byte piece) {
             whiteKnights.add(piece);
         }
-        public void addBlackKnight(Square piece) {
+        public void addBlackKnight(byte piece) {
             blackKnights.add(piece);
         }
-        public void addWhiteBishop(Square piece) {
+        public void addWhiteBishop(byte piece) {
             whiteBishops.add(piece);
         }
-        public void addBlackBishop(Square piece) {
+        public void addBlackBishop(byte piece) {
             blackBishops.add(piece);
         }
-        public void addWhiteRook(Square piece) {
+        public void addWhiteRook(byte piece) {
             whiteRooks.add(piece);
         }
-        public void addBlackRook(Square piece) {
+        public void addBlackRook(byte piece) {
             blackRooks.add(piece);
         }
-        public void addWhiteQueen(Square piece) {
+        public void addWhiteQueen(byte piece) {
             whiteQueens.add(piece);
         }
-        public void addBlackQueen(Square piece) {
+        public void addBlackQueen(byte piece) {
             blackQueens.add(piece);
         }
-        public void setWhiteKing(Square piece) {
-            if (whiteKing != null) {
+        public void setWhiteKing(byte piece) {
+            if (whiteKing != Square0x88.NULL) {
                 throw new IllegalStateException("Duplicate white king: "+ whiteKing +" " + piece);
             }
             whiteKing = piece;
         }
         
-        public void setBlackKing(Square piece) {
-            if (blackKing != null) {
+        public void setBlackKing(byte piece) {
+            if (blackKing != Square0x88.NULL) {
                 throw new IllegalStateException("Duplicate black king: "+ blackKing +" " + piece);
             }
             blackKing = piece;

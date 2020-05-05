@@ -1,4 +1,4 @@
-package machess;
+package machess.board8x8;
 
 public interface File {
 	int A = 0;

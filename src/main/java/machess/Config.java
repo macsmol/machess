@@ -6,9 +6,6 @@ public class Config {
 
 	public static final int DEFAULT_MOVES_LIST_CAPACITY = 60;
 
-	// TODO conflict with pawn sorting?
-	public static final boolean SORT_OCCUPIED_SQUARES = false;
-
 	public static final int SEARCH_DEPTH = 4;
 
 	/**

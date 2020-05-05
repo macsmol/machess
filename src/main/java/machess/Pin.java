@@ -1,5 +1,7 @@
 package machess;
 
+import machess.board0x88.Direction;
+
 /**
  * Describes the line to which movement is limited
  */
@@ -7,11 +9,7 @@ enum Pin {
     FILE('|'),          // |
     RANK('_'),          // _
     DIAGONAL('/'),      // /
-    ANTIDIAGONAL('\\'),	// \
-
-    // cases specific for en passant takes - maybe just filter it afterwards? - logic is to iffy
-    NO_QS_EN_PASSANT('{'),
-    NO_KS_EN_PASSANT('}');
+    ANTIDIAGONAL('\\');	// \
 
     char symbol;
 
@@ -29,5 +27,25 @@ enum Pin {
         assert Math.abs(deltaRank) <= 1 			: "Invalid deltaRank: " + deltaRank;
 
         return LUT[(deltaFile + 1)  + (deltaRank + 1) * 3];
+    }
+
+    static Pin fromDirection(byte direction) {
+        switch(direction) {
+            case Direction.N:
+            case Direction.S:
+                return FILE;
+            case Direction.E:
+            case Direction.W:
+                return RANK;
+            case Direction.SW:
+            case Direction.NE:
+                return DIAGONAL;
+            case Direction.NW:
+            case Direction.SE:
+                return ANTIDIAGONAL;
+            default:
+                assert false : "Expected a sliding piece direction " + direction;
+                return null;
+        }
     }
 }
