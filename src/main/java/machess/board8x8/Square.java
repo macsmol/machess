@@ -39,12 +39,4 @@ public enum Square {
 		assert rank >= Rank._1 && rank <= Rank._8 : "invalid rank in: " + file + ", " + rank;
 		return INTS_TO_SQUARES[file * FILES_COUNT + rank];
 	}
-
-	@Nullable
-	public static Square fromInts(int file, int rank) {
-		if (file < File.A || file > File.H || rank < Rank._1 || rank > Rank._8) {
-			return null;
-		}
-		return INTS_TO_SQUARES[file * FILES_COUNT + rank];
-	}
 }

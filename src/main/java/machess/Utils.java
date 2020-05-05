@@ -28,7 +28,7 @@ public class Utils {
     }
 
 	/**
-	 * insert sort pawns by their file
+	 * Insertion sort of pawns by their file
 	 * @param pawns - pawn locations given as 0x88 squares
 	 * @param pawnsCount
 	 */

@@ -2,7 +2,7 @@ package machess.board0x88;
 
 /**
  * Directions on the 0x88 board (https://www.chessprogramming.org/0x88).
- * North is towards the 8 rank.
+ * North is towards the 8th rank.
  * East is towards the H file.
  */
 public final class Direction {

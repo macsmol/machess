@@ -1,11 +1,12 @@
 package machess.interfaces;
 
 
-import machess.*;
+import machess.Content;
+import machess.PieceLists;
+import machess.State;
 import machess.board0x88.Square0x88;
 import machess.board8x8.File;
 import machess.board8x8.Rank;
-import machess.board8x8.Square;
 
 import static machess.board0x88.Square0x88.NULL;
 

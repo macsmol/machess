@@ -33,15 +33,15 @@ public interface Square0x88 {
         return (byte)(16 * rank07 + file07);
     }
 
+    static boolean inBounds(byte square0x88) {
+        return (square0x88 & NULL) == 0;
+    }
+
     /**
      * @return file in 0-7 range
      */
     static byte getFile(byte square0x88) {
         return (byte)(square0x88 & 7);
-    }
-
-    static boolean inBounds(byte square0x88) {
-        return (square0x88 & NULL) == 0;
     }
 
     /**

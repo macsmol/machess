@@ -562,7 +562,6 @@ public class State {
 			return;
 		}
 
-		// todo does this work?
 		Utils.sortByFiles(pawns, pawnsCount);
 
 		byte minKingSafeDistance = (byte)(castlingImpossible ? 2 : 3);
