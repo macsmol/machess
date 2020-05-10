@@ -1,11 +1,19 @@
 package machess;
 
+import machess.interfaces.UCI;
+
 public class Main {
     public static void main(String[] args) {
+        UCI uci = new UCI();
+        uci.startEngine();
+
+    }
+
+    private void play() {
         State game = new State();
         System.out.println("new game \n" + game);
         for (int ply = 1; ply <= 150; ply++) {
-            Scorer.MoveScore bestMove = Scorer.miniMax(game);
+            Scorer.MoveScore bestMove = Scorer.startMiniMax(game, Config.SEARCH_DEPTH);
 
             if (bestMove.moveIndex == -1) {
                 String winMessage = bestMove.score > 0 ? "white win!" : "black win!";

@@ -10,7 +10,7 @@ public class PieceLists {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         return sb.append("White: ")
-                .append("king:").append(whiteKing).append(' ')
+                .append("king:").append(Square0x88.toString(whiteKing)).append(' ')
                 .append(toString("Pawns:", whitePawns, whitePawnsCount))
                 .append(toString("Knights:", whiteKnights, whiteKnightsCount))
                 .append(toString("Bishops:", whiteBishops, whiteBishopsCount))
@@ -18,7 +18,7 @@ public class PieceLists {
                 .append(toString("Queens:", whiteQueens, whiteQueensCount))
                 .append('\n')
                 .append("Black: ")
-                .append("king:").append(blackKing).append(' ')
+                .append("king:").append(Square0x88.toString(blackKing)).append(' ')
                 .append(toString("Pawns:", blackPawns, blackPawnsCount))
                 .append(toString("Knights:", blackKnights, blackKnightsCount))
                 .append(toString("Bishops:", blackBishops, blackBishopsCount))

@@ -22,7 +22,7 @@ public class Scorer {
 	private static long totalNanosElapsed = 0;
 
 
-	public static MoveScore miniMax(State rootState) {
+	public static MoveScore startMiniMax(State rootState, int depth) {
 		boolean maximizing = rootState.test(State.WHITE_TURN);
 		movesEvaluatedInPly = 0;
 		checkMatesFound = 0;
@@ -37,7 +37,6 @@ public class Scorer {
 			return new MoveScore(terminalNodeScore(rootState), -1);
 		}
 
-		int depth = Config.SEARCH_DEPTH;
 		depth -=  maximizing ? Config.WHITE_PLY_HANDICAP : Config.BLACK_PLY_HANDICAP;
 		for (int i = 0; i < moves.size(); i++) {
 			int currScore;
@@ -74,7 +73,7 @@ public class Scorer {
 		return bestMove;
 	}
 
-	private static int miniMax(State state, int depth) {
+	static int miniMax(State state, int depth) {
 		boolean maximizingTurn = state.test(State.WHITE_TURN);
 		if (depth <= 0) {
 			return evaluate(state);
@@ -130,7 +129,7 @@ public class Scorer {
 		System.out.println("divide(" + depth + "):");
 		for (State child : legalMoves) {
 			long movesCount = perft(child, depth - 1);
-			System.out.println(child.printMove() + " " + movesCount);
+			System.out.println(Lan.printLastMove(child) + " " + movesCount);
 		}
 	}
 

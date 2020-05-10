@@ -2,5 +2,6 @@
 # Default ignored files
 .idea/
 target/
+classes/
 machess.iml
 *.log

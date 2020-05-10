@@ -7,7 +7,8 @@ import machess.board8x8.File;
 import machess.board8x8.Rank;
 import machess.board8x8.Square;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 import static machess.board0x88.Square0x88.*;
 
@@ -73,14 +74,15 @@ public class State {
 	 */
 	private final Pin[] pinnedPieces;
 
-
-	private byte from;
-	private byte to;
+	// for printing move
+	byte from;
+	byte to;
+	Content promotion;
 
 	/**
 	 * new game
 	 */
-	State() {
+	public State() {
 		flags = WHITE_TURN |
 				WHITE_QS_CASTLE_POSSIBLE | WHITE_KS_CASTLE_POSSIBLE |
 				BLACK_QS_CASTLE_POSSIBLE | BLACK_KS_CASTLE_POSSIBLE;
@@ -190,17 +192,19 @@ public class State {
 		return true;
 	}
 
-	private State fromPseudoLegalMoveWithPromotion(byte from, byte to, Content promotion) {
+	State fromPseudoLegalMoveWithPromotion(byte from, byte to, Content promotion) {
 		assert promotion != null;
-		return fromPseudoLegalMove(from, to, promotion, NULL, NULL);
+		State nextState = fromPseudoLegalMove(from, to, promotion, NULL, NULL);
+		nextState.promotion = promotion;
+		return nextState;
 	}
 
-	private State fromLegalQueensideCastling(byte kingFrom, byte kingTo) {
+	State fromLegalQueensideCastling(byte kingFrom, byte kingTo) {
 		byte rookToCastle = Square0x88.from07(File.A,  getRank(kingFrom));
 		return fromPseudoLegalMove(kingFrom, kingTo, null, NULL, rookToCastle);
 	}
 
-	private State fromLegalKingsideCastling(byte kingFrom, byte kingTo) {
+	State fromLegalKingsideCastling(byte kingFrom, byte kingTo) {
 		byte rookToCastle = Square0x88.from07(File.H, getRank(kingFrom));
 		return fromPseudoLegalMove(kingFrom, kingTo, null, NULL, rookToCastle);
 	}
