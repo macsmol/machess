@@ -1,5 +1,8 @@
 Release 1:
 -UCI
+    -print info in correct format pv line nodes, current depth etc
+    -timed moves - trivial
+    -timed moves - iterative deepening with TT
 -alpha-beta-pruning
 -TODOs in code
 -oscillation when playing against itself (threefold repetition draw)
