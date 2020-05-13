@@ -1,7 +1,7 @@
 package machess;
 
 
-import java.util.List;
+import java.util.*;
 
 public class Scorer {
 	private static final int MAXIMIZING_WIN = 1_000_000;
@@ -20,12 +20,14 @@ public class Scorer {
 	private static int checkMatesFound = 0;
 	private static long totalMovesEvaluated = 0;
 	private static long totalNanosElapsed = 0;
-
+	private static long pvUpdates = 0;
 
 	public static MoveScore startMiniMax(State rootState, int depth) {
 		boolean maximizing = rootState.test(State.WHITE_TURN);
 		movesEvaluatedInPly = 0;
 		checkMatesFound = 0;
+		PrincipalVariation pvLine = new PrincipalVariation();
+		PrincipalVariation pvSubLine = new PrincipalVariation();
 		long before = System.nanoTime();
 		List<State> moves = rootState.generateLegalMoves();
 
@@ -42,7 +44,7 @@ public class Scorer {
 			int currScore;
 
 			try {
-				currScore = miniMax(moves.get(i), depth - 1);
+				currScore = miniMax(moves.get(i), depth - 1, pvSubLine);
 			} catch (Throwable ae) {
 				System.out.println("----------------------FAILED ASSERTION!-------------------------------------");
 				System.out.println("DEPTH: " + depth + " ROOT STATE: " + rootState);
@@ -51,11 +53,15 @@ public class Scorer {
 
 			if (maximizing) {
 				if (currScore > resultScore) {
+					pvLine.updateSubline(pvSubLine, moves.get(i));
+					System.out.println("pvline: " + pvLine);
 					resultScore = currScore;
 					indexOfResultScore = i;
 				}
 			} else {
 				if (currScore < resultScore) {
+					pvLine.updateSubline(pvSubLine, moves.get(i));
+					System.out.println("pvline: " + pvLine);
 					resultScore = currScore;
 					indexOfResultScore = i;
 				}
@@ -70,27 +76,36 @@ public class Scorer {
 		totalNanosElapsed += elapsedNanos;
 
 		System.out.println(bestMove + "; millis elapsed: " + elapsedNanos / 1000_000 + "; Moves/sec: " + Utils.calcMovesPerSecond(movesEvaluatedInPly, elapsedNanos));
+		System.out.println("Principal variation: " + pvLine + " updates: "+ pvUpdates);
 		return bestMove;
 	}
 
-	static int miniMax(State state, int depth) {
+	/**
+	 *
+	 * @param state
+	 * @param depth
+	 * @param pvLine - principal variation line - https://www.chessprogramming.org/Principal_Variation
+	 * @return score
+	 */
+	private static int miniMax(State state, int depth, PrincipalVariation pvLine) {
 		boolean maximizingTurn = state.test(State.WHITE_TURN);
 		if (depth <= 0) {
+			pvLine.movesCount = 0;
 			return evaluate(state);
 		}
+
 		int resultScore = maximizingTurn ? Integer.MIN_VALUE : Integer.MAX_VALUE;
+		PrincipalVariation pvSubLine = new PrincipalVariation();
 
 		List<State> moves = state.generateLegalMoves();
-
 
 		if (moves.isEmpty()) {
 			return terminalNodeScore(state);
 		}
 		for (State move : moves) {
 			int currScore;
-
 			try {
-				currScore = discourageLaterWin(miniMax(move, depth - 1));
+				currScore = discourageLaterWin(miniMax(move, depth - 1, pvSubLine));
 			} catch (Throwable ae) {
 				System.out.println("----------------------FAILED ASSERTION!-------------------------------------");
 				System.out.println("DEPTH: " + depth + " STATE: " + state);
@@ -98,10 +113,12 @@ public class Scorer {
 			}
 			if (maximizingTurn) {
 				if (currScore > resultScore) {
+					pvLine.updateSubline(pvSubLine, move);
 					resultScore = currScore;
 				}
 			} else {
 				if (currScore < resultScore) {
+					pvLine.updateSubline(pvSubLine, move);
 					resultScore = currScore;
 				}
 			}
@@ -241,6 +258,7 @@ public class Scorer {
 		boolean maximizingTurn = state.test(State.WHITE_TURN);
 		if (maximizingTurn) {
 			if (state.isKingInCheck()) {
+				// todo updateSubline()
 				return MINIMIZING_WIN;
 			} else {
 				return DRAW;
@@ -251,6 +269,28 @@ public class Scorer {
 			} else {
 				return DRAW;
 			}
+		}
+	}
+
+	private static class PrincipalVariation {
+		private String [] moves = new String[Config.MAX_SEARCH_DEPTH];
+		private int movesCount = 0;
+
+		private void updateSubline(PrincipalVariation newSubLine, State move) {
+			pvUpdates++;
+			moves[0] = Lan.printLastMove(move);
+
+			System.arraycopy(newSubLine.moves, 0, moves, 1, newSubLine.movesCount);
+			movesCount = newSubLine.movesCount + 1;
+		}
+
+		@Override
+		public String toString() {
+			StringBuilder sb = new StringBuilder();
+			for (int i = 0; i < movesCount; i++) {
+				sb.append(moves[i]).append(' ');
+			}
+			return sb.toString();
 		}
 	}
 }

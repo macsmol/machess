@@ -9,6 +9,11 @@ public class Config {
 	public static final int SEARCH_DEPTH = 4;
 
 	/**
+	 * Don't expect to be searching this far
+	 */
+	public static final int MAX_SEARCH_DEPTH = 40;
+
+	/**
 	 * Decrement maximizing player search depth by this number
 	 */
 	public static final int WHITE_PLY_HANDICAP = 0;

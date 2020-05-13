@@ -4,12 +4,16 @@ import machess.interfaces.UCI;
 
 public class Main {
     public static void main(String[] args) {
-        UCI uci = new UCI();
-        uci.startEngine();
-
+//        startUci();
+        play();
     }
 
-    private void play() {
+    private static void startUci() {
+        UCI uci = new UCI();
+        uci.startEngine();
+    }
+
+    private static void play() {
         State game = new State();
         System.out.println("new game \n" + game);
         for (int ply = 1; ply <= 150; ply++) {
