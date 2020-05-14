@@ -4,8 +4,8 @@ import machess.interfaces.UCI;
 
 public class Main {
     public static void main(String[] args) {
-//        startUci();
-        play();
+        startUci();
+//        play();
     }
 
     private static void startUci() {

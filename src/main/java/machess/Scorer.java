@@ -1,7 +1,11 @@
 package machess;
 
 
+import machess.interfaces.UCI;
+
 import java.util.*;
+
+import static machess.Utils.spaces;
 
 public class Scorer {
 	private static final int MAXIMIZING_WIN = 1_000_000;
@@ -20,7 +24,7 @@ public class Scorer {
 	private static int checkMatesFound = 0;
 	private static long totalMovesEvaluated = 0;
 	private static long totalNanosElapsed = 0;
-	private static long pvUpdates = 0;
+	private static int pvUpdates = 0;
 
 	public static MoveScore startMiniMax(State rootState, int depth) {
 		boolean maximizing = rootState.test(State.WHITE_TURN);
@@ -54,36 +58,34 @@ public class Scorer {
 			if (maximizing) {
 				if (currScore > resultScore) {
 					pvLine.updateSubline(pvSubLine, moves.get(i));
-					System.out.println("pvline: " + pvLine);
+					System.out.println(spaces(UCI.INFO, UCI.PV, pvLine.toString()));
 					resultScore = currScore;
 					indexOfResultScore = i;
 				}
 			} else {
 				if (currScore < resultScore) {
 					pvLine.updateSubline(pvSubLine, moves.get(i));
-					System.out.println("pvline: " + pvLine);
+					System.out.println(spaces(UCI.INFO, UCI.PV, pvLine.toString()));
 					resultScore = currScore;
 					indexOfResultScore = i;
 				}
 			}
 		}
-		System.out.println("Moves evaluated: " + movesEvaluatedInPly);
-		System.out.println("Checkmates found: " + checkMatesFound);
+		System.out.println();
 		long after = System.nanoTime();
 		MoveScore bestMove = new MoveScore(resultScore, indexOfResultScore);
 		long elapsedNanos = after - before;
 		totalMovesEvaluated += movesEvaluatedInPly;
 		totalNanosElapsed += elapsedNanos;
 
-		System.out.println(bestMove + "; millis elapsed: " + elapsedNanos / 1000_000 + "; Moves/sec: " + Utils.calcMovesPerSecond(movesEvaluatedInPly, elapsedNanos));
-		System.out.println("Principal variation: " + pvLine + " updates: "+ pvUpdates);
+		System.out.println(info(movesEvaluatedInPly, pvLine,
+				elapsedNanos / 1000_000, depth, pvUpdates,
+				Utils.calcMovesPerSecond(movesEvaluatedInPly, elapsedNanos)));
 		return bestMove;
 	}
 
 	/**
 	 *
-	 * @param state
-	 * @param depth
 	 * @param pvLine - principal variation line - https://www.chessprogramming.org/Principal_Variation
 	 * @return score
 	 */
@@ -258,6 +260,7 @@ public class Scorer {
 		boolean maximizingTurn = state.test(State.WHITE_TURN);
 		if (maximizingTurn) {
 			if (state.isKingInCheck()) {
+
 				// todo updateSubline()
 				return MINIMIZING_WIN;
 			} else {
@@ -270,6 +273,16 @@ public class Scorer {
 				return DRAW;
 			}
 		}
+	}
+
+	private static String info(int nodesEvaluated, PrincipalVariation pvLine, long elapsedMillis, int depth, int pvUpdates, int nodesPerSecond) {
+		return spaces(UCI.INFO,
+				UCI.NODES, Integer.toString(nodesEvaluated),
+				UCI.PV, pvLine.toString(),
+				UCI.TIME, Long.toString(elapsedMillis),
+				UCI.DEPTH, Integer.toString(depth),
+				UCI.NPS, Integer.toString(nodesPerSecond),
+				"pvUpdates", Integer.toString(pvUpdates));
 	}
 
 	private static class PrincipalVariation {
@@ -286,9 +299,9 @@ public class Scorer {
 
 		@Override
 		public String toString() {
-			StringBuilder sb = new StringBuilder();
+			StringJoiner sb = new StringJoiner(" ");
 			for (int i = 0; i < movesCount; i++) {
-				sb.append(moves[i]).append(' ');
+				sb.add(moves[i]);
 			}
 			return sb.toString();
 		}

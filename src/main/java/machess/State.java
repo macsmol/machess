@@ -1,6 +1,5 @@
 package machess;
 
-import com.sun.istack.internal.Nullable;
 import machess.board0x88.Direction;
 import machess.board0x88.Square0x88;
 import machess.board8x8.File;
@@ -127,7 +126,7 @@ public class State {
 	}
 
 	public State(short[] board0x88, PieceLists pieces, byte flags,
-		  @Nullable byte enPassantSquare, byte halfmoveClock, int fullMoveCounter, byte from, byte to) {
+				 byte enPassantSquare, byte halfmoveClock, int fullMoveCounter, byte from, byte to) {
 		this.board0x88 = board0x88;
 		this.pieces = pieces;
 		this.flags = flags;
@@ -220,7 +219,7 @@ public class State {
 	 * Generates new BoardState based on move. It does not verify game rules - assumes input is a legal move.
 	 * This is the root method - it covers all cases. All 'overload' methods should call this one.
 	 */
-	private State fromPseudoLegalMove(byte from, byte to, @Nullable Content promotion, @Nullable byte futureEnPassantSquare,
+	private State fromPseudoLegalMove(byte from, byte to, Content promotion, byte futureEnPassantSquare,
 									  byte rookCastleFrom) {
 		assert from != to : from + "->" + to + " is no move";
 		assert inBounds(from) : "invalid from square: " + from;

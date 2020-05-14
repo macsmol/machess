@@ -7,14 +7,23 @@ import machess.State;
 import java.util.Scanner;
 
 public class UCI {
-    private static final String POSITION = "position";
-    private static final String STARTPOS = "startpos";
-    private static final String MOVES = "moves";
+    public static final String POSITION = "position";
+    public static final String STARTPOS = "startpos";
+    public static final String MOVES = "moves";
 
-    private static final String GO = "go";
-    private static final String DEPTH = "depth";
+    public static final String INFO = "info";
+    // principal variation
+    public static final String PV = "pv";
+    // time in millis
+    public static final String TIME = "time";
+    public static final String NODES = "nodes";
+    // nodes per second
+    public static final String NPS = "nps";
 
-    private static final String[] EMPTY_ARRAY = {};
+    public static final String GO = "go";
+    public static final String DEPTH = "depth";
+
+    public static final String QUIT = "quit";
 
     private State state;
 
@@ -32,9 +41,10 @@ public class UCI {
                 setPosition(input.substring(POSITION.length()).trim());
             } else if (input.startsWith(GO)) {
                 go(input.substring(GO.length()).trim());
-            }
-            else if (input.startsWith("tostr")) {
+            } else if (input.startsWith("tostr")) {
                 System.out.println(state);
+            }else if (input.startsWith(QUIT)) {
+                System.exit(0);
             }
         }
 
@@ -44,8 +54,8 @@ public class UCI {
         if (input.startsWith(DEPTH)) {
             int depth = Integer.parseInt(input.substring(DEPTH.length()).trim());
             Scorer.MoveScore score = Scorer.startMiniMax(state, depth);
-            state = state.chooseMove(score.moveIndex);
-            System.out.println("bestmove " + Lan.printLastMove(state));
+            State bestMove = state.chooseMove(score.moveIndex);
+            System.out.println("bestmove " + Lan.printLastMove(bestMove));
         }
     }
 
