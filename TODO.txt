@@ -1,7 +1,11 @@
 Release 1:
 -UCI
     -print info in correct format pv line nodes, current depth etc
-    -timed moves - trivial
+    -timed moves
+        -break when getting stop from gui
+        -don't do iterative deepening when only one legal move
+        -timed first, second.. N moves (like explained on https://ccrl.chessdom.com/ccrl/4040/about.html)
+
     -timed moves - iterative deepening with TT
 -alpha-beta-pruning
 -TODOs in code

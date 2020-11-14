@@ -20,35 +20,32 @@ public class Scorer {
 
 	private static final int LEGAL_MOVE_SCORE = 5;
 
-	private static int movesEvaluatedInPly = 0;
-	private static int checkMatesFound = 0;
-	private static long totalMovesEvaluated = 0;
-	private static long totalNanosElapsed = 0;
+	private static int nodesEvaluatedInPly = 0;
 	private static int pvUpdates = 0;
 
-	public static MoveScore startMiniMax(State rootState, int depth) {
-		boolean maximizing = rootState.test(State.WHITE_TURN);
-		movesEvaluatedInPly = 0;
-		checkMatesFound = 0;
+	private static volatile boolean interrupt;
+
+	public static Result startMiniMax(State rootState, int depth) {
+		interrupt = false;
+		nodesEvaluatedInPly = 0;
+		pvUpdates = 0;
 		PrincipalVariation pvLine = new PrincipalVariation();
 		PrincipalVariation pvSubLine = new PrincipalVariation();
-		long before = System.nanoTime();
 		List<State> moves = rootState.generateLegalMoves();
 
+		boolean maximizing = rootState.test(State.WHITE_TURN);
 		int resultScore = maximizing ? Integer.MIN_VALUE : Integer.MAX_VALUE;
-		int indexOfResultScore = -1;
+
 		if (moves.isEmpty()) {
-			System.out.println("Total milliseconds elapsed: " + totalNanosElapsed / 1000_000
-					+ "; Moves/sec: " + Utils.calcMovesPerSecond(totalMovesEvaluated, totalNanosElapsed));
-			return new MoveScore(terminalNodeScore(rootState), -1);
+			return new Result(terminalNodeScore(rootState), pvLine, nodesEvaluatedInPly, pvUpdates, false);
 		}
 
 		depth -=  maximizing ? Config.WHITE_PLY_HANDICAP : Config.BLACK_PLY_HANDICAP;
-		for (int i = 0; i < moves.size(); i++) {
+		for (State move : moves) {
 			int currScore;
 
 			try {
-				currScore = miniMax(moves.get(i), depth - 1, pvSubLine);
+				currScore = miniMax(move, depth - 1, pvSubLine);
 			} catch (Throwable ae) {
 				System.out.println("----------------------FAILED ASSERTION!-------------------------------------");
 				System.out.println("DEPTH: " + depth + " ROOT STATE: " + rootState);
@@ -57,31 +54,23 @@ public class Scorer {
 
 			if (maximizing) {
 				if (currScore > resultScore) {
-					pvLine.updateSubline(pvSubLine, moves.get(i));
+					pvLine.updateSubline(pvSubLine, move);
 					System.out.println(spaces(UCI.INFO, UCI.PV, pvLine.toString()));
 					resultScore = currScore;
-					indexOfResultScore = i;
 				}
 			} else {
 				if (currScore < resultScore) {
-					pvLine.updateSubline(pvSubLine, moves.get(i));
+					pvLine.updateSubline(pvSubLine, move);
 					System.out.println(spaces(UCI.INFO, UCI.PV, pvLine.toString()));
 					resultScore = currScore;
-					indexOfResultScore = i;
 				}
 			}
 		}
-		System.out.println();
-		long after = System.nanoTime();
-		MoveScore bestMove = new MoveScore(resultScore, indexOfResultScore);
-		long elapsedNanos = after - before;
-		totalMovesEvaluated += movesEvaluatedInPly;
-		totalNanosElapsed += elapsedNanos;
+		return new Result(resultScore, pvLine, nodesEvaluatedInPly, pvUpdates, moves.size() == 1);
+	}
 
-		System.out.println(info(movesEvaluatedInPly, pvLine,
-				elapsedNanos / 1000_000, depth, pvUpdates,
-				Utils.calcMovesPerSecond(movesEvaluatedInPly, elapsedNanos)));
-		return bestMove;
+	public static void terminate() {
+		interrupt = true;
 	}
 
 	/**
@@ -92,6 +81,8 @@ public class Scorer {
 	private static int miniMax(State state, int depth, PrincipalVariation pvLine) {
 		boolean maximizingTurn = state.test(State.WHITE_TURN);
 		if (depth <= 0) {
+			TODO bug przy wyswietlaniu pv dla depth 2 (wyswietla 1 mniej niz trzeba) ale niektóre inne silniki też nie wypisują tego wiec olewka?
+		 sprawdz z terminalnymi węzłami
 			pvLine.movesCount = 0;
 			return evaluate(state);
 		}
@@ -102,6 +93,7 @@ public class Scorer {
 		List<State> moves = state.generateLegalMoves();
 
 		if (moves.isEmpty()) {
+			pvLine.movesCount = 0;
 			return terminalNodeScore(state);
 		}
 		for (State move : moves) {
@@ -123,6 +115,9 @@ public class Scorer {
 					pvLine.updateSubline(pvSubLine, move);
 					resultScore = currScore;
 				}
+			}
+			if (interrupt) {
+				break;
 			}
 		}
 		return resultScore;
@@ -159,32 +154,42 @@ public class Scorer {
 		return score * 1023 / 1024;
 	}
 
-	public static class MoveScore {
+	// TODO
+	public static class Result {
 		public final int score;
-		public final int moveIndex;
+		public final PrincipalVariation pv;
+		public final int nodesEvaluated;
 
-		public MoveScore(int score, int moveIndex) {
+		public final int pvUpdates;
+
+		// skip iterative deepening in this case
+		public final boolean oneLegalMove;
+
+		public Result(int score, PrincipalVariation pvLine, int nodesEvaluated, int pvUpdates,
+					  boolean oneLegalMove) {
 			this.score = score;
-			this.moveIndex = moveIndex;
+			this.pv = pvLine;
+			this.nodesEvaluated = nodesEvaluated;
+			this.pvUpdates = pvUpdates;
+			this.oneLegalMove = oneLegalMove;
 		}
 
 		@Override
 		public String toString() {
-			return "MoveScore{" +
+			return "Result{" +
 					"score=" + score +
-					", moveIndex=" + moveIndex +
+					", pv=" + pv +
+					", oneLegalMove=" + oneLegalMove +
+					", pvUpdates=" + pvUpdates +
 					'}';
 		}
 	}
 
 	public static int evaluate(State state) {
-		movesEvaluatedInPly++;
+		nodesEvaluatedInPly++;
 		int legalMoves = state.countLegalMoves();
 		if (legalMoves == 0) {
 			int terminalNodeScore = terminalNodeScore(state);
-			if (terminalNodeScore != DRAW) {
-				checkMatesFound++;
-			}
 			return terminalNodeScore;
 		}
 		int materialScore = evaluateMaterialScore(state);
@@ -261,7 +266,6 @@ public class Scorer {
 		if (maximizingTurn) {
 			if (state.isKingInCheck()) {
 
-				// todo updateSubline()
 				return MINIMIZING_WIN;
 			} else {
 				return DRAW;
@@ -275,19 +279,10 @@ public class Scorer {
 		}
 	}
 
-	private static String info(int nodesEvaluated, PrincipalVariation pvLine, long elapsedMillis, int depth, int pvUpdates, int nodesPerSecond) {
-		return spaces(UCI.INFO,
-				UCI.NODES, Integer.toString(nodesEvaluated),
-				UCI.PV, pvLine.toString(),
-				UCI.TIME, Long.toString(elapsedMillis),
-				UCI.DEPTH, Integer.toString(depth),
-				UCI.NPS, Integer.toString(nodesPerSecond),
-				"pvUpdates", Integer.toString(pvUpdates));
-	}
 
-	private static class PrincipalVariation {
-		private String [] moves = new String[Config.MAX_SEARCH_DEPTH];
-		private int movesCount = 0;
+	public static class PrincipalVariation {
+		public String [] moves = new String[Config.MAX_SEARCH_DEPTH];
+		public int movesCount = 0;
 
 		private void updateSubline(PrincipalVariation newSubLine, State move) {
 			pvUpdates++;

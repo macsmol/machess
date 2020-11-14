@@ -19,12 +19,10 @@ public class Utils {
 		return sb.toString();
 	}
 
-    static int calcMovesPerSecond(long movesEvaluated, long elapsedNanos) {
-        elapsedNanos++;
-        BigInteger movesPerSec = BigInteger.valueOf(1000_000_000)
-                .multiply(BigInteger.valueOf(movesEvaluated))
-                .divide(BigInteger.valueOf(elapsedNanos));
-        return movesPerSec.intValue();
+    public static int calcNodesPerSecond(long movesEvaluated, long elapsedMillis) {
+        elapsedMillis++; // don't divide by zero
+        long movesPerSec = 1000 * movesEvaluated / elapsedMillis;
+        return (int) movesPerSec;
     }
 
 	/**

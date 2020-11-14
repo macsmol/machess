@@ -302,7 +302,7 @@ public class State {
 				from, to);
 	}
 
-	boolean test(int flagMask) {
+	public boolean test(int flagMask) {
 		return (flags & flagMask) != 0;
 	}
 
@@ -357,7 +357,7 @@ public class State {
 		return sb.toString();
 	}
 
-	public String printMove() {
+	public String printLastMove() {
 		return "" + Square0x88.toString(from) + Square0x88.toString(to);
 	}
 
@@ -821,10 +821,6 @@ public class State {
 	private boolean canKingWalkOnSquare(byte square0x88, boolean isKingWhite) {
 		short checkedByKingFlag = isKingWhite ? SquareFormat.CHECK_BY_BLACK_KING : SquareFormat.CHECK_BY_WHITE_KING;
 		return !isSquareCheckedBy(square0x88, !isKingWhite) && (board0x88[square0x88] & checkedByKingFlag) == 0;
-	}
-
-	public State chooseMove(int moveIndex) {
-		return generateLegalMoves().get(moveIndex);
 	}
 
 	public int countLegalMoves() {

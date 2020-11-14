@@ -7,6 +7,10 @@ public class Config {
 	public static final int DEFAULT_MOVES_LIST_CAPACITY = 60;
 
 	public static final int SEARCH_DEPTH = 4;
+	/**
+	 * Used in calculation of time devoted to next move
+	 */
+	public static final int EXPECTED_TURNS_LEFT = 25;
 
 	/**
 	 * Don't expect to be searching this far

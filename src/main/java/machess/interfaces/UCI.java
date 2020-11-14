@@ -1,10 +1,10 @@
 package machess.interfaces;
 
-import machess.Lan;
-import machess.Scorer;
-import machess.State;
+import machess.*;
 
 import java.util.Scanner;
+
+import static machess.Utils.spaces;
 
 public class UCI {
     public static final String POSITION = "position";
@@ -22,6 +22,12 @@ public class UCI {
 
     public static final String GO = "go";
     public static final String DEPTH = "depth";
+    public static final String WHITE_TIME = "wtime";
+    public static final String BLACK_TIME = "btime";
+    public static final String WHITE_INCREMENT = "winc";
+    public static final String BLACK_INCREMENT = "binc";
+
+    public static final String BESTMOVE = "bestmove";
 
     public static final String QUIT = "quit";
 
@@ -30,7 +36,12 @@ public class UCI {
     public void startEngine() {
         Scanner scanner = new Scanner(System.in);
         while (true) {
-            String input = scanner.nextLine();
+            tryToParseInput(scanner.nextLine());
+        }
+    }
+
+    private void tryToParseInput(String input) {
+        try {
             if (input.startsWith("uci")) {
                 enterUci();
             } else if (input.startsWith("isready")) {
@@ -43,19 +54,22 @@ public class UCI {
                 go(input.substring(GO.length()).trim());
             } else if (input.startsWith("tostr")) {
                 System.out.println(state);
-            }else if (input.startsWith(QUIT)) {
+            } else if (input.startsWith(QUIT)) {
                 System.exit(0);
             }
+        } catch (Exception ex) {
+            System.out.println("Cannot parse input: " + input + " ex: "+ ex);
         }
-
     }
 
     private void go(String input) {
         if (input.startsWith(DEPTH)) {
             int depth = Integer.parseInt(input.substring(DEPTH.length()).trim());
-            Scorer.MoveScore score = Scorer.startMiniMax(state, depth);
-            State bestMove = state.chooseMove(score.moveIndex);
-            System.out.println("bestmove " + Lan.printLastMove(bestMove));
+            Scorer.Result result = Scorer.startMiniMax(state, depth);
+            System.out.println(BESTMOVE + " " + result.pv.moves[0]);
+        } else if (input.contains(WHITE_TIME)) {
+            SuddenDeathWorker worker = new SuddenDeathWorker(input, state.test(State.WHITE_TURN));
+            worker.doIterativeDeepening();
         }
     }
 
@@ -86,7 +100,7 @@ public class UCI {
     }
 
     private void enterUci() {
-        System.out.println("id machess 0.1");
+        System.out.println("id machess 1.0-SNAPSHOT_14.11.2020_23:18");
         System.out.println("id author Maciej Smolczewski");
         presentOptions();
         System.out.println("uciok");
@@ -100,5 +114,72 @@ public class UCI {
     }
 
     private void presentOptions() {
+    }
+
+    private static String info(int nodesEvaluated, Scorer.PrincipalVariation pvLine, long elapsedMillis, int depth, int pvUpdates, int nodesPerSecond) {
+        return spaces(UCI.INFO,
+                UCI.NODES, Integer.toString(nodesEvaluated),
+                UCI.PV, pvLine.toString(),
+                UCI.TIME, Long.toString(elapsedMillis),
+                UCI.DEPTH, Integer.toString(depth),
+                UCI.NPS, Integer.toString(nodesPerSecond),
+                "pvUpdates", Integer.toString(pvUpdates));
+    }
+
+    private class SuddenDeathWorker {
+
+        private int whiteLeftMillis;
+        private int blackLeftMillis;
+        private int whiteIncrementMillis = 0;
+        private int blackIncrementMillis = 0;
+        private boolean whiteTurn;
+
+        public SuddenDeathWorker(String timeParameters, boolean isWhiteTurn) {
+            String[] timeTokens = timeParameters.split(" +");
+
+            for (int i = 0; i < timeTokens.length; i += 2) {
+                switch (timeTokens[i]) {
+                    case WHITE_TIME:
+                        whiteLeftMillis = Integer.parseInt(timeTokens[i + 1]);
+                        break;
+                    case BLACK_TIME:
+                        blackLeftMillis = Integer.parseInt(timeTokens[i + 1]);
+                        break;
+                    case WHITE_INCREMENT:
+                        whiteIncrementMillis = Integer.parseInt(timeTokens[i + 1]);
+                        break;
+                    case BLACK_INCREMENT:
+                        blackIncrementMillis = Integer.parseInt(timeTokens[i + 1]);
+                        break;
+                }
+            }
+        }
+
+        public void doIterativeDeepening() {
+            // TODO this is veery basic iterative deepening
+            String bestMove = "";
+            long before = System.currentTimeMillis();
+            long millisForMove = calcMillisForNextMove();
+            long elapsedMillis = 0;
+            for (int depth = 1; depth < Config.MAX_SEARCH_DEPTH; depth++) {
+                Scorer.Result score = Scorer.startMiniMax(state, depth);
+
+                elapsedMillis = System.currentTimeMillis() - before;
+                System.out.println(info(score.nodesEvaluated, score.pv,
+                        elapsedMillis, depth, score.pvUpdates,
+                        Utils.calcNodesPerSecond(score.nodesEvaluated, elapsedMillis)));
+                // terminal nodes will not throw npex because gui will not ask
+                bestMove = score.pv.moves[0];
+                if (elapsedMillis > millisForMove) {
+                    break;
+                }
+            }
+            System.out.println("bestmove " + bestMove);
+        }
+
+        private long calcMillisForNextMove() {
+            // TODO improve it - this is very basic and probably not very smart
+            return (whiteTurn ? whiteLeftMillis : blackLeftMillis) / Config.EXPECTED_TURNS_LEFT;
+        }
     }
 }
