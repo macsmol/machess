@@ -17,6 +17,11 @@ public class UCI {
     // time in millis
     public static final String TIME = "time";
     public static final String NODES = "nodes";
+
+    public static final String SCORE = "score";
+    public static final String MATE_IN = "mate";
+    public static final String CENTIPAWNS = "cp";
+
     // nodes per second
     public static final String NPS = "nps";
 
@@ -65,7 +70,16 @@ public class UCI {
     private void go(String input) {
         if (input.startsWith(DEPTH)) {
             int depth = Integer.parseInt(input.substring(DEPTH.length()).trim());
+
+            long before = System.currentTimeMillis();
             Scorer.Result result = Scorer.startMiniMax(state, depth);
+            long elapsedMillis = System.currentTimeMillis() - before;
+
+            System.out.println(info(result.nodesEvaluated, result.pv,
+                    elapsedMillis, depth, result.pvUpdates,
+                    Utils.calcNodesPerSecond(result.nodesEvaluated, elapsedMillis),
+                    formatScore(result.score, state.test(State.WHITE_TURN))));
+
             System.out.println(BESTMOVE + " " + result.pv.moves[0]);
         } else if (input.contains(WHITE_TIME)) {
             SuddenDeathWorker worker = new SuddenDeathWorker(input, state.test(State.WHITE_TURN));
@@ -116,14 +130,38 @@ public class UCI {
     private void presentOptions() {
     }
 
-    private static String info(int nodesEvaluated, Scorer.PrincipalVariation pvLine, long elapsedMillis, int depth, int pvUpdates, int nodesPerSecond) {
+    private static String info(int nodesEvaluated, Scorer.PrincipalVariation pvLine, long elapsedMillis, int depth,
+                               int pvUpdates, int nodesPerSecond, String scoreString) {
         return spaces(UCI.INFO,
                 UCI.NODES, Integer.toString(nodesEvaluated),
                 UCI.PV, pvLine.toString(),
                 UCI.TIME, Long.toString(elapsedMillis),
                 UCI.DEPTH, Integer.toString(depth),
                 UCI.NPS, Integer.toString(nodesPerSecond),
-                "pvUpdates", Integer.toString(pvUpdates));
+                UCI.SCORE, scoreString,
+                "pvUpdates", Integer.toString(pvUpdates)
+        );
+    }
+
+    public static String formatScore(int score, boolean isWhiteTurn) {
+        if (Math.abs(score) > Scorer.SCORE_CLOSE_TO_WIN) {
+            return UCI.MATE_IN + " " + fullMovesToMate(score, isWhiteTurn);
+        }
+        return UCI.CENTIPAWNS + " " + score;
+    }
+
+    static int fullMovesToMate(int actualScore, boolean isWhiteTurn) {
+        int movesToMate = 0;
+
+        int actualScoreAbsolute = Math.abs(actualScore);
+        int successiveMatingScores = Scorer.MAXIMIZING_WIN;
+        while (successiveMatingScores > actualScoreAbsolute) {
+            successiveMatingScores = Scorer.discourageLaterWin(Scorer.discourageLaterWin(successiveMatingScores));
+            movesToMate++;
+        }
+        // negative values when engine is loosing
+        int signum = actualScore > 0 == isWhiteTurn ? 1 : -1;
+        return movesToMate * signum;
     }
 
     private class SuddenDeathWorker {
@@ -134,7 +172,7 @@ public class UCI {
         private int blackIncrementMillis = 0;
         private boolean whiteTurn;
 
-        public SuddenDeathWorker(String timeParameters, boolean isWhiteTurn) {
+        public SuddenDeathWorker(String timeParameters, boolean whiteTurn) {
             String[] timeTokens = timeParameters.split(" +");
 
             for (int i = 0; i < timeTokens.length; i += 2) {
@@ -153,24 +191,29 @@ public class UCI {
                         break;
                 }
             }
+            this.whiteTurn = whiteTurn;
         }
 
         public void doIterativeDeepening() {
             // TODO this is veery basic iterative deepening
             String bestMove = "";
-            long before = System.currentTimeMillis();
             long millisForMove = calcMillisForNextMove();
-            long elapsedMillis = 0;
-            for (int depth = 1; depth < Config.MAX_SEARCH_DEPTH; depth++) {
-                Scorer.Result score = Scorer.startMiniMax(state, depth);
+            long before = System.currentTimeMillis();
 
-                elapsedMillis = System.currentTimeMillis() - before;
-                System.out.println(info(score.nodesEvaluated, score.pv,
-                        elapsedMillis, depth, score.pvUpdates,
-                        Utils.calcNodesPerSecond(score.nodesEvaluated, elapsedMillis)));
-                // terminal nodes will not throw npex because gui will not ask
-                bestMove = score.pv.moves[0];
+            for (int depth = 1; depth < Config.MAX_SEARCH_DEPTH; depth++) {
+                Scorer.Result result = Scorer.startMiniMax(state, depth);
+
+                long elapsedMillis = System.currentTimeMillis() - before;
+                System.out.println(info(result.nodesEvaluated, result.pv,
+                        elapsedMillis, depth, result.pvUpdates,
+                        Utils.calcNodesPerSecond(result.nodesEvaluated, elapsedMillis),
+                        formatScore(result.score, state.test(State.WHITE_TURN))));
+
+                bestMove = result.pv.moves[0];
                 if (elapsedMillis > millisForMove) {
+                    break;
+                }
+                if (result.oneLegalMove) {
                     break;
                 }
             }

@@ -8,8 +8,8 @@ import java.util.*;
 import static machess.Utils.spaces;
 
 public class Scorer {
-	private static final int MAXIMIZING_WIN = 1_000_000;
-	private static final int MINIMIZING_WIN = -1_000_000;
+	public static final int MAXIMIZING_WIN = 1_000_000;
+	public static final int MINIMIZING_WIN = -1_000_000;
 	private static final int DRAW = 0;
 
 	private static final int MATERIAL_PAWN 		= 100;
@@ -17,6 +17,9 @@ public class Scorer {
 	private static final int MATERIAL_BISHOP 	= 300;
 	private static final int MATERIAL_ROOK		= 500;
 	private static final int MATERIAL_QUEEN		= 900;
+
+	public static final int SCORE_CLOSE_TO_WIN = 2 * (9 * MATERIAL_QUEEN +  2 * MATERIAL_ROOK +
+			2 * MATERIAL_BISHOP + 2 * MATERIAL_KNIGHT);
 
 	private static final int LEGAL_MOVE_SCORE = 5;
 
@@ -40,12 +43,11 @@ public class Scorer {
 			return new Result(terminalNodeScore(rootState), pvLine, nodesEvaluatedInPly, pvUpdates, false);
 		}
 
-		depth -=  maximizing ? Config.WHITE_PLY_HANDICAP : Config.BLACK_PLY_HANDICAP;
 		for (State move : moves) {
 			int currScore;
 
 			try {
-				currScore = miniMax(move, depth - 1, pvSubLine);
+				currScore = discourageLaterWin(miniMax(move, depth - 1, pvSubLine));
 			} catch (Throwable ae) {
 				System.out.println("----------------------FAILED ASSERTION!-------------------------------------");
 				System.out.println("DEPTH: " + depth + " ROOT STATE: " + rootState);
@@ -81,8 +83,7 @@ public class Scorer {
 	private static int miniMax(State state, int depth, PrincipalVariation pvLine) {
 		boolean maximizingTurn = state.test(State.WHITE_TURN);
 		if (depth <= 0) {
-			TODO bug przy wyswietlaniu pv dla depth 2 (wyswietla 1 mniej niz trzeba) ale niektóre inne silniki też nie wypisują tego wiec olewka?
-		 sprawdz z terminalnymi węzłami
+//		 TODO sprawdz z terminalnymi węzłami
 			pvLine.movesCount = 0;
 			return evaluate(state);
 		}
@@ -123,6 +124,7 @@ public class Scorer {
 		return resultScore;
 	}
 
+
 	public static long perft(State state, int depth) {
 		long movesCount = 0;
 		if (depth == 0) {
@@ -148,13 +150,13 @@ public class Scorer {
 	}
 
 	/**
-	 * call this on child nodes to encourage choosing earlier wins
+	 * Decreases the score.
+	 * call this on child nodes to encourage choosing earlier wins.
 	 */
-	private static int discourageLaterWin(int score) {
-		return score * 1023 / 1024;
+	public static int discourageLaterWin(int score) {
+		return score * 127 / 128;
 	}
 
-	// TODO
 	public static class Result {
 		public final int score;
 		public final PrincipalVariation pv;
