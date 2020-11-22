@@ -199,6 +199,9 @@ public class Scorer {
 
 	public static int evaluate(State state) {
 		nodesEvaluatedInPly++;
+		if (nodesEvaluatedInPly % Config.LOG_NODES_EVALUATED_DELAY == 0) {
+			System.out.println(spaces(UCI.INFO, UCI.NODES, Integer.toString(nodesEvaluatedInPly)));
+		}
 		int legalMoves = state.countLegalMoves();
 		if (legalMoves == 0) {
 			int terminalNodeScore = terminalNodeScore(state);

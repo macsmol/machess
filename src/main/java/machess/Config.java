@@ -22,4 +22,6 @@ public class Config {
 	 * R6R/3Q4/1Q4Q1/4Q3/2Q4Q/Q4Q2/pp1Q4/kBNN1KB1 w - - 0 1
  	 */
 	public static final int PIECE_LIST_CAPACITY = 5;
+
+	public static final int LOG_NODES_EVALUATED_DELAY = 500000;
 }
