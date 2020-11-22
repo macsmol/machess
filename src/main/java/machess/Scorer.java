@@ -185,16 +185,6 @@ public class Scorer {
 			this.pvUpdates = pvUpdates;
 			this.oneLegalMove = oneLegalMove;
 		}
-
-		@Override
-		public String toString() {
-			return "Result{" +
-					"score=" + score +
-					", pv=" + pv +
-					", oneLegalMove=" + oneLegalMove +
-					", pvUpdates=" + pvUpdates +
-					'}';
-		}
 	}
 
 	public static int evaluate(State state) {
