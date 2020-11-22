@@ -147,7 +147,7 @@ public class Scorer {
 		System.out.println("divide(" + depth + "):");
 		for (State child : legalMoves) {
 			long movesCount = perft(child, depth - 1);
-			System.out.println(Lan.printLastMove(child) + " " + movesCount);
+			System.out.println(Lan.toStringLastMove(child) + " " + movesCount);
 		}
 	}
 
@@ -301,7 +301,7 @@ public class Scorer {
 
 		private void updateSubline(PrincipalVariation newSubLine, State move) {
 			pvUpdates++;
-			moves[0] = Lan.printLastMove(move);
+			moves[0] = Lan.toStringLastMove(move);
 
 			System.arraycopy(newSubLine.moves, 0, moves, 1, newSubLine.movesCount);
 			movesCount = newSubLine.movesCount + 1;

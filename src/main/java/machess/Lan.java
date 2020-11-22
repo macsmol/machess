@@ -88,7 +88,7 @@ public class Lan {
         }
     }
 
-    public static String printLastMove(State state) {
+    public static String toStringLastMove(State state) {
         String fromTo = "" + Square0x88.toString(state.from) + Square0x88.toString(state.to);
         fromTo = fromTo.toLowerCase();
         if (state.promotion == null) {
