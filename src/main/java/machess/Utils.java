@@ -19,11 +19,17 @@ public class Utils {
 		return sb.toString();
 	}
 
-    public static int calcNodesPerSecond(long movesEvaluated, long elapsedMillis) {
-        elapsedMillis++; // don't divide by zero
-        long movesPerSec = 1000 * movesEvaluated / elapsedMillis;
-        return (int) movesPerSec;
-    }
+	public static int calcNodesPerSecond(long movesEvaluated, long elapsedNanos) {
+		elapsedNanos++;
+		BigInteger movesPerSec = BigInteger.valueOf(1000_000_000)
+				.multiply(BigInteger.valueOf(movesEvaluated))
+				.divide(BigInteger.valueOf(elapsedNanos));
+		return movesPerSec.intValue();
+	}
+
+	public static long toMillis(long nanos) {
+		return nanos / 1000_000;
+	}
 
 	/**
 	 * Insertion sort of pawns by their file

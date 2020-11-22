@@ -4,7 +4,7 @@ import machess.*;
 
 import java.util.Scanner;
 
-import static machess.Utils.spaces;
+import static machess.Utils.*;
 
 public class UCI {
     public static final String POSITION = "position";
@@ -72,13 +72,13 @@ public class UCI {
         if (input.startsWith(DEPTH)) {
             int depth = Integer.parseInt(input.substring(DEPTH.length()).trim());
 
-            long before = System.currentTimeMillis();
+            long before = System.nanoTime();
             Scorer.Result result = Scorer.startMiniMax(state, depth);
-            long elapsedMillis = System.currentTimeMillis() - before;
+            long elapsedNanos = System.nanoTime() - before;
 
             System.out.println(info(result.nodesEvaluated, result.pv,
-                    elapsedMillis, depth, result.pvUpdates,
-                    Utils.calcNodesPerSecond(result.nodesEvaluated, elapsedMillis),
+                    toMillis(elapsedNanos), depth, result.pvUpdates,
+                    calcNodesPerSecond(result.nodesEvaluated, elapsedNanos),
                     formatScore(result.score, state.test(State.WHITE_TURN))));
 
             System.out.println(BESTMOVE + " " + result.pv.moves[0]);
@@ -199,19 +199,19 @@ public class UCI {
             // TODO this is veery basic iterative deepening
             String bestMove = "";
             long millisForMove = calcMillisForNextMove();
-            long before = System.currentTimeMillis();
+            long before = System.nanoTime();
 
             for (int depth = 1; depth < Config.MAX_SEARCH_DEPTH; depth++) {
                 Scorer.Result result = Scorer.startMiniMax(state, depth);
 
-                long elapsedMillis = System.currentTimeMillis() - before;
+                long elapsedNanos = System.nanoTime() - before;
                 System.out.println(info(result.nodesEvaluated, result.pv,
-                        elapsedMillis, depth, result.pvUpdates,
-                        Utils.calcNodesPerSecond(result.nodesEvaluated, elapsedMillis),
+                        toMillis(elapsedNanos), depth, result.pvUpdates,
+                        calcNodesPerSecond(result.nodesEvaluated, elapsedNanos),
                         formatScore(result.score, state.test(State.WHITE_TURN))));
 
                 bestMove = result.pv.moves[0];
-                if (elapsedMillis > millisForMove) {
+                if (toMillis(elapsedNanos) > millisForMove) {
                     break;
                 }
                 if (result.oneLegalMove) {
