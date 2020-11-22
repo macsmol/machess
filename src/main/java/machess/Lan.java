@@ -45,11 +45,11 @@ public class Lan {
     }
 
     private static byte getFrom(String move) {
-        return getField(move, 0, 1);
+        return getSquare(move, 0, 1);
     }
 
     private static byte getTo(String move) {
-        return getField(move, 2, 3);
+        return getSquare(move, 2, 3);
     }
 
     private static boolean isQsCastling(State state, String move) {
@@ -112,7 +112,7 @@ public class Lan {
         }
     }
 
-    private static byte getField(String move, int fileIndex, int rankIndex) {
+    private static byte getSquare(String move, int fileIndex, int rankIndex) {
         int file = move.charAt(fileIndex) - 'a';
         int rank = move.charAt(rankIndex) - '1';
         return Square0x88.from07(file, rank);
