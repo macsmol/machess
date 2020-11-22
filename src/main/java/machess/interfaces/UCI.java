@@ -64,6 +64,7 @@ public class UCI {
             }
         } catch (Exception ex) {
             System.out.println("Cannot parse input: " + input + " ex: "+ ex);
+            ex.printStackTrace();
         }
     }
 
@@ -144,7 +145,7 @@ public class UCI {
     }
 
     public static String formatScore(int score, boolean isWhiteTurn) {
-        if (Math.abs(score) > Scorer.SCORE_CLOSE_TO_WIN) {
+        if (Scorer.scoreCloseToWinning(score)) {
             return UCI.MATE_IN + " " + fullMovesToMate(score, isWhiteTurn);
         }
         return UCI.CENTIPAWNS + " " + score;
@@ -214,6 +215,9 @@ public class UCI {
                     break;
                 }
                 if (result.oneLegalMove) {
+                    break;
+                }
+                if (Scorer.scoreCloseToWinning(result.score)) {
                     break;
                 }
             }

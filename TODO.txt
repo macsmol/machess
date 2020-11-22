@@ -4,7 +4,6 @@ Release 1:
     -timed moves
         -break when getting stop from gui
         -don't do iterative deepening when found winning PV
-        -break out of minmax when found winning PV (will this work in AB-pruning?)
         -log pv and info more often
         -timed first, second.. N moves (like explained on https://ccrl.chessdom.com/ccrl/4040/about.html)
 
@@ -19,6 +18,4 @@ Later:
 
 LATER IDEAS:
 -init sliding-checks around king and pins in one loop OR init pins per sliding piece, not per direction.
-
---testing git - can't push that directly to master?
 

@@ -49,7 +49,7 @@ public class Scorer {
 			try {
 				currScore = discourageLaterWin(miniMax(move, depth - 1, pvSubLine));
 			} catch (Throwable ae) {
-				System.out.println("----------------------FAILED ASSERTION!-------------------------------------");
+				System.out.println("----------------------ERROR!-------------------------------------");
 				System.out.println("DEPTH: " + depth + " ROOT STATE: " + rootState);
 				throw ae;
 			}
@@ -67,6 +67,9 @@ public class Scorer {
 					resultScore = currScore;
 				}
 			}
+			if (nextMoveWins(currScore)) {
+				break;
+			}
 		}
 		return new Result(resultScore, pvLine, nodesEvaluatedInPly, pvUpdates, moves.size() == 1);
 	}
@@ -83,7 +86,6 @@ public class Scorer {
 	private static int miniMax(State state, int depth, PrincipalVariation pvLine) {
 		boolean maximizingTurn = state.test(State.WHITE_TURN);
 		if (depth <= 0) {
-//		 TODO sprawdz z terminalnymi węzłami
 			pvLine.movesCount = 0;
 			return evaluate(state);
 		}
@@ -102,7 +104,7 @@ public class Scorer {
 			try {
 				currScore = discourageLaterWin(miniMax(move, depth - 1, pvSubLine));
 			} catch (Throwable ae) {
-				System.out.println("----------------------FAILED ASSERTION!-------------------------------------");
+				System.out.println("----------------------ERROR!-------------------------------------");
 				System.out.println("DEPTH: " + depth + " STATE: " + state);
 				throw ae;
 			}
@@ -147,6 +149,14 @@ public class Scorer {
 			long movesCount = perft(child, depth - 1);
 			System.out.println(Lan.printLastMove(child) + " " + movesCount);
 		}
+	}
+
+	public static boolean scoreCloseToWinning(int score) {
+		return Math.abs(score) > Scorer.SCORE_CLOSE_TO_WIN;
+	}
+
+	private static boolean nextMoveWins(int score) {
+		return Math.abs(score) >= discourageLaterWin(MAXIMIZING_WIN);
 	}
 
 	/**
