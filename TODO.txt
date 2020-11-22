@@ -1,13 +1,10 @@
 Release 1:
 -UCI
-    -print info in correct format pv line nodes, current depth etc
     -timed moves
+        -move worker to another thread
         -break when getting stop from gui
-        -don't do iterative deepening when found winning PV
         -log pv and info more often
-        -timed first, second.. N moves (like explained on https://ccrl.chessdom.com/ccrl/4040/about.html)
-
-    -timed moves - iterative deepening with TT
+        -iterative deepening with transposition table
 -alpha-beta-pruning
 -TODOs in code
 

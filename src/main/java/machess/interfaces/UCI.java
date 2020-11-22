@@ -31,6 +31,8 @@ public class UCI {
     public static final String BLACK_TIME = "btime";
     public static final String WHITE_INCREMENT = "winc";
     public static final String BLACK_INCREMENT = "binc";
+    public static final String MOVESTOGO = "movestogo";
+
 
     public static final String BESTMOVE = "bestmove";
 
@@ -171,6 +173,7 @@ public class UCI {
         private int blackLeftMillis;
         private int whiteIncrementMillis = 0;
         private int blackIncrementMillis = 0;
+        private int givenMovesToGo = -1;
         private boolean whiteTurn;
 
         public SuddenDeathWorker(String timeParameters, boolean whiteTurn) {
@@ -190,13 +193,15 @@ public class UCI {
                     case BLACK_INCREMENT:
                         blackIncrementMillis = Integer.parseInt(timeTokens[i + 1]);
                         break;
+                    case MOVESTOGO:
+                        givenMovesToGo = Integer.parseInt(timeTokens[i + 1]);
+                        break;
                 }
             }
             this.whiteTurn = whiteTurn;
         }
 
         public void doIterativeDeepening() {
-            // TODO this is veery basic iterative deepening
             String bestMove = "";
             long millisForMove = calcMillisForNextMove();
             long before = System.nanoTime();
@@ -225,8 +230,8 @@ public class UCI {
         }
 
         private long calcMillisForNextMove() {
-            // TODO improve it - this is very basic and probably not very smart
-            return (whiteTurn ? whiteLeftMillis : blackLeftMillis) / Config.EXPECTED_TURNS_LEFT;
+            int fullMovesToGo = givenMovesToGo == -1 ? Config.EXPECTED_FULLMOVES_LEFT : givenMovesToGo;
+            return (whiteTurn ? whiteLeftMillis : blackLeftMillis) / fullMovesToGo;
         }
     }
 }

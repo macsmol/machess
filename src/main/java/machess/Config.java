@@ -9,7 +9,7 @@ public class Config {
 	/**
 	 * Used in calculation of time devoted to next move
 	 */
-	public static final int EXPECTED_TURNS_LEFT = 25;
+	public static final int EXPECTED_FULLMOVES_LEFT = 25;
 
 	/**
 	 * Don't expect to be searching this far
