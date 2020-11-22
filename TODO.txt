@@ -1,8 +1,12 @@
 Release 1:
 -UCI
+    -timed moves
+        -move worker to another thread
+        -break when getting stop from gui
+        -log pv and info more often
+        -iterative deepening with transposition table
 -alpha-beta-pruning
 -TODOs in code
--oscillation when playing against itself (threefold repetition draw)
 
 Later:
 -try out incremental check-flags update
@@ -11,6 +15,4 @@ Later:
 
 LATER IDEAS:
 -init sliding-checks around king and pins in one loop OR init pins per sliding piece, not per direction.
-
---testing git - can't push that directly to master?
 

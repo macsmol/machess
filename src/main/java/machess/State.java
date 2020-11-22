@@ -1,13 +1,13 @@
 package machess;
 
-import com.sun.istack.internal.Nullable;
 import machess.board0x88.Direction;
 import machess.board0x88.Square0x88;
 import machess.board8x8.File;
 import machess.board8x8.Rank;
 import machess.board8x8.Square;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 import static machess.board0x88.Square0x88.*;
 
@@ -73,14 +73,15 @@ public class State {
 	 */
 	private final Pin[] pinnedPieces;
 
-
-	private byte from;
-	private byte to;
+	// for printing move
+	byte from;
+	byte to;
+	Content promotion;
 
 	/**
 	 * new game
 	 */
-	State() {
+	public State() {
 		flags = WHITE_TURN |
 				WHITE_QS_CASTLE_POSSIBLE | WHITE_KS_CASTLE_POSSIBLE |
 				BLACK_QS_CASTLE_POSSIBLE | BLACK_KS_CASTLE_POSSIBLE;
@@ -125,7 +126,7 @@ public class State {
 	}
 
 	public State(short[] board0x88, PieceLists pieces, byte flags,
-		  @Nullable byte enPassantSquare, byte halfmoveClock, int fullMoveCounter, byte from, byte to) {
+				 byte enPassantSquare, byte halfmoveClock, int fullMoveCounter, byte from, byte to) {
 		this.board0x88 = board0x88;
 		this.pieces = pieces;
 		this.flags = flags;
@@ -190,17 +191,19 @@ public class State {
 		return true;
 	}
 
-	private State fromPseudoLegalMoveWithPromotion(byte from, byte to, Content promotion) {
+	State fromPseudoLegalMoveWithPromotion(byte from, byte to, Content promotion) {
 		assert promotion != null;
-		return fromPseudoLegalMove(from, to, promotion, NULL, NULL);
+		State nextState = fromPseudoLegalMove(from, to, promotion, NULL, NULL);
+		nextState.promotion = promotion;
+		return nextState;
 	}
 
-	private State fromLegalQueensideCastling(byte kingFrom, byte kingTo) {
+	State fromLegalQueensideCastling(byte kingFrom, byte kingTo) {
 		byte rookToCastle = Square0x88.from07(File.A,  getRank(kingFrom));
 		return fromPseudoLegalMove(kingFrom, kingTo, null, NULL, rookToCastle);
 	}
 
-	private State fromLegalKingsideCastling(byte kingFrom, byte kingTo) {
+	State fromLegalKingsideCastling(byte kingFrom, byte kingTo) {
 		byte rookToCastle = Square0x88.from07(File.H, getRank(kingFrom));
 		return fromPseudoLegalMove(kingFrom, kingTo, null, NULL, rookToCastle);
 	}
@@ -216,7 +219,7 @@ public class State {
 	 * Generates new BoardState based on move. It does not verify game rules - assumes input is a legal move.
 	 * This is the root method - it covers all cases. All 'overload' methods should call this one.
 	 */
-	private State fromPseudoLegalMove(byte from, byte to, @Nullable Content promotion, @Nullable byte futureEnPassantSquare,
+	private State fromPseudoLegalMove(byte from, byte to, Content promotion, byte futureEnPassantSquare,
 									  byte rookCastleFrom) {
 		assert from != to : from + "->" + to + " is no move";
 		assert inBounds(from) : "invalid from square: " + from;
@@ -299,7 +302,7 @@ public class State {
 				from, to);
 	}
 
-	boolean test(int flagMask) {
+	public boolean test(int flagMask) {
 		return (flags & flagMask) != 0;
 	}
 
@@ -354,7 +357,7 @@ public class State {
 		return sb.toString();
 	}
 
-	public String printMove() {
+	public String printLastMove() {
 		return "" + Square0x88.toString(from) + Square0x88.toString(to);
 	}
 
@@ -818,10 +821,6 @@ public class State {
 	private boolean canKingWalkOnSquare(byte square0x88, boolean isKingWhite) {
 		short checkedByKingFlag = isKingWhite ? SquareFormat.CHECK_BY_BLACK_KING : SquareFormat.CHECK_BY_WHITE_KING;
 		return !isSquareCheckedBy(square0x88, !isKingWhite) && (board0x88[square0x88] & checkedByKingFlag) == 0;
-	}
-
-	public State chooseMove(int moveIndex) {
-		return generateLegalMoves().get(moveIndex);
 	}
 
 	public int countLegalMoves() {

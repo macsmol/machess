@@ -19,18 +19,21 @@ public class Utils {
 		return sb.toString();
 	}
 
-    static int calcMovesPerSecond(long movesEvaluated, long elapsedNanos) {
-        elapsedNanos++;
-        BigInteger movesPerSec = BigInteger.valueOf(1000_000_000)
-                .multiply(BigInteger.valueOf(movesEvaluated))
-                .divide(BigInteger.valueOf(elapsedNanos));
-        return movesPerSec.intValue();
-    }
+	public static int calcNodesPerSecond(long movesEvaluated, long elapsedNanos) {
+		elapsedNanos++;
+		BigInteger movesPerSec = BigInteger.valueOf(1000_000_000)
+				.multiply(BigInteger.valueOf(movesEvaluated))
+				.divide(BigInteger.valueOf(elapsedNanos));
+		return movesPerSec.intValue();
+	}
+
+	public static long toMillis(long nanos) {
+		return nanos / 1000_000;
+	}
 
 	/**
 	 * Insertion sort of pawns by their file
 	 * @param pawns - pawn locations given as 0x88 squares
-	 * @param pawnsCount
 	 */
 	static void sortByFiles(byte[] pawns, int pawnsCount)	{
 		for (int i = 1; i < pawnsCount; ++i) {
@@ -46,5 +49,9 @@ public class Utils {
 			}
 			pawns[j + 1] = key;
 		}
+	}
+
+	public static String spaces(CharSequence... tokens) {
+		return String.join(" ", tokens);
 	}
 }

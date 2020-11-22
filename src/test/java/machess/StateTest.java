@@ -14,6 +14,9 @@ public class StateTest {
 
     @Test
     public void moveGenerationTest() {
+        // test new game from no-arg constructor
+        testPosition(new State(), new long[] { 20,  400,  8902,  197281,  4865609});
+        // test new game from fen string
         testPosition("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", new long[] { 20,  400,  8902,  197281,  4865609});
         testPosition("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", new long[] { 48,  2039,  97862,  4085603,  });
         testPosition("4k3/8/8/8/8/8/8/4K2R w K - 0 1", new long[] { 15,  66,  1197,  7059,  133987,  764643});
@@ -161,9 +164,14 @@ public class StateTest {
         }
     }
 
+
     private void testPosition(String fen, long[] expectedLegalMoves) {
         State position = FEN.parse(fen);
         System.out.println("Testing: " + fen);
+        testPosition(position, expectedLegalMoves);
+    }
+
+    private void testPosition(State position, long[] expectedLegalMoves) {
         for (int i = 0; i < expectedLegalMoves.length; i++) {
             int depth = i + 1;
             long actualLegalMoves = Scorer.perft(position, depth);
