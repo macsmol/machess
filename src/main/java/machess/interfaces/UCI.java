@@ -198,7 +198,7 @@ public class UCI {
             Instant finishTime = before.plus(calcTimeForNextMove());
 
             for (int depth = 1; depth <= maxDepth; depth++) {
-                Scorer.Result result = Scorer.startMiniMax(state, depth, finishTime, Line.of(Config.DEBUG_LINE));
+                Scorer.Result result = Scorer.startAlphaBeta(state, depth, finishTime, Line.of(Config.DEBUG_LINE));
                 if (result.pv == null) { // when runs out of time returns null pv
                     break;
                 }
