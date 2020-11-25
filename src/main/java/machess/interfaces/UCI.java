@@ -10,6 +10,7 @@ import java.util.Scanner;
 import static machess.Utils.*;
 
 public class UCI {
+    private static final String VERSION_STRING = "1.0-SNAPSHOT_25.11.2020";
     public static final String POSITION = "position";
     public static final String STARTPOS = "startpos";
     public static final String MOVES = "moves";
@@ -105,7 +106,7 @@ public class UCI {
     }
 
     private void enterUci() {
-        System.out.println("id machess 1.0-SNAPSHOT_30.12.2020");
+        System.out.println("id machess " + VERSION_STRING);
         System.out.println("id author Maciej Smolczewski");
         presentOptions();
         System.out.println("uciok");
