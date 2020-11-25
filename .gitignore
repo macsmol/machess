@@ -3,5 +3,6 @@
 .idea/
 target/
 classes/
+logs/
 machess.iml
 *.log
