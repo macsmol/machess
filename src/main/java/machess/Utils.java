@@ -27,10 +27,6 @@ public class Utils {
 		return movesPerSec.intValue();
 	}
 
-	public static long toMillis(long nanos) {
-		return nanos / 1000_000;
-	}
-
 	/**
 	 * Insertion sort of pawns by their file
 	 * @param pawns - pawn locations given as 0x88 squares

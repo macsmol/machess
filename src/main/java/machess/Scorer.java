@@ -3,6 +3,7 @@ package machess;
 
 import machess.interfaces.UCI;
 
+import java.time.Instant;
 import java.util.*;
 
 import static machess.Utils.spaces;
@@ -28,7 +29,7 @@ public class Scorer {
 
 	private static volatile boolean interrupt;
 
-	public static Result startMiniMax(State rootState, int depth) {
+	public static Result startMiniMax(State rootState, int depth, Instant finishTime) {
 		interrupt = false;
 		nodesEvaluatedInPly = 0;
 		pvUpdates = 0;
@@ -47,7 +48,7 @@ public class Scorer {
 			int currScore;
 
 			try {
-				currScore = discourageLaterWin(miniMax(move, depth - 1, pvSubLine));
+				currScore = discourageLaterWin(miniMax(move, depth - 1, pvSubLine, finishTime));
 			} catch (Throwable ae) {
 				System.out.println("----------------------ERROR!-------------------------------------");
 				System.out.println("DEPTH: " + depth + " ROOT STATE: " + rootState);
@@ -67,6 +68,10 @@ public class Scorer {
 					resultScore = currScore;
 				}
 			}
+			if (Instant.now().isAfter(finishTime)) {
+				// TODO return partial results after passing best PVs from previous iterative deepening iterations
+				return new Result(0, null, nodesEvaluatedInPly, pvUpdates, false);
+			}
 			if (nextMoveWins(currScore)) {
 				break;
 			}
@@ -83,7 +88,7 @@ public class Scorer {
 	 * @param pvLine - principal variation line - https://www.chessprogramming.org/Principal_Variation
 	 * @return score
 	 */
-	private static int miniMax(State state, int depth, PrincipalVariation pvLine) {
+	private static int miniMax(State state, int depth, PrincipalVariation pvLine, Instant finishTime) {
 		boolean maximizingTurn = state.test(State.WHITE_TURN);
 		if (depth <= 0) {
 			pvLine.movesCount = 0;
@@ -102,7 +107,7 @@ public class Scorer {
 		for (State move : moves) {
 			int currScore;
 			try {
-				currScore = discourageLaterWin(miniMax(move, depth - 1, pvSubLine));
+				currScore = discourageLaterWin(miniMax(move, depth - 1, pvSubLine, finishTime));
 			} catch (Throwable ae) {
 				System.out.println("----------------------ERROR!-------------------------------------");
 				System.out.println("DEPTH: " + depth + " STATE: " + state);
@@ -118,6 +123,9 @@ public class Scorer {
 					pvLine.updateSubline(pvSubLine, move);
 					resultScore = currScore;
 				}
+			}
+			if (Instant.now().isAfter(finishTime)) {
+				break;
 			}
 			if (interrupt) {
 				break;
