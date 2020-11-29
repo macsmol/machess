@@ -4,5 +4,6 @@
 target/
 classes/
 logs/
+variations/
 machess.iml
 *.log
