@@ -8,3 +8,6 @@
 At 5 plies depth generateLegalMoves() breaks ~2000000 times.
 
 -perft(5) is correct. We just should not count checkmates from previous ply.
+
+System.nanoTime() and System.currentTimeMillis() count from different epochs. -> Use only System.nanoTime() or even better
+ use Instant(). Mem allocation shouldn't cost too much. as it's not happening too often

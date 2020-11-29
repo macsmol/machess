@@ -2,6 +2,9 @@ package machess.interfaces;
 
 import machess.*;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Scanner;
 
 import static machess.Utils.*;
@@ -71,23 +74,8 @@ public class UCI {
     }
 
     private void go(String input) {
-        if (input.startsWith(DEPTH)) {
-            int depth = Integer.parseInt(input.substring(DEPTH.length()).trim());
-
-            long before = System.nanoTime();
-            Scorer.Result result = Scorer.startMiniMax(state, depth);
-            long elapsedNanos = System.nanoTime() - before;
-
-            System.out.println(info(result.nodesEvaluated, result.pv,
-                    toMillis(elapsedNanos), depth, result.pvUpdates,
-                    calcNodesPerSecond(result.nodesEvaluated, elapsedNanos),
-                    formatScore(result.score, state.test(State.WHITE_TURN))));
-
-            System.out.println(BESTMOVE + " " + result.pv.moves[0]);
-        } else if (input.contains(WHITE_TIME)) {
-            SuddenDeathWorker worker = new SuddenDeathWorker(input, state.test(State.WHITE_TURN));
-            worker.doIterativeDeepening();
-        }
+        SuddenDeathWorker worker = new SuddenDeathWorker(input, state.test(State.WHITE_TURN));
+        worker.doIterativeDeepening();
     }
 
     private void setPosition(String positionCommand) {
@@ -169,32 +157,36 @@ public class UCI {
 
     private class SuddenDeathWorker {
 
-        private int whiteLeftMillis;
-        private int blackLeftMillis;
+        private int whiteLeftMillis = Integer.MAX_VALUE;
+        private int blackLeftMillis = Integer.MAX_VALUE;
         private int whiteIncrementMillis = 0;
         private int blackIncrementMillis = 0;
         private int givenMovesToGo = -1;
+        private int maxDepth = Config.MAX_SEARCH_DEPTH;
         private boolean whiteTurn;
 
         public SuddenDeathWorker(String timeParameters, boolean whiteTurn) {
-            String[] timeTokens = timeParameters.split(" +");
+            String[] tokens = timeParameters.split(" +");
 
-            for (int i = 0; i < timeTokens.length; i += 2) {
-                switch (timeTokens[i]) {
+            for (int i = 0; i < tokens.length; i += 2) {
+                switch (tokens[i]) {
                     case WHITE_TIME:
-                        whiteLeftMillis = Integer.parseInt(timeTokens[i + 1]);
+                        whiteLeftMillis = Integer.parseInt(tokens[i + 1]);
                         break;
                     case BLACK_TIME:
-                        blackLeftMillis = Integer.parseInt(timeTokens[i + 1]);
+                        blackLeftMillis = Integer.parseInt(tokens[i + 1]);
                         break;
                     case WHITE_INCREMENT:
-                        whiteIncrementMillis = Integer.parseInt(timeTokens[i + 1]);
+                        whiteIncrementMillis = Integer.parseInt(tokens[i + 1]);
                         break;
                     case BLACK_INCREMENT:
-                        blackIncrementMillis = Integer.parseInt(timeTokens[i + 1]);
+                        blackIncrementMillis = Integer.parseInt(tokens[i + 1]);
                         break;
                     case MOVESTOGO:
-                        givenMovesToGo = Integer.parseInt(timeTokens[i + 1]);
+                        givenMovesToGo = Integer.parseInt(tokens[i + 1]);
+                        break;
+                    case DEPTH:
+                        maxDepth  = Math.min(Integer.parseInt(tokens[i + 1]), Config.MAX_SEARCH_DEPTH);
                         break;
                 }
             }
@@ -203,35 +195,39 @@ public class UCI {
 
         public void doIterativeDeepening() {
             String bestMove = "";
-            long millisForMove = calcMillisForNextMove();
-            long before = System.nanoTime();
+            Instant before = Instant.now();
+            Instant finishTime = before.plus(calcTimeForNextMove());
 
-            for (int depth = 1; depth < Config.MAX_SEARCH_DEPTH; depth++) {
-                Scorer.Result result = Scorer.startMiniMax(state, depth);
+            for (int depth = 1; depth <= maxDepth; depth++) {
+                Scorer.Result result = Scorer.startMiniMax(state, depth, finishTime);
+                if (result.pv == null) { // when runs out of time returns null pv
+                    break;
+                }
 
-                long elapsedNanos = System.nanoTime() - before;
+                Duration elapsedTime = Duration.between(before, Instant.now());
                 System.out.println(info(result.nodesEvaluated, result.pv,
-                        toMillis(elapsedNanos), depth, result.pvUpdates,
-                        calcNodesPerSecond(result.nodesEvaluated, elapsedNanos),
+                        elapsedTime.toMillis(), depth, result.pvUpdates,
+                        calcNodesPerSecond(result.nodesEvaluated, elapsedTime.toNanos()),
                         formatScore(result.score, state.test(State.WHITE_TURN))));
 
                 bestMove = result.pv.moves[0];
-                if (toMillis(elapsedNanos) > millisForMove) {
+                if (Instant.now().isAfter(finishTime)) {
                     break;
                 }
                 if (result.oneLegalMove) {
                     break;
                 }
-                if (Scorer.scoreCloseToWinning(result.score)) {
+                if (Scorer.scoreCloseToWinning(result.score)) { // mating line was found no need to go deeper
                     break;
                 }
             }
             System.out.println("bestmove " + bestMove);
         }
 
-        private long calcMillisForNextMove() {
+        private Duration calcTimeForNextMove() {
             int fullMovesToGo = givenMovesToGo == -1 ? Config.EXPECTED_FULLMOVES_LEFT : givenMovesToGo;
-            return (whiteTurn ? whiteLeftMillis : blackLeftMillis) / fullMovesToGo;
+            long millis = (whiteTurn ? whiteLeftMillis : blackLeftMillis) / fullMovesToGo;
+            return Duration.of(millis, ChronoUnit.MILLIS);
         }
     }
 }
