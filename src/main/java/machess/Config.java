@@ -24,4 +24,6 @@ public class Config {
 	public static final int PIECE_LIST_CAPACITY = 5;
 
 	public static final int LOG_NODES_EVALUATED_DELAY = 500000;
+
+	public static final String DEBUG_LINE = "e2e4";
 }

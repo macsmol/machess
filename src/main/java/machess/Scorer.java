@@ -19,6 +19,7 @@ public class Scorer {
 	private static final int MATERIAL_ROOK		= 500;
 	private static final int MATERIAL_QUEEN		= 900;
 
+	//  Score more than overwhelming difference in material
 	public static final int SCORE_CLOSE_TO_WIN = 2 * (9 * MATERIAL_QUEEN +  2 * MATERIAL_ROOK +
 			2 * MATERIAL_BISHOP + 2 * MATERIAL_KNIGHT);
 
@@ -30,11 +31,15 @@ public class Scorer {
 	private static volatile boolean interrupt;
 
 	public static Result startMiniMax(State rootState, int depth, Instant finishTime) {
+		return startMiniMax(rootState, depth, finishTime, null);
+	}
+
+	public static Result startMiniMax(State rootState, int depth, Instant finishTime, Line debugLine) {
 		interrupt = false;
 		nodesEvaluatedInPly = 0;
 		pvUpdates = 0;
-		PrincipalVariation pvLine = new PrincipalVariation();
-		PrincipalVariation pvSubLine = new PrincipalVariation();
+		Line pvLine = new Line();
+		Line pvSubLine = new Line();
 		List<State> moves = rootState.generateLegalMoves();
 
 		boolean maximizing = rootState.test(State.WHITE_TURN);
@@ -48,10 +53,10 @@ public class Scorer {
 			int currScore;
 
 			try {
-				currScore = discourageLaterWin(miniMax(move, depth - 1, pvSubLine, finishTime));
+				currScore = discourageLaterWin(miniMax(move, depth - 1, pvSubLine, finishTime, debugLine, 1));
 			} catch (Throwable ae) {
 				System.out.println("----------------------ERROR!-------------------------------------");
-				System.out.println("DEPTH: " + depth + " ROOT STATE: " + rootState);
+				System.out.println("ROOT STATE: " + rootState);
 				throw ae;
 			}
 
@@ -85,42 +90,57 @@ public class Scorer {
 
 	/**
 	 *
-	 * @param pvLine - principal variation line - https://www.chessprogramming.org/Principal_Variation
+	 * @param principalVariation - principal variation line - https://www.chessprogramming.org/Principal_Variation
+	 *                           propagated up to the root node
+	 * @param debugLine - nullable line that when matched should display additional info about scores of it's children.
+	 * @param ply - same as depth but counts up. In other words ply distance from the root node
 	 * @return score
 	 */
-	private static int miniMax(State state, int depth, PrincipalVariation pvLine, Instant finishTime) {
+	private static int miniMax(State state, int depth, Line principalVariation, Instant finishTime, Line debugLine, int ply) {
+		boolean debugChildrenScores = false;
+		if (debugLine != null) {
+			debugLine.isMoveMatched(state, ply);
+			if (debugLine.isLineMatched()) {
+				System.out.println("\tFound debug line: " + debugLine);
+				System.out.println("State is: " + state);
+				debugChildrenScores = true;
+			}
+		}
 		boolean maximizingTurn = state.test(State.WHITE_TURN);
 		if (depth <= 0) {
-			pvLine.movesCount = 0;
+			principalVariation.movesCount = 0;
 			return evaluate(state);
 		}
 
 		int resultScore = maximizingTurn ? Integer.MIN_VALUE : Integer.MAX_VALUE;
-		PrincipalVariation pvSubLine = new PrincipalVariation();
+		Line pvSubLine = new Line();
 
 		List<State> moves = state.generateLegalMoves();
 
 		if (moves.isEmpty()) {
-			pvLine.movesCount = 0;
+			principalVariation.movesCount = 0;
 			return terminalNodeScore(state);
 		}
 		for (State move : moves) {
 			int currScore;
 			try {
-				currScore = discourageLaterWin(miniMax(move, depth - 1, pvSubLine, finishTime));
+				currScore = discourageLaterWin(miniMax(move, depth - 1, pvSubLine, finishTime, debugLine, ply + 1));
 			} catch (Throwable ae) {
 				System.out.println("----------------------ERROR!-------------------------------------");
-				System.out.println("DEPTH: " + depth + " STATE: " + state);
+				System.out.println("PLY: " + ply + " STATE: " + state);
 				throw ae;
+			}
+			if (debugChildrenScores) {
+				System.out.println("\t" + Lan.toStringLastMove(move) + ": " + normalize(currScore, ply));
 			}
 			if (maximizingTurn) {
 				if (currScore > resultScore) {
-					pvLine.updateSubline(pvSubLine, move);
+					principalVariation.updateSubline(pvSubLine, move);
 					resultScore = currScore;
 				}
 			} else {
 				if (currScore < resultScore) {
-					pvLine.updateSubline(pvSubLine, move);
+					principalVariation.updateSubline(pvSubLine, move);
 					resultScore = currScore;
 				}
 			}
@@ -168,6 +188,17 @@ public class Scorer {
 	}
 
 	/**
+	 * Because of discourageLaterWin() same positions occurring deeper in the search tree will have different scores.
+	 * Call this on them to make them appear as seeb from the root position.
+	 */
+	private static int normalize(int score, int ply) {
+		for (int i = 0; i < ply; i++) {
+			score = discourageLaterWin(score);
+		}
+		return score;
+	}
+
+	/**
 	 * Decreases the score.
 	 * call this on child nodes to encourage choosing earlier wins.
 	 */
@@ -177,7 +208,7 @@ public class Scorer {
 
 	public static class Result {
 		public final int score;
-		public final PrincipalVariation pv;
+		public final Line pv;
 		public final int nodesEvaluated;
 
 		public final int pvUpdates;
@@ -185,7 +216,7 @@ public class Scorer {
 		// skip iterative deepening in this case
 		public final boolean oneLegalMove;
 
-		public Result(int score, PrincipalVariation pvLine, int nodesEvaluated, int pvUpdates,
+		public Result(int score, Line pvLine, int nodesEvaluated, int pvUpdates,
 					  boolean oneLegalMove) {
 			this.score = score;
 			this.pv = pvLine;
@@ -278,7 +309,6 @@ public class Scorer {
 		boolean maximizingTurn = state.test(State.WHITE_TURN);
 		if (maximizingTurn) {
 			if (state.isKingInCheck()) {
-
 				return MINIMIZING_WIN;
 			} else {
 				return DRAW;
@@ -293,16 +323,46 @@ public class Scorer {
 	}
 
 
-	public static class PrincipalVariation {
+	/**
+	 * Represents sequence of moves in LAN format eg.
+	 * e2e4 e7e6
+	 */
+	public static class Line {
 		public String [] moves = new String[Config.MAX_SEARCH_DEPTH];
 		public int movesCount = 0;
+		public int movesMatched = 0;
 
-		private void updateSubline(PrincipalVariation newSubLine, State move) {
+		private void updateSubline(Line newSubLine, State move) {
 			pvUpdates++;
 			moves[0] = Lan.toStringLastMove(move);
 
 			System.arraycopy(newSubLine.moves, 0, moves, 1, newSubLine.movesCount);
 			movesCount = newSubLine.movesCount + 1;
+		}
+
+		public Line () {
+		}
+
+		public Line (String moves) {
+			String [] movesSplit = moves.split(" +");
+			this.moves = movesSplit;
+			this.movesCount = movesSplit.length;
+		}
+
+		public void isMoveMatched(State move, int ply) {
+			if (ply - 1 == movesMatched // so that we match the move only at desired level
+					&& movesMatched < moves.length && moves[movesMatched].equals(Lan.toStringLastMove(move))) {
+				movesMatched++;
+			}
+		}
+
+		public boolean isLineMatched() {
+			if (movesCount == movesMatched) {
+				// once int overflows it could return false positives
+				movesMatched++;
+				return true;
+			}
+			return false;
 		}
 
 		@Override

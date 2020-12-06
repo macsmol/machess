@@ -357,10 +357,6 @@ public class State {
 		return sb.toString();
 	}
 
-	public String printLastMove() {
-		return "" + Square0x88.toString(from) + Square0x88.toString(to);
-	}
-
 	private Content getContent(int file, int rank) {
 		return getContent(Square0x88.from07(file, rank));
 	}

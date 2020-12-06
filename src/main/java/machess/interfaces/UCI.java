@@ -121,7 +121,7 @@ public class UCI {
     private void presentOptions() {
     }
 
-    private static String info(int nodesEvaluated, Scorer.PrincipalVariation pvLine, long elapsedMillis, int depth,
+    private static String info(int nodesEvaluated, Scorer.Line pvLine, long elapsedMillis, int depth,
                                int pvUpdates, int nodesPerSecond, String scoreString) {
         return spaces(UCI.INFO,
                 UCI.NODES, Integer.toString(nodesEvaluated),
@@ -199,7 +199,7 @@ public class UCI {
             Instant finishTime = before.plus(calcTimeForNextMove());
 
             for (int depth = 1; depth <= maxDepth; depth++) {
-                Scorer.Result result = Scorer.startMiniMax(state, depth, finishTime);
+                Scorer.Result result = Scorer.startMiniMax(state, depth, finishTime, new Scorer.Line(Config.DEBUG_LINE));
                 if (result.pv == null) { // when runs out of time returns null pv
                     break;
                 }
