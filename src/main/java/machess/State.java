@@ -120,6 +120,8 @@ public class State {
 		enPassantSquare = NULL;
 		halfmoveClock = 0;
 		fullMoveCounter = 1;
+		from = NULL;
+		to = NULL;
 
 		pinnedPieces = new Pin[Square.values().length];
 		initChecksAroundKings();
@@ -315,16 +317,16 @@ public class State {
 		sb.append(test(BLACK_KS_CASTLE_POSSIBLE) ? "; BLACK_KS_CASTLE_POSSIBLE" : "");
 		sb.append(test(BLACK_QS_CASTLE_POSSIBLE) ? "; BLACK_QS_CASTLE_POSSIBLE" : "");
 		sb.append("\n | a  | b  | c  | d  | e  | f  | g  | h  |");
-		sb.append(Config.DEBUG_FIELD_IN_CHECK_FLAGS	? "| a  | b  | c  | d  | e  | f  | g  | h  |" : "");
-		sb.append(Config.DEBUG_PINNED_PIECES 		? "| a  | b  | c  | d  | e  | f  | g  | h  |" : "");
+		sb.append("| a  | b  | c  | d  | e  | f  | g  | h  |");
+		sb.append("| a  | b  | c  | d  | e  | f  | g  | h  |");
 		sb.append('\n');
 		sb.append("==========================================");
-		sb.append(Config.DEBUG_FIELD_IN_CHECK_FLAGS	? "=========================================" : "");
-		sb.append(Config.DEBUG_PINNED_PIECES 		? "=========================================" : "");
+		sb.append("=========================================");
+		sb.append("=========================================");
 		sb.append('\n');
 		for (byte rank = Rank._8; rank >= Rank._1; rank--) {
-			StringBuilder sbCheckFlags = 	new StringBuilder(Config.DEBUG_FIELD_IN_CHECK_FLAGS 	? "|" : "");
-			StringBuilder sbPins = 			new StringBuilder(Config.DEBUG_PINNED_PIECES 			? "|" : "");
+			StringBuilder sbCheckFlags = 	new StringBuilder("|");
+			StringBuilder sbPins = 			new StringBuilder("|");
 			sb.append(rank + 1).append("|");
 			for (byte file = File.A; file <= File.H; file++) {
 				byte square = Square0x88.from07(file, rank);
@@ -336,19 +338,16 @@ public class State {
 					sb.append(" |");
 				}
 
-				if (Config.DEBUG_FIELD_IN_CHECK_FLAGS) {
-					short contentAsShort = board0x88[Square0x88.from07(file,rank)];
-					sbCheckFlags.append(Utils.checkCountsToString(contentAsShort)).append('|');
-				}
-				if (Config.DEBUG_PINNED_PIECES) {
-					Pin pinType = pinnedPieces[Square0x88.to8x8Square(square)];
-					sbPins.append(" ").append(pinType != null ? pinType.symbol : ' ').append("  |");
-				}
+				short contentAsShort = board0x88[Square0x88.from07(file,rank)];
+				sbCheckFlags.append(Utils.checkCountsToString(contentAsShort)).append('|');
+
+				Pin pinType = pinnedPieces[Square0x88.to8x8Square(square)];
+				sbPins.append(" ").append(pinType != null ? pinType.symbol : ' ').append("  |");
 			}
 			sb.append(sbCheckFlags).append(sbPins)
 					.append("\n-+----+----+----+----+----+----+----+----+")
-					.append(Config.DEBUG_FIELD_IN_CHECK_FLAGS 	? "+----+----+----+----+----+----+----+----+" : "")
-					.append(Config.DEBUG_PINNED_PIECES 			? "+----+----+----+----+----+----+----+----+" : "")
+					.append("+----+----+----+----+----+----+----+----+")
+					.append("+----+----+----+----+----+----+----+----+")
 					.append('\n');
 		}
 		sb.append(pieces);
@@ -840,7 +839,7 @@ public class State {
 
 	public List<State> generateLegalMoves() {
 		assert isLegal() : "King is still left in check after previous move!\n" + this;
-		List<State> moves = new ArrayList<>(Config.DEFAULT_MOVES_LIST_CAPACITY);
+		List<State> moves = new ArrayList<>(Config.MOVES_LIST_CAPACITY);
 		try {
 
 			if (isKingInCheck()) {
@@ -1144,7 +1143,7 @@ public class State {
 	private int generateLegalMovesWhenKingInCheck(List<State> outputMoves, byte checkedKing) {
 		int movesCount = 0;
 		if (getChecksCount(checkedKing, !test(WHITE_TURN)) < 2) {
-			List<State> pseudoLegalMoves = new ArrayList<>(Config.DEFAULT_MOVES_LIST_CAPACITY);
+			List<State> pseudoLegalMoves = new ArrayList<>(Config.MOVES_LIST_CAPACITY);
 			generatePseudoLegalMoves(pseudoLegalMoves);
 			for (State pseudoLegalState : pseudoLegalMoves) {
 				if (pseudoLegalState.isLegal()) {

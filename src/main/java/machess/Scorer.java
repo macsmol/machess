@@ -26,7 +26,6 @@ public class Scorer {
 	private static final int LEGAL_MOVE_SCORE = 5;
 
 	private static int nodesEvaluatedInPly = 0;
-	private static int pvUpdates = 0;
 
 	private static volatile boolean interrupt;
 
@@ -37,16 +36,15 @@ public class Scorer {
 	public static Result startMiniMax(State rootState, int depth, Instant finishTime, Line debugLine) {
 		interrupt = false;
 		nodesEvaluatedInPly = 0;
-		pvUpdates = 0;
-		Line pvLine = new Line();
-		Line pvSubLine = new Line();
+		Line pvLine = Line.empty();
+		Line pvSubLine = Line.empty();
 		List<State> moves = rootState.generateLegalMoves();
 
 		boolean maximizing = rootState.test(State.WHITE_TURN);
 		int resultScore = maximizing ? Integer.MIN_VALUE : Integer.MAX_VALUE;
 
 		if (moves.isEmpty()) {
-			return new Result(terminalNodeScore(rootState), pvLine, nodesEvaluatedInPly, pvUpdates, false);
+			return new Result(terminalNodeScore(rootState), pvLine, nodesEvaluatedInPly, false);
 		}
 
 		for (State move : moves) {
@@ -75,13 +73,13 @@ public class Scorer {
 			}
 			if (Instant.now().isAfter(finishTime)) {
 				// TODO return partial results after passing best PVs from previous iterative deepening iterations
-				return new Result(0, null, nodesEvaluatedInPly, pvUpdates, false);
+				return new Result(0, null, nodesEvaluatedInPly, false);
 			}
 			if (nextMoveWins(currScore)) {
 				break;
 			}
 		}
-		return new Result(resultScore, pvLine, nodesEvaluatedInPly, pvUpdates, moves.size() == 1);
+		return new Result(resultScore, pvLine, nodesEvaluatedInPly, moves.size() == 1);
 	}
 
 	public static void terminate() {
@@ -113,7 +111,7 @@ public class Scorer {
 		}
 
 		int resultScore = maximizingTurn ? Integer.MIN_VALUE : Integer.MAX_VALUE;
-		Line pvSubLine = new Line();
+		Line pvSubLine = Line.empty();
 
 		List<State> moves = state.generateLegalMoves();
 
@@ -211,30 +209,26 @@ public class Scorer {
 		public final Line pv;
 		public final int nodesEvaluated;
 
-		public final int pvUpdates;
-
 		// skip iterative deepening in this case
 		public final boolean oneLegalMove;
 
-		public Result(int score, Line pvLine, int nodesEvaluated, int pvUpdates,
+		public Result(int score, Line pvLine, int nodesEvaluated,
 					  boolean oneLegalMove) {
 			this.score = score;
 			this.pv = pvLine;
 			this.nodesEvaluated = nodesEvaluated;
-			this.pvUpdates = pvUpdates;
 			this.oneLegalMove = oneLegalMove;
 		}
 	}
 
 	public static int evaluate(State state) {
 		nodesEvaluatedInPly++;
-		if (nodesEvaluatedInPly % Config.LOG_NODES_EVALUATED_DELAY == 0) {
+		if (nodesEvaluatedInPly % Config.NODES_LOGGING_PERIOD == 0) {
 			System.out.println(spaces(UCI.INFO, UCI.NODES, Integer.toString(nodesEvaluatedInPly)));
 		}
 		int legalMoves = state.countLegalMoves();
 		if (legalMoves == 0) {
-			int terminalNodeScore = terminalNodeScore(state);
-			return terminalNodeScore;
+			return terminalNodeScore(state);
 		}
 		int materialScore = evaluateMaterialScore(state);
 		int mobilityScore = mobilityScore(legalMoves, state);
@@ -319,59 +313,6 @@ public class Scorer {
 			} else {
 				return DRAW;
 			}
-		}
-	}
-
-
-	/**
-	 * Represents sequence of moves in LAN format eg.
-	 * e2e4 e7e6
-	 */
-	public static class Line {
-		public String [] moves = new String[Config.MAX_SEARCH_DEPTH];
-		public int movesCount = 0;
-		public int movesMatched = 0;
-
-		private void updateSubline(Line newSubLine, State move) {
-			pvUpdates++;
-			moves[0] = Lan.toStringLastMove(move);
-
-			System.arraycopy(newSubLine.moves, 0, moves, 1, newSubLine.movesCount);
-			movesCount = newSubLine.movesCount + 1;
-		}
-
-		public Line () {
-		}
-
-		public Line (String moves) {
-			String [] movesSplit = moves.split(" +");
-			this.moves = movesSplit;
-			this.movesCount = movesSplit.length;
-		}
-
-		public void isMoveMatched(State move, int ply) {
-			if (ply - 1 == movesMatched // so that we match the move only at desired level
-					&& movesMatched < moves.length && moves[movesMatched].equals(Lan.toStringLastMove(move))) {
-				movesMatched++;
-			}
-		}
-
-		public boolean isLineMatched() {
-			if (movesCount == movesMatched) {
-				// once int overflows it could return false positives
-				movesMatched++;
-				return true;
-			}
-			return false;
-		}
-
-		@Override
-		public String toString() {
-			StringJoiner sb = new StringJoiner(" ");
-			for (int i = 0; i < movesCount; i++) {
-				sb.add(moves[i]);
-			}
-			return sb.toString();
 		}
 	}
 }
