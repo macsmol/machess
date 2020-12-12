@@ -121,16 +121,15 @@ public class UCI {
     private void presentOptions() {
     }
 
-    private static String info(int nodesEvaluated, Scorer.PrincipalVariation pvLine, long elapsedMillis, int depth,
-                               int pvUpdates, int nodesPerSecond, String scoreString) {
+    private static String info(int nodesEvaluated, Line pvLine, long elapsedMillis, int depth,
+                               int nodesPerSecond, String scoreString) {
         return spaces(UCI.INFO,
                 UCI.NODES, Integer.toString(nodesEvaluated),
                 UCI.PV, pvLine.toString(),
                 UCI.TIME, Long.toString(elapsedMillis),
                 UCI.DEPTH, Integer.toString(depth),
                 UCI.NPS, Integer.toString(nodesPerSecond),
-                UCI.SCORE, scoreString,
-                "pvUpdates", Integer.toString(pvUpdates)
+                UCI.SCORE, scoreString
         );
     }
 
@@ -199,14 +198,14 @@ public class UCI {
             Instant finishTime = before.plus(calcTimeForNextMove());
 
             for (int depth = 1; depth <= maxDepth; depth++) {
-                Scorer.Result result = Scorer.startMiniMax(state, depth, finishTime);
+                Scorer.Result result = Scorer.startMiniMax(state, depth, finishTime, Line.of(Config.DEBUG_LINE));
                 if (result.pv == null) { // when runs out of time returns null pv
                     break;
                 }
 
                 Duration elapsedTime = Duration.between(before, Instant.now());
                 System.out.println(info(result.nodesEvaluated, result.pv,
-                        elapsedTime.toMillis(), depth, result.pvUpdates,
+                        elapsedTime.toMillis(), depth,
                         calcNodesPerSecond(result.nodesEvaluated, elapsedTime.toNanos()),
                         formatScore(result.score, state.test(State.WHITE_TURN))));
 
@@ -225,7 +224,7 @@ public class UCI {
         }
 
         private Duration calcTimeForNextMove() {
-            int fullMovesToGo = givenMovesToGo == -1 ? Config.EXPECTED_FULLMOVES_LEFT : givenMovesToGo;
+            int fullMovesToGo = givenMovesToGo == -1 ? Config.EXPECTED_FULL_MOVES_TO_BE_PLAYED : givenMovesToGo;
             long millis = (whiteTurn ? whiteLeftMillis : blackLeftMillis) / fullMovesToGo;
             return Duration.of(millis, ChronoUnit.MILLIS);
         }

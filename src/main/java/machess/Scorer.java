@@ -19,39 +19,42 @@ public class Scorer {
 	private static final int MATERIAL_ROOK		= 500;
 	private static final int MATERIAL_QUEEN		= 900;
 
+	//  Score more than overwhelming difference in material
 	public static final int SCORE_CLOSE_TO_WIN = 2 * (9 * MATERIAL_QUEEN +  2 * MATERIAL_ROOK +
 			2 * MATERIAL_BISHOP + 2 * MATERIAL_KNIGHT);
 
 	private static final int LEGAL_MOVE_SCORE = 5;
 
 	private static int nodesEvaluatedInPly = 0;
-	private static int pvUpdates = 0;
 
 	private static volatile boolean interrupt;
 
 	public static Result startMiniMax(State rootState, int depth, Instant finishTime) {
+		return startMiniMax(rootState, depth, finishTime, null);
+	}
+
+	public static Result startMiniMax(State rootState, int depth, Instant finishTime, Line debugLine) {
 		interrupt = false;
 		nodesEvaluatedInPly = 0;
-		pvUpdates = 0;
-		PrincipalVariation pvLine = new PrincipalVariation();
-		PrincipalVariation pvSubLine = new PrincipalVariation();
+		Line pvLine = Line.empty();
+		Line pvSubLine = Line.empty();
 		List<State> moves = rootState.generateLegalMoves();
 
 		boolean maximizing = rootState.test(State.WHITE_TURN);
 		int resultScore = maximizing ? Integer.MIN_VALUE : Integer.MAX_VALUE;
 
 		if (moves.isEmpty()) {
-			return new Result(terminalNodeScore(rootState), pvLine, nodesEvaluatedInPly, pvUpdates, false);
+			return new Result(terminalNodeScore(rootState), pvLine, nodesEvaluatedInPly, false);
 		}
 
 		for (State move : moves) {
 			int currScore;
 
 			try {
-				currScore = discourageLaterWin(miniMax(move, depth - 1, pvSubLine, finishTime));
+				currScore = discourageLaterWin(miniMax(move, depth - 1, pvSubLine, finishTime, debugLine, 1));
 			} catch (Throwable ae) {
 				System.out.println("----------------------ERROR!-------------------------------------");
-				System.out.println("DEPTH: " + depth + " ROOT STATE: " + rootState);
+				System.out.println("ROOT STATE: " + rootState);
 				throw ae;
 			}
 
@@ -70,13 +73,13 @@ public class Scorer {
 			}
 			if (Instant.now().isAfter(finishTime)) {
 				// TODO return partial results after passing best PVs from previous iterative deepening iterations
-				return new Result(0, null, nodesEvaluatedInPly, pvUpdates, false);
+				return new Result(0, null, nodesEvaluatedInPly, false);
 			}
 			if (nextMoveWins(currScore)) {
 				break;
 			}
 		}
-		return new Result(resultScore, pvLine, nodesEvaluatedInPly, pvUpdates, moves.size() == 1);
+		return new Result(resultScore, pvLine, nodesEvaluatedInPly, moves.size() == 1);
 	}
 
 	public static void terminate() {
@@ -85,42 +88,57 @@ public class Scorer {
 
 	/**
 	 *
-	 * @param pvLine - principal variation line - https://www.chessprogramming.org/Principal_Variation
+	 * @param principalVariation - principal variation line - https://www.chessprogramming.org/Principal_Variation
+	 *                           propagated up to the root node
+	 * @param debugLine - nullable line that when matched should display additional info about scores of it's children.
+	 * @param ply - same as depth but counts up. In other words ply distance from the root node
 	 * @return score
 	 */
-	private static int miniMax(State state, int depth, PrincipalVariation pvLine, Instant finishTime) {
+	private static int miniMax(State state, int depth, Line principalVariation, Instant finishTime, Line debugLine, int ply) {
+		boolean debugChildrenScores = false;
+		if (debugLine != null) {
+			debugLine.isMoveMatched(state, ply);
+			if (debugLine.isLineMatched()) {
+				System.out.println("\tFound debug line: " + debugLine);
+				System.out.println("State is: " + state);
+				debugChildrenScores = true;
+			}
+		}
 		boolean maximizingTurn = state.test(State.WHITE_TURN);
 		if (depth <= 0) {
-			pvLine.movesCount = 0;
+			principalVariation.movesCount = 0;
 			return evaluate(state);
 		}
 
 		int resultScore = maximizingTurn ? Integer.MIN_VALUE : Integer.MAX_VALUE;
-		PrincipalVariation pvSubLine = new PrincipalVariation();
+		Line pvSubLine = Line.empty();
 
 		List<State> moves = state.generateLegalMoves();
 
 		if (moves.isEmpty()) {
-			pvLine.movesCount = 0;
+			principalVariation.movesCount = 0;
 			return terminalNodeScore(state);
 		}
 		for (State move : moves) {
 			int currScore;
 			try {
-				currScore = discourageLaterWin(miniMax(move, depth - 1, pvSubLine, finishTime));
+				currScore = discourageLaterWin(miniMax(move, depth - 1, pvSubLine, finishTime, debugLine, ply + 1));
 			} catch (Throwable ae) {
 				System.out.println("----------------------ERROR!-------------------------------------");
-				System.out.println("DEPTH: " + depth + " STATE: " + state);
+				System.out.println("PLY: " + ply + " STATE: " + state);
 				throw ae;
+			}
+			if (debugChildrenScores) {
+				System.out.println("\t" + Lan.toStringLastMove(move) + ": " + normalize(currScore, ply));
 			}
 			if (maximizingTurn) {
 				if (currScore > resultScore) {
-					pvLine.updateSubline(pvSubLine, move);
+					principalVariation.updateSubline(pvSubLine, move);
 					resultScore = currScore;
 				}
 			} else {
 				if (currScore < resultScore) {
-					pvLine.updateSubline(pvSubLine, move);
+					principalVariation.updateSubline(pvSubLine, move);
 					resultScore = currScore;
 				}
 			}
@@ -168,6 +186,17 @@ public class Scorer {
 	}
 
 	/**
+	 * Because of discourageLaterWin() same positions occurring deeper in the search tree will have different scores.
+	 * Call this on them to make them appear as seeb from the root position.
+	 */
+	private static int normalize(int score, int ply) {
+		for (int i = 0; i < ply; i++) {
+			score = discourageLaterWin(score);
+		}
+		return score;
+	}
+
+	/**
 	 * Decreases the score.
 	 * call this on child nodes to encourage choosing earlier wins.
 	 */
@@ -177,33 +206,29 @@ public class Scorer {
 
 	public static class Result {
 		public final int score;
-		public final PrincipalVariation pv;
+		public final Line pv;
 		public final int nodesEvaluated;
-
-		public final int pvUpdates;
 
 		// skip iterative deepening in this case
 		public final boolean oneLegalMove;
 
-		public Result(int score, PrincipalVariation pvLine, int nodesEvaluated, int pvUpdates,
+		public Result(int score, Line pvLine, int nodesEvaluated,
 					  boolean oneLegalMove) {
 			this.score = score;
 			this.pv = pvLine;
 			this.nodesEvaluated = nodesEvaluated;
-			this.pvUpdates = pvUpdates;
 			this.oneLegalMove = oneLegalMove;
 		}
 	}
 
 	public static int evaluate(State state) {
 		nodesEvaluatedInPly++;
-		if (nodesEvaluatedInPly % Config.LOG_NODES_EVALUATED_DELAY == 0) {
+		if (nodesEvaluatedInPly % Config.NODES_LOGGING_PERIOD == 0) {
 			System.out.println(spaces(UCI.INFO, UCI.NODES, Integer.toString(nodesEvaluatedInPly)));
 		}
 		int legalMoves = state.countLegalMoves();
 		if (legalMoves == 0) {
-			int terminalNodeScore = terminalNodeScore(state);
-			return terminalNodeScore;
+			return terminalNodeScore(state);
 		}
 		int materialScore = evaluateMaterialScore(state);
 		int mobilityScore = mobilityScore(legalMoves, state);
@@ -278,7 +303,6 @@ public class Scorer {
 		boolean maximizingTurn = state.test(State.WHITE_TURN);
 		if (maximizingTurn) {
 			if (state.isKingInCheck()) {
-
 				return MINIMIZING_WIN;
 			} else {
 				return DRAW;
@@ -289,29 +313,6 @@ public class Scorer {
 			} else {
 				return DRAW;
 			}
-		}
-	}
-
-
-	public static class PrincipalVariation {
-		public String [] moves = new String[Config.MAX_SEARCH_DEPTH];
-		public int movesCount = 0;
-
-		private void updateSubline(PrincipalVariation newSubLine, State move) {
-			pvUpdates++;
-			moves[0] = Lan.toStringLastMove(move);
-
-			System.arraycopy(newSubLine.moves, 0, moves, 1, newSubLine.movesCount);
-			movesCount = newSubLine.movesCount + 1;
-		}
-
-		@Override
-		public String toString() {
-			StringJoiner sb = new StringJoiner(" ");
-			for (int i = 0; i < movesCount; i++) {
-				sb.add(moves[i]);
-			}
-			return sb.toString();
 		}
 	}
 }

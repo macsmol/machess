@@ -25,7 +25,6 @@ public interface Square0x88 {
     byte A1 = 0x00; byte B1 = 0x01; byte C1 = 0x02; byte D1 = 0x03; byte E1 = 0x04; byte F1 = 0x05; byte G1 = 0x06; byte H1 = 0x07;
 
 
-    @Deprecated
     static byte from07(int file07, int rank07) {
         assert file07 >= File.A && file07 <=  File.H : "invalid file in: " + file07 + ", " + rank07;
         assert rank07 >= Rank._1 && rank07 <= Rank._8 : "invalid rank in: " + file07 + ", " + rank07;
