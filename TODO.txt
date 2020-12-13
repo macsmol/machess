@@ -4,9 +4,11 @@ Release 1:
         -move worker to another thread
         -break when getting stop from gui
         -log pv and info more often
-        -iterative deepening with transposition table
--alpha-beta-pruning
+        -iterative deepening with transposition table/ branch from prev ID iteration searched first
 -TODOs in code
+
+Bugs:
+-negative nps for depth 1
 
 Later:
 -try out incremental check-flags update

@@ -5,5 +5,6 @@ target/
 classes/
 logs/
 variations/
+arena/
 machess.iml
 *.log

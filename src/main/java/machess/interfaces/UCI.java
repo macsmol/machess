@@ -10,7 +10,7 @@ import java.util.Scanner;
 import static machess.Utils.*;
 
 public class UCI {
-    private static final String VERSION_STRING = "1.0-SNAPSHOT-A-B-pawnTakes_13.12.2020";
+    private static final String VERSION_STRING = "1.0-SNAPSHOT-A-B-pawnTakes_14.12.2020";
     public static final String POSITION = "position";
     public static final String STARTPOS = "startpos";
     public static final String MOVES = "moves";
@@ -137,6 +137,9 @@ public class UCI {
     public static String formatScore(int score, boolean isWhiteTurn) {
         if (Scorer.scoreCloseToWinning(score)) {
             return UCI.MATE_IN + " " + fullMovesToMate(score);
+        }
+        if (!isWhiteTurn) { // score from engine's perspective
+            score = score * -1;
         }
         return UCI.CENTIPAWNS + " " + score;
     }
