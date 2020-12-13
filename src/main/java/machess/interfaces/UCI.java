@@ -10,7 +10,7 @@ import java.util.Scanner;
 import static machess.Utils.*;
 
 public class UCI {
-    private static final String VERSION_STRING = "1.0-SNAPSHOT-A-B-pawnTakes_29.11.2020";
+    private static final String VERSION_STRING = "1.0-SNAPSHOT-A-B-pawnTakes_13.12.2020";
     public static final String POSITION = "position";
     public static final String STARTPOS = "startpos";
     public static final String MOVES = "moves";
@@ -136,27 +136,23 @@ public class UCI {
 
     public static String formatScore(int score, boolean isWhiteTurn) {
         if (Scorer.scoreCloseToWinning(score)) {
-            return UCI.MATE_IN + " " + fullMovesToMate(score, isWhiteTurn);
+            return UCI.MATE_IN + " " + fullMovesToMate(score);
         }
         return UCI.CENTIPAWNS + " " + score;
     }
 
-    static int fullMovesToMate(int actualScore, boolean isWhiteTurn) {
-        int movesToMate = 0;
+    static int fullMovesToMate(int score) {
+        int scoreAbsolute = Math.abs(score);
+        // ply == halfmove
+        int pliesToMate = Scorer.MAXIMIZING_WIN - scoreAbsolute;
 
-        int actualScoreAbsolute = Math.abs(actualScore);
-        int successiveMatingScores = Scorer.MAXIMIZING_WIN;
-        while (successiveMatingScores > actualScoreAbsolute) {
-            successiveMatingScores = Scorer.discourageLaterWin(Scorer.discourageLaterWin(successiveMatingScores));
-            movesToMate++;
-        }
-        // negative values when engine is loosing
-        int signum = actualScore > 0 == isWhiteTurn ? 1 : -1;
-        return movesToMate * signum;
+        // negative full move count = Machess is loosing
+        int sign = ((pliesToMate % 2) == 0) ? -1 : 1;
+
+        return sign * (pliesToMate + 1) / 2;
     }
 
     private class SuddenDeathWorker {
-
         private int whiteLeftMillis = Integer.MAX_VALUE;
         private int blackLeftMillis = Integer.MAX_VALUE;
         private int whiteIncrementMillis = 0;

@@ -35,7 +35,6 @@ public class Scorer {
 	}
 
 	public static Result startAlphaBeta(State rootState, int depth, Instant finishTime, Line debugLine) {
-
 		interrupt = false;
 		nodesEvaluatedInPly = 0;
 		Line pvLine = Line.empty();
@@ -48,14 +47,14 @@ public class Scorer {
 		int resultScore = maximizing ? Integer.MIN_VALUE : Integer.MAX_VALUE;
 
 		if (moves.isEmpty()) {
-			return new Result(terminalNodeScore(rootState), pvLine, nodesEvaluatedInPly, false);
+			return new Result(terminalNodeScore(rootState, 0), pvLine, nodesEvaluatedInPly, false);
 		}
 
 		for (State move : moves) {
 			int currScore;
 
 			try {
-				currScore = discourageLaterWin(alphaBeta(move, depth - 1, alpha, beta, pvSubLine, finishTime, debugLine, 1));
+				currScore = alphaBeta(move, depth - 1, alpha, beta, pvSubLine, finishTime, debugLine, 1);
 			} catch (Throwable ae) {
 				System.out.println("----------------------ERROR!-------------------------------------");
 				System.out.println("ROOT STATE: " + rootState);
@@ -109,6 +108,7 @@ public class Scorer {
 			debugLine.isMoveMatched(state, ply);
 			if (debugLine.isLineMatched()) {
 				System.out.println("\tFound debug line: " + debugLine);
+				System.out.println("alpha: " + alpha + " beta: " + beta);
 				System.out.println("State is: " + state);
 				debugChildrenScores = true;
 			}
@@ -116,7 +116,7 @@ public class Scorer {
 		boolean maximizingTurn = state.test(State.WHITE_TURN);
 		if (depth <= 0) {
 			principalVariation.movesCount = 0;
-			return evaluate(state);
+			return evaluate(state, ply);
 		}
 
 		int resultScore = maximizingTurn ? Integer.MIN_VALUE : Integer.MAX_VALUE;
@@ -126,20 +126,19 @@ public class Scorer {
 
 		if (moves.isEmpty()) {
 			principalVariation.movesCount = 0;
-			return terminalNodeScore(state);
+			return terminalNodeScore(state, ply);
 		}
 		for (State move : moves) {
 			int currScore;
 			try {
-				currScore = discourageLaterWin(alphaBeta(move, depth - 1, alpha, beta, pvSubLine, finishTime, debugLine, ply + 1));
+				currScore = alphaBeta(move, depth - 1, alpha, beta, pvSubLine, finishTime, debugLine, ply + 1);
 			} catch (Throwable ae) {
 				System.out.println("----------------------ERROR!-------------------------------------");
 				System.out.println("PLY: " + ply + " STATE: " + state);
 				throw ae;
 			}
 			if (debugChildrenScores) {
-				// TODO log info whether it is lower/upper bound score
-				System.out.println("\t" + Lan.toStringLastMove(move) + ": " + normalize(currScore, ply));
+				System.out.println("\t" + Lan.toStringLastMove(move) + ": " + currScore);
 			}
 			if (maximizingTurn) {
 				if (currScore > resultScore) {
@@ -197,26 +196,8 @@ public class Scorer {
 	}
 
 	private static boolean nextMoveWins(int score) {
-		return Math.abs(score) >= discourageLaterWin(MAXIMIZING_WIN);
-	}
-
-	/**
-	 * Because of discourageLaterWin() same positions occurring deeper in the search tree will have different scores.
-	 * Call this on them to make them appear as seeb from the root position.
-	 */
-	private static int normalize(int score, int ply) {
-		for (int i = 0; i < ply; i++) {
-			score = discourageLaterWin(score);
-		}
-		return score;
-	}
-
-	/**
-	 * Decreases the score.
-	 * call this on child nodes to encourage choosing earlier wins.
-	 */
-	public static int discourageLaterWin(int score) {
-		return score * 127 / 128;
+		final int onePly = 1;
+		return Math.abs(score) == MAXIMIZING_WIN - onePly;
 	}
 
 	public static class Result {
@@ -236,14 +217,14 @@ public class Scorer {
 		}
 	}
 
-	public static int evaluate(State state) {
+	public static int evaluate(State state, int ply) {
 		nodesEvaluatedInPly++;
 		if (nodesEvaluatedInPly % Config.NODES_LOGGING_PERIOD == 0) {
 			System.out.println(spaces(UCI.INFO, UCI.NODES, Integer.toString(nodesEvaluatedInPly)));
 		}
 		int legalMoves = state.countLegalMoves();
 		if (legalMoves == 0) {
-			return terminalNodeScore(state);
+			return terminalNodeScore(state, ply);
 		}
 		int materialScore = evaluateMaterialScore(state);
 		int mobilityScore = mobilityScore(legalMoves, state);
@@ -314,17 +295,17 @@ public class Scorer {
 //		return score;
 //	}
 
-	private static int terminalNodeScore(State state) {
+	private static int terminalNodeScore(State state, int ply) {
 		boolean maximizingTurn = state.test(State.WHITE_TURN);
 		if (maximizingTurn) {
 			if (state.isKingInCheck()) {
-				return MINIMIZING_WIN;
+				return MINIMIZING_WIN + ply;
 			} else {
 				return DRAW;
 			}
 		} else {
 			if (state.isKingInCheck()) {
-				return MAXIMIZING_WIN;
+				return MAXIMIZING_WIN - ply;
 			} else {
 				return DRAW;
 			}
