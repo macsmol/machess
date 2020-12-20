@@ -64,14 +64,14 @@ public class Scorer {
 			if (maximizing) {
 				if (currScore > resultScore) {
 					pvLine.updateSubline(pvSubLine, move);
-					System.out.println(spaces(UCI.INFO, UCI.PV, pvLine.toString()));
+					System.out.println(spaces(UCI.INFO, UCI.PV, pvLine.toString(), UCI.SCORE, UCI.formatScore(currScore,true)));
 					resultScore = currScore;
 				}
 				alpha = Math.max(currScore, alpha);
 			} else {
 				if (currScore < resultScore) {
 					pvLine.updateSubline(pvSubLine, move);
-					System.out.println(spaces(UCI.INFO, UCI.PV, pvLine.toString()));
+					System.out.println(spaces(UCI.INFO, UCI.PV, pvLine.toString(), UCI.SCORE, UCI.formatScore(currScore,false)));
 					resultScore = currScore;
 				}
 				beta = Math.min(currScore, beta);
