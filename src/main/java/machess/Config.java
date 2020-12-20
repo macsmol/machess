@@ -15,7 +15,11 @@ public class Config {
 
 	public static final int NODES_LOGGING_PERIOD = getProperty("nodesLoggingPeriod", 500_000);
 
-	public static final String DEBUG_LINE = getProperty("debugLine", null);
+	public static final String DEBUG_LINE_KEY = "debugLine";
+
+	public static String debugLine() {
+		return getProperty(DEBUG_LINE_KEY, null);
+	}
 
 	/**
 	 * Move generation will fail if given position has more immediate children than this number

@@ -3,8 +3,14 @@ package machess;
 import machess.board0x88.Square0x88;
 
 import java.math.BigInteger;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 
 public class Utils {
+
+	private static final NanoClock NANO_CLOCK = new NanoClock();
+
 	public static String checkCountsToString(short number) {
 		StringBuilder sb = new StringBuilder();
 
@@ -19,12 +25,16 @@ public class Utils {
 		return sb.toString();
 	}
 
-	public static int calcNodesPerSecond(long movesEvaluated, long elapsedNanos) {
+	public static long calcNodesPerSecond(long movesEvaluated, long elapsedNanos) {
 		elapsedNanos++;
 		BigInteger movesPerSec = BigInteger.valueOf(1000_000_000)
 				.multiply(BigInteger.valueOf(movesEvaluated))
 				.divide(BigInteger.valueOf(elapsedNanos));
-		return movesPerSec.intValue();
+		return movesPerSec.longValueExact();
+	}
+
+	public static Instant nanoNow() {
+		return NANO_CLOCK.instant();
 	}
 
 	/**
@@ -49,5 +59,42 @@ public class Utils {
 
 	public static String spaces(CharSequence... tokens) {
 		return String.join(" ", tokens);
+	}
+
+	private static class NanoClock extends Clock {
+		private final Clock clock;
+
+		private final long initialNanos;
+
+		private final Instant initialInstant;
+
+		public NanoClock() {
+			this(Clock.systemUTC());
+		}
+
+		public NanoClock(final Clock clock) {
+			this.clock = clock;
+			initialInstant = clock.instant();
+			initialNanos = getSystemNanos();
+		}
+
+		@Override
+		public ZoneId getZone() {
+			return clock.getZone();
+		}
+
+		@Override
+		public Instant instant() {
+			return initialInstant.plusNanos(getSystemNanos() - initialNanos);
+		}
+
+		@Override
+		public Clock withZone(final ZoneId zone) {
+			return new NanoClock(clock.withZone(zone));
+		}
+
+		private long getSystemNanos() {
+			return System.nanoTime();
+		}
 	}
 }

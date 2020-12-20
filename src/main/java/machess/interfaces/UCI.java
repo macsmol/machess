@@ -10,7 +10,7 @@ import java.util.Scanner;
 import static machess.Utils.*;
 
 public class UCI {
-    private static final String VERSION_STRING = "1.0-SNAPSHOT-A-B-pawnTakes_14.12.2020";
+    private static final String VERSION_STRING = "1.0-SNAPSHOT-A-B-preciseNPS_19.12.2020";
     public static final String POSITION = "position";
     public static final String STARTPOS = "startpos";
     public static final String MOVES = "moves";
@@ -65,6 +65,8 @@ public class UCI {
                 go(input.substring(GO.length()).trim());
             } else if (input.startsWith("tostr")) {
                 System.out.println(state);
+            } else if (input.startsWith(Config.DEBUG_LINE_KEY)) {
+                setDebugLine(input.substring(Config.DEBUG_LINE_KEY.length()).trim());
             } else if (input.startsWith(QUIT)) {
                 System.exit(0);
             }
@@ -72,6 +74,10 @@ public class UCI {
             System.out.println("Cannot parse input: " + input + " ex: "+ ex);
             ex.printStackTrace();
         }
+    }
+
+    private void setDebugLine(String debugLineStr) {
+        System.setProperty(Config.DEBUG_LINE_KEY, debugLineStr);
     }
 
     private void go(String input) {
@@ -123,13 +129,13 @@ public class UCI {
     }
 
     private static String info(int nodesEvaluated, Line pvLine, long elapsedMillis, int depth,
-                               int nodesPerSecond, String scoreString) {
+                               long nodesPerSecond, String scoreString) {
         return spaces(UCI.INFO,
                 UCI.NODES, Integer.toString(nodesEvaluated),
                 UCI.PV, pvLine.toString(),
                 UCI.TIME, Long.toString(elapsedMillis),
                 UCI.DEPTH, Integer.toString(depth),
-                UCI.NPS, Integer.toString(nodesPerSecond),
+                UCI.NPS, Long.toString(nodesPerSecond),
                 UCI.SCORE, scoreString
         );
     }
@@ -194,16 +200,16 @@ public class UCI {
 
         public void doIterativeDeepening() {
             String bestMove = "";
-            Instant before = Instant.now();
+            Instant before = Utils.nanoNow();
             Instant finishTime = before.plus(calcTimeForNextMove());
 
             for (int depth = 1; depth <= maxDepth; depth++) {
-                Scorer.Result result = Scorer.startAlphaBeta(state, depth, finishTime, Line.of(Config.DEBUG_LINE));
+                Scorer.Result result = Scorer.startAlphaBeta(state, depth, finishTime, Line.of(Config.debugLine()));
                 if (result.pv == null) { // when runs out of time returns null pv
                     break;
                 }
 
-                Duration elapsedTime = Duration.between(before, Instant.now());
+                Duration elapsedTime = Duration.between(before, Utils.nanoNow());
                 System.out.println(info(result.nodesEvaluated, result.pv,
                         elapsedTime.toMillis(), depth,
                         calcNodesPerSecond(result.nodesEvaluated, elapsedTime.toNanos()),
@@ -220,7 +226,7 @@ public class UCI {
                     break;
                 }
             }
-            System.out.println("bestmove " + bestMove);
+            System.out.println(BESTMOVE + " " + bestMove);
         }
 
         private Duration calcTimeForNextMove() {
