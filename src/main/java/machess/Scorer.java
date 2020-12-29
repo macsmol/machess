@@ -29,12 +29,7 @@ public class Scorer {
 
 	private static volatile boolean interrupt;
 
-
-	public static Result startAlphaBeta(State rootState, int depth, Instant finishTime) {
-		return startAlphaBeta(rootState, depth, finishTime, null);
-	}
-
-	public static Result startAlphaBeta(State rootState, int depth, Instant finishTime, Line debugLine) {
+	public static Result startAlphaBeta(State rootState, int depth, Instant finishTime, Line leftmostLine, Line debugLine) {
 		interrupt = false;
 		nodesEvaluatedInPly = 0;
 		Line pvLine = Line.empty();
@@ -50,15 +45,16 @@ public class Scorer {
 			return new Result(terminalNodeScore(rootState, 0), pvLine, nodesEvaluatedInPly, false);
 		}
 
+		reorderMoves(moves, leftmostLine, 1);
 		for (State move : moves) {
 			int currScore;
 
 			try {
-				currScore = alphaBeta(move, depth - 1, alpha, beta, pvSubLine, finishTime, debugLine, 1);
-			} catch (Throwable ae) {
+				currScore = alphaBeta(move, depth - 1, alpha, beta, leftmostLine, pvSubLine, finishTime, debugLine, 1);
+			} catch (Throwable error) {
 				System.out.println("----------------------ERROR!-------------------------------------");
 				System.out.println("ROOT STATE: " + rootState);
-				throw ae;
+				throw error;
 			}
 
 			if (maximizing) {
@@ -96,13 +92,15 @@ public class Scorer {
 
 	/**
 	 *
+	 * @param leftmostLine - line to be examined first (obtained from previous ID)
 	 * @param principalVariation - principal variation line - https://www.chessprogramming.org/Principal_Variation
 	 *                           propagated up to the root node
 	 * @param debugLine - nullable line that when matched should display additional info about scores of it's children.
 	 * @param ply - same as depth but counts up. In other words ply distance from the root node
 	 * @return score
 	 */
-	private static int alphaBeta(State state, int depth, int alpha, int beta, Line principalVariation, Instant finishTime, Line debugLine, int ply) {
+	private static int alphaBeta(State state, int depth, int alpha, int beta, Line leftmostLine, Line principalVariation,
+								 Instant finishTime, Line debugLine, int ply) {
 		boolean debugChildrenScores = false;
 		if (debugLine != null) {
 			debugLine.isMoveMatched(state, ply);
@@ -128,14 +126,15 @@ public class Scorer {
 			principalVariation.movesCount = 0;
 			return terminalNodeScore(state, ply);
 		}
+		reorderMoves(moves, leftmostLine, ply + 1);
 		for (State move : moves) {
 			int currScore;
 			try {
-				currScore = alphaBeta(move, depth - 1, alpha, beta, pvSubLine, finishTime, debugLine, ply + 1);
-			} catch (Throwable ae) {
+				currScore = alphaBeta(move, depth - 1, alpha, beta, leftmostLine, pvSubLine, finishTime, debugLine, ply + 1);
+			} catch (Throwable error) {
 				System.out.println("----------------------ERROR!-------------------------------------");
 				System.out.println("PLY: " + ply + " STATE: " + state);
-				throw ae;
+				throw error;
 			}
 			if (debugChildrenScores) {
 				System.out.println("\t" + Lan.toStringLastMove(move) + ": " + currScore);
@@ -164,6 +163,18 @@ public class Scorer {
 			}
 		}
 		return resultScore;
+	}
+
+	private static void reorderMoves(List<State> moves, Line leftmostLine, int ply) {
+		for (int i = 0; i < moves.size(); i++) {
+			State move = moves.get(i);
+			if (leftmostLine.isMoveMatched(move, ply)) {
+				State tmp = moves.get(0);
+				moves.set(0, move);
+				moves.set(i, tmp);
+				break;
+			}
+		}
 	}
 
 

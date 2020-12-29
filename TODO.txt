@@ -6,9 +6,9 @@ Release 1:
         -log pv and info more often
         -iterative deepening with transposition table/ branch from prev ID iteration searched first (this will also fix invalid PVs reported in pgns from Arena)
 -TODOs in code
+-perft test case for tricky ep with pin
 
 Bugs:
--negative nps for depth 1
 
 Later:
 -try out incremental check-flags update

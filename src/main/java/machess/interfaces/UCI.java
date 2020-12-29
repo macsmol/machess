@@ -203,11 +203,13 @@ public class UCI {
             Instant before = Utils.nanoNow();
             Instant finishTime = before.plus(calcTimeForNextMove());
 
+            Line bestLine = Line.empty();
             for (int depth = 1; depth <= maxDepth; depth++) {
-                Scorer.Result result = Scorer.startAlphaBeta(state, depth, finishTime, Line.of(Config.debugLine()));
+                Scorer.Result result = Scorer.startAlphaBeta(state, depth, finishTime, bestLine, Line.of(Config.debugLine()));
                 if (result.pv == null) { // when runs out of time returns null pv
                     break;
                 }
+                bestLine = result.pv;
 
                 Duration elapsedTime = Duration.between(before, Utils.nanoNow());
                 System.out.println(info(result.nodesEvaluated, result.pv,

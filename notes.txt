@@ -11,3 +11,10 @@ At 5 plies depth generateLegalMoves() breaks ~2000000 times.
 
 System.nanoTime() and System.currentTimeMillis() count from different epochs. -> Use only System.nanoTime() or even better
  use Instant(). Mem allocation shouldn't cost too much. as it's not happening too often
+
+29.12.2020
+Leftmost branch reordering sometimes is detrimental to pruning effect. Especially without quiescence search. In italian game
+(r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3)
+search at depth 1 suggests a queen-loosing blunder d8h4. Without reordering the first move suggested was a7a6.
+Also this may actually change the move made if more than one position results in the same score.
+
