@@ -75,8 +75,7 @@ public class Scorer {
 			if (alpha >= beta) {
 				break;
 			}
-			if (Instant.now().isAfter(finishTime)) {
-				// TODO return partial results after passing best PVs from previous iterative deepening iterations
+			if (Utils.nanoNow().isAfter(finishTime)) {
 				return new Result(0, null, nodesEvaluatedInPly, false);
 			}
 			if (nextMoveWins(currScore)) {

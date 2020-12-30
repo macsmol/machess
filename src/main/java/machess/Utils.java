@@ -72,7 +72,7 @@ public class Utils {
 			this(Clock.systemUTC());
 		}
 
-		public NanoClock(final Clock clock) {
+		private NanoClock(final Clock clock) {
 			this.clock = clock;
 			initialInstant = clock.instant();
 			initialNanos = getSystemNanos();
