@@ -105,7 +105,7 @@ public class UCI {
     }
 
     private void enterUci() {
-        System.out.println("id machess 1.0-SNAPSHOT_22.11.2020");
+        System.out.println("id machess 1.0-SNAPSHOT_30.12.2020");
         System.out.println("id author Maciej Smolczewski");
         presentOptions();
         System.out.println("uciok");

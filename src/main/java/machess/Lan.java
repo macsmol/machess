@@ -68,8 +68,9 @@ public class Lan {
 
     private static boolean isDoublePush(State state, String move) {
         byte from = getFrom(move);
-        return (Square0x88.getRank(from) == Rank._2 && state.getContent(from)== WHITE_PAWN) ||
-                (Square0x88.getRank(from) == Rank._7 && state.getContent(from)== BLACK_PAWN);
+        byte to = getTo(move);
+        return (Square0x88.getRank(from) == Rank._2 && Square0x88.getRank(to) == Rank._4 && state.getContent(from)== WHITE_PAWN) ||
+                (Square0x88.getRank(from) == Rank._7 && Square0x88.getRank(to) == Rank._5 && state.getContent(from)== BLACK_PAWN);
     }
 
     private static Content getPromotion(String move) {
