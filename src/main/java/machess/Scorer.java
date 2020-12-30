@@ -155,6 +155,7 @@ public class Scorer {
 			if (alpha >= beta) {
 				break;
 			}
+			// TODO if (Utils.nanoNow().isAfter(finishTime)) {
 			if (Instant.now().isAfter(finishTime)) {
 				break;
 			}
