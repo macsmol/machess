@@ -10,6 +10,7 @@ import java.util.Scanner;
 import static machess.Utils.*;
 
 public class UCI {
+    private static final String VERSION_STRING = "1.0-SNAPSHOT-reordering-30.12.2020";
     public static final String POSITION = "position";
     public static final String STARTPOS = "startpos";
     public static final String MOVES = "moves";
@@ -64,6 +65,8 @@ public class UCI {
                 go(input.substring(GO.length()).trim());
             } else if (input.startsWith("tostr")) {
                 System.out.println(state);
+            } else if (input.startsWith(Config.DEBUG_LINE_KEY)) {
+                setDebugLine(input.substring(Config.DEBUG_LINE_KEY.length()).trim());
             } else if (input.startsWith(QUIT)) {
                 System.exit(0);
             }
@@ -71,6 +74,10 @@ public class UCI {
             System.out.println("Cannot parse input: " + input + " ex: "+ ex);
             ex.printStackTrace();
         }
+    }
+
+    private void setDebugLine(String debugLineStr) {
+        System.setProperty(Config.DEBUG_LINE_KEY, debugLineStr);
     }
 
     private void go(String input) {
@@ -105,7 +112,7 @@ public class UCI {
     }
 
     private void enterUci() {
-        System.out.println("id machess 1.0-SNAPSHOT_30.12.2020");
+        System.out.println("id machess " + VERSION_STRING);
         System.out.println("id author Maciej Smolczewski");
         presentOptions();
         System.out.println("uciok");
@@ -122,40 +129,39 @@ public class UCI {
     }
 
     private static String info(int nodesEvaluated, Line pvLine, long elapsedMillis, int depth,
-                               int nodesPerSecond, String scoreString) {
+                               long nodesPerSecond, String scoreString) {
         return spaces(UCI.INFO,
                 UCI.NODES, Integer.toString(nodesEvaluated),
                 UCI.PV, pvLine.toString(),
                 UCI.TIME, Long.toString(elapsedMillis),
                 UCI.DEPTH, Integer.toString(depth),
-                UCI.NPS, Integer.toString(nodesPerSecond),
+                UCI.NPS, Long.toString(nodesPerSecond),
                 UCI.SCORE, scoreString
         );
     }
 
     public static String formatScore(int score, boolean isWhiteTurn) {
         if (Scorer.scoreCloseToWinning(score)) {
-            return UCI.MATE_IN + " " + fullMovesToMate(score, isWhiteTurn);
+            return UCI.MATE_IN + " " + fullMovesToMate(score);
+        }
+        if (!isWhiteTurn) { // score from engine's perspective
+            score = score * -1;
         }
         return UCI.CENTIPAWNS + " " + score;
     }
 
-    static int fullMovesToMate(int actualScore, boolean isWhiteTurn) {
-        int movesToMate = 0;
+    static int fullMovesToMate(int score) {
+        int scoreAbsolute = Math.abs(score);
+        // ply == halfmove
+        int pliesToMate = Scorer.MAXIMIZING_WIN - scoreAbsolute;
 
-        int actualScoreAbsolute = Math.abs(actualScore);
-        int successiveMatingScores = Scorer.MAXIMIZING_WIN;
-        while (successiveMatingScores > actualScoreAbsolute) {
-            successiveMatingScores = Scorer.discourageLaterWin(Scorer.discourageLaterWin(successiveMatingScores));
-            movesToMate++;
-        }
-        // negative values when engine is loosing
-        int signum = actualScore > 0 == isWhiteTurn ? 1 : -1;
-        return movesToMate * signum;
+        // negative full move count = Machess is loosing
+        int sign = ((pliesToMate % 2) == 0) ? -1 : 1;
+
+        return sign * (pliesToMate + 1) / 2;
     }
 
     private class SuddenDeathWorker {
-
         private int whiteLeftMillis = Integer.MAX_VALUE;
         private int blackLeftMillis = Integer.MAX_VALUE;
         private int whiteIncrementMillis = 0;
@@ -194,16 +200,18 @@ public class UCI {
 
         public void doIterativeDeepening() {
             String bestMove = "";
-            Instant before = Instant.now();
+            Instant before = Utils.nanoNow();
             Instant finishTime = before.plus(calcTimeForNextMove());
 
+            Line bestLine = Line.empty();
             for (int depth = 1; depth <= maxDepth; depth++) {
-                Scorer.Result result = Scorer.startMiniMax(state, depth, finishTime, Line.of(Config.DEBUG_LINE));
+                Scorer.Result result = Scorer.startAlphaBeta(state, depth, finishTime, bestLine, Line.of(Config.debugLine()));
                 if (result.pv == null) { // when runs out of time returns null pv
                     break;
                 }
+                bestLine = result.pv;
 
-                Duration elapsedTime = Duration.between(before, Instant.now());
+                Duration elapsedTime = Duration.between(before, Utils.nanoNow());
                 System.out.println(info(result.nodesEvaluated, result.pv,
                         elapsedTime.toMillis(), depth,
                         calcNodesPerSecond(result.nodesEvaluated, elapsedTime.toNanos()),
@@ -220,7 +228,7 @@ public class UCI {
                     break;
                 }
             }
-            System.out.println("bestmove " + bestMove);
+            System.out.println(BESTMOVE + " " + bestMove);
         }
 
         private Duration calcTimeForNextMove() {

@@ -29,50 +29,53 @@ public class Scorer {
 
 	private static volatile boolean interrupt;
 
-	public static Result startMiniMax(State rootState, int depth, Instant finishTime) {
-		return startMiniMax(rootState, depth, finishTime, null);
-	}
-
-	public static Result startMiniMax(State rootState, int depth, Instant finishTime, Line debugLine) {
+	public static Result startAlphaBeta(State rootState, int depth, Instant finishTime, Line leftmostLine, Line debugLine) {
 		interrupt = false;
 		nodesEvaluatedInPly = 0;
 		Line pvLine = Line.empty();
 		Line pvSubLine = Line.empty();
 		List<State> moves = rootState.generateLegalMoves();
+		int alpha = Integer.MIN_VALUE;
+		int beta = Integer.MAX_VALUE;
 
-		boolean maximizing = rootState.test(State.WHITE_TURN);
+		final boolean maximizing = rootState.test(State.WHITE_TURN);
 		int resultScore = maximizing ? Integer.MIN_VALUE : Integer.MAX_VALUE;
 
 		if (moves.isEmpty()) {
-			return new Result(terminalNodeScore(rootState), pvLine, nodesEvaluatedInPly, false);
+			return new Result(terminalNodeScore(rootState, 0), pvLine, nodesEvaluatedInPly, false);
 		}
 
+		reorderMoves(moves, leftmostLine, 1);
 		for (State move : moves) {
 			int currScore;
 
 			try {
-				currScore = discourageLaterWin(miniMax(move, depth - 1, pvSubLine, finishTime, debugLine, 1));
-			} catch (Throwable ae) {
+				currScore = alphaBeta(move, depth - 1, alpha, beta, leftmostLine, pvSubLine, finishTime, debugLine, 1);
+			} catch (Throwable error) {
 				System.out.println("----------------------ERROR!-------------------------------------");
 				System.out.println("ROOT STATE: " + rootState);
-				throw ae;
+				throw error;
 			}
 
 			if (maximizing) {
 				if (currScore > resultScore) {
 					pvLine.updateSubline(pvSubLine, move);
-					System.out.println(spaces(UCI.INFO, UCI.PV, pvLine.toString()));
+					System.out.println(spaces(UCI.INFO, UCI.PV, pvLine.toString(), UCI.SCORE, UCI.formatScore(currScore,true)));
 					resultScore = currScore;
 				}
+				alpha = Math.max(currScore, alpha);
 			} else {
 				if (currScore < resultScore) {
 					pvLine.updateSubline(pvSubLine, move);
-					System.out.println(spaces(UCI.INFO, UCI.PV, pvLine.toString()));
+					System.out.println(spaces(UCI.INFO, UCI.PV, pvLine.toString(), UCI.SCORE, UCI.formatScore(currScore,false)));
 					resultScore = currScore;
 				}
+				beta = Math.min(currScore, beta);
 			}
-			if (Instant.now().isAfter(finishTime)) {
-				// TODO return partial results after passing best PVs from previous iterative deepening iterations
+			if (alpha >= beta) {
+				break;
+			}
+			if (Utils.nanoNow().isAfter(finishTime)) {
 				return new Result(0, null, nodesEvaluatedInPly, false);
 			}
 			if (nextMoveWins(currScore)) {
@@ -88,18 +91,21 @@ public class Scorer {
 
 	/**
 	 *
+	 * @param leftmostLine - line to be examined first (obtained from previous ID)
 	 * @param principalVariation - principal variation line - https://www.chessprogramming.org/Principal_Variation
 	 *                           propagated up to the root node
 	 * @param debugLine - nullable line that when matched should display additional info about scores of it's children.
 	 * @param ply - same as depth but counts up. In other words ply distance from the root node
 	 * @return score
 	 */
-	private static int miniMax(State state, int depth, Line principalVariation, Instant finishTime, Line debugLine, int ply) {
+	private static int alphaBeta(State state, int depth, int alpha, int beta, Line leftmostLine, Line principalVariation,
+								 Instant finishTime, Line debugLine, int ply) {
 		boolean debugChildrenScores = false;
 		if (debugLine != null) {
 			debugLine.isMoveMatched(state, ply);
 			if (debugLine.isLineMatched()) {
 				System.out.println("\tFound debug line: " + debugLine);
+				System.out.println("alpha: " + alpha + " beta: " + beta);
 				System.out.println("State is: " + state);
 				debugChildrenScores = true;
 			}
@@ -107,7 +113,7 @@ public class Scorer {
 		boolean maximizingTurn = state.test(State.WHITE_TURN);
 		if (depth <= 0) {
 			principalVariation.movesCount = 0;
-			return evaluate(state);
+			return evaluate(state, ply);
 		}
 
 		int resultScore = maximizingTurn ? Integer.MIN_VALUE : Integer.MAX_VALUE;
@@ -117,31 +123,38 @@ public class Scorer {
 
 		if (moves.isEmpty()) {
 			principalVariation.movesCount = 0;
-			return terminalNodeScore(state);
+			return terminalNodeScore(state, ply);
 		}
+		reorderMoves(moves, leftmostLine, ply + 1);
 		for (State move : moves) {
 			int currScore;
 			try {
-				currScore = discourageLaterWin(miniMax(move, depth - 1, pvSubLine, finishTime, debugLine, ply + 1));
-			} catch (Throwable ae) {
+				currScore = alphaBeta(move, depth - 1, alpha, beta, leftmostLine, pvSubLine, finishTime, debugLine, ply + 1);
+			} catch (Throwable error) {
 				System.out.println("----------------------ERROR!-------------------------------------");
 				System.out.println("PLY: " + ply + " STATE: " + state);
-				throw ae;
+				throw error;
 			}
 			if (debugChildrenScores) {
-				System.out.println("\t" + Lan.toStringLastMove(move) + ": " + normalize(currScore, ply));
+				System.out.println("\t" + Lan.toStringLastMove(move) + ": " + currScore);
 			}
 			if (maximizingTurn) {
 				if (currScore > resultScore) {
 					principalVariation.updateSubline(pvSubLine, move);
 					resultScore = currScore;
 				}
+				alpha = Math.max(currScore, alpha);
 			} else {
 				if (currScore < resultScore) {
 					principalVariation.updateSubline(pvSubLine, move);
 					resultScore = currScore;
 				}
+				beta = Math.min(currScore, beta);
 			}
+			if (alpha >= beta) {
+				break;
+			}
+			// TODO if (Utils.nanoNow().isAfter(finishTime)) {
 			if (Instant.now().isAfter(finishTime)) {
 				break;
 			}
@@ -150,6 +163,18 @@ public class Scorer {
 			}
 		}
 		return resultScore;
+	}
+
+	private static void reorderMoves(List<State> moves, Line leftmostLine, int ply) {
+		for (int i = 0; i < moves.size(); i++) {
+			State move = moves.get(i);
+			if (leftmostLine.isMoveMatched(move, ply)) {
+				State tmp = moves.get(0);
+				moves.set(0, move);
+				moves.set(i, tmp);
+				break;
+			}
+		}
 	}
 
 
@@ -182,26 +207,8 @@ public class Scorer {
 	}
 
 	private static boolean nextMoveWins(int score) {
-		return Math.abs(score) >= discourageLaterWin(MAXIMIZING_WIN);
-	}
-
-	/**
-	 * Because of discourageLaterWin() same positions occurring deeper in the search tree will have different scores.
-	 * Call this on them to make them appear as seeb from the root position.
-	 */
-	private static int normalize(int score, int ply) {
-		for (int i = 0; i < ply; i++) {
-			score = discourageLaterWin(score);
-		}
-		return score;
-	}
-
-	/**
-	 * Decreases the score.
-	 * call this on child nodes to encourage choosing earlier wins.
-	 */
-	public static int discourageLaterWin(int score) {
-		return score * 127 / 128;
+		final int onePly = 1;
+		return Math.abs(score) == MAXIMIZING_WIN - onePly;
 	}
 
 	public static class Result {
@@ -221,14 +228,14 @@ public class Scorer {
 		}
 	}
 
-	public static int evaluate(State state) {
+	public static int evaluate(State state, int ply) {
 		nodesEvaluatedInPly++;
 		if (nodesEvaluatedInPly % Config.NODES_LOGGING_PERIOD == 0) {
 			System.out.println(spaces(UCI.INFO, UCI.NODES, Integer.toString(nodesEvaluatedInPly)));
 		}
 		int legalMoves = state.countLegalMoves();
 		if (legalMoves == 0) {
-			return terminalNodeScore(state);
+			return terminalNodeScore(state, ply);
 		}
 		int materialScore = evaluateMaterialScore(state);
 		int mobilityScore = mobilityScore(legalMoves, state);
@@ -299,17 +306,17 @@ public class Scorer {
 //		return score;
 //	}
 
-	private static int terminalNodeScore(State state) {
+	private static int terminalNodeScore(State state, int ply) {
 		boolean maximizingTurn = state.test(State.WHITE_TURN);
 		if (maximizingTurn) {
 			if (state.isKingInCheck()) {
-				return MINIMIZING_WIN;
+				return MINIMIZING_WIN + ply;
 			} else {
 				return DRAW;
 			}
 		} else {
 			if (state.isKingInCheck()) {
-				return MAXIMIZING_WIN;
+				return MAXIMIZING_WIN - ply;
 			} else {
 				return DRAW;
 			}

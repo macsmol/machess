@@ -1,15 +1,17 @@
 Release 1:
+-quiescence search!
+-better mobility evaluation (less points for stronger pieces)
 -UCI
     -timed moves
-        -move worker to another thread
-        -break when getting stop from gui
-        -log pv and info more often
-        -iterative deepening with transposition table
--alpha-beta-pruning
--TODOs in code
+        -break when getting stop from gui (move worker to another thread?)
+-transposition table
+-clearTODOs in code
+-perft test case for tricky ep with pin
+
+Bugs:
+-minor: fix invalid PVs reported in pgns from Arena (due to scrapping results of unfinished iterative deepening runs)
 
 Later:
--try out incremental check-flags update
 -improve evaluation (piece-square table, pins, pawn structure)
 
 

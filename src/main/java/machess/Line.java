@@ -38,11 +38,13 @@ public class Line {
         return movesLan != null ? new Line(movesLan) : null;
     }
 
-    public void isMoveMatched(State move, int ply) {
+    public boolean isMoveMatched(State move, int ply) {
         if (ply - 1 == movesMatched // so that we match the move only at desired level
-                && movesMatched < moves.length && moves[movesMatched].equals(Lan.toStringLastMove(move))) {
+                && movesMatched < moves.length && Lan.toStringLastMove(move).equals(moves[movesMatched])) {
             movesMatched++;
+            return true;
         }
+        return false;
     }
 
     public boolean isLineMatched() {

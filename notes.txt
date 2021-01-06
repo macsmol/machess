@@ -11,3 +11,29 @@ At 5 plies depth generateLegalMoves() breaks ~2000000 times.
 
 System.nanoTime() and System.currentTimeMillis() count from different epochs. -> Use only System.nanoTime() or even better
  use Instant(). Mem allocation shouldn't cost too much. as it's not happening too often
+
+29.12.2020
+Leftmost branch reordering sometimes is detrimental to pruning effect. Especially without quiescence search. In italian game
+(r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3)
+search at depth 1 suggests a queen-loosing blunder d8h4. Without reordering the first move suggested was a7a6.
+Also this may actually change the move made if more than one position results in the same score.
+
+30.12.2020
+21:15
+Made match alpha-beta (ver.A) against alpha-beta with reordering (ver. B).
+It turns out that it indeed works faster (prunes more) but actually plays worse. My currenct explanation is the following: The time settings was 4 min for all moves. This was just enough for 4-ply deep search.
+The reorded version (supposedly better) sometimes manages to search 5 plies deep which is actually bad because:
+-this is evaluation after 'my' move. (1: my, 2: opponent, 3: my, 4: opponent, 5: my)
+-there is no quiescence search.
+Given the above This results in engine being overoptimistic about the position. I compared symmetric game of two engines.
+The first time reordered version managed go see 5 plies deep it made a queen move resulting in this position:
+position startpos moves d2d4 g8f6 c2c4 e7e6 g1f3 b7b6 g2g3 f6e4 c4c5 d8f6 d1c2 d7d5 c5d6 f6f5
+whereas ver A.
+position startpos moves d2d4 g8f6 c2c4 e7e6 g1f3 b7b6 g2g3 f6e4 c4c5 d8f6 d1c2 d7d5 c5d6 f8d6
+To verify if this I can do another tournament with different time controls where it would be better version that would reach depths that are even number.
+
+06.01.2020
+Did rematch ver. A vs ver. B rematch under different time settings. This time ver B did better. So it is indeed a problem with lack of quiescence search. (without it odd-depth searches are overoptimistic)
+
+
+
