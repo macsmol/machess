@@ -140,12 +140,9 @@ public class UCI {
         );
     }
 
-    public static String formatScore(int score, boolean isWhiteTurn) {
-        if (Scorer.scoreCloseToWinning(score)) {
+    public static String formatScore(int score) {
+        if (Scorer.scoreCloseToMating(score)) {
             return UCI.MATE_IN + " " + fullMovesToMate(score);
-        }
-        if (!isWhiteTurn) { // score from engine's perspective
-            score = score * -1;
         }
         return UCI.CENTIPAWNS + " " + score;
     }
@@ -153,10 +150,10 @@ public class UCI {
     static int fullMovesToMate(int score) {
         int scoreAbsolute = Math.abs(score);
         // ply == halfmove
-        int pliesToMate = Scorer.MAXIMIZING_WIN - scoreAbsolute;
+        int pliesToMate = -Scorer.LOST - scoreAbsolute;
 
         // negative full move count = Machess is loosing
-        int sign = ((pliesToMate % 2) == 0) ? -1 : 1;
+        int sign = (score > 0) ? 1 : -1;
 
         return sign * (pliesToMate + 1) / 2;
     }
@@ -215,16 +212,18 @@ public class UCI {
                 System.out.println(info(result.nodesEvaluated, result.pv,
                         elapsedTime.toMillis(), depth,
                         calcNodesPerSecond(result.nodesEvaluated, elapsedTime.toNanos()),
-                        formatScore(result.score, state.test(State.WHITE_TURN))));
+                        formatScore(result.score)));
 
                 bestMove = result.pv.moves[0];
                 if (Instant.now().isAfter(finishTime)) {
                     break;
                 }
-                if (result.oneLegalMove) {
+                // skip deper searches in case when only one legal move and playing on time
+                if (result.oneLegalMove && whiteLeftMillis != Integer.MAX_VALUE) {
                     break;
                 }
-                if (Scorer.scoreCloseToWinning(result.score)) { // mating line was found no need to go deeper
+                // mating line was found no need to go deeper
+                if (Scorer.scoreCloseToMating(result.score)) {
                     break;
                 }
             }

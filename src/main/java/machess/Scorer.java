@@ -9,9 +9,14 @@ import java.util.*;
 import static machess.Utils.spaces;
 
 public class Scorer {
-	public static final int MAXIMIZING_WIN = 1_000_000;
-	public static final int MINIMIZING_WIN = -1_000_000;
+	public static final int LOST = -1_000_000;
 	private static final int DRAW = 0;
+
+	/**
+	 * Can't just use Integer.MIN_VALUE because it overflows in negamax after changing sign.
+	 */
+	private static final int MINUS_INFINITY = -Integer.MAX_VALUE;
+	private static final int INFINITY = Integer.MAX_VALUE ;
 
 	private static final int MATERIAL_PAWN 		= 100;
 	private static final int MATERIAL_KNIGHT 	= 300;
@@ -35,11 +40,9 @@ public class Scorer {
 		Line pvLine = Line.empty();
 		Line pvSubLine = Line.empty();
 		List<State> moves = rootState.generateLegalMoves();
-		int alpha = Integer.MIN_VALUE;
-		int beta = Integer.MAX_VALUE;
+		int alpha = MINUS_INFINITY;
+		final int beta = INFINITY;
 
-		final boolean maximizing = rootState.test(State.WHITE_TURN);
-		int resultScore = maximizing ? Integer.MIN_VALUE : Integer.MAX_VALUE;
 
 		if (moves.isEmpty()) {
 			return new Result(terminalNodeScore(rootState, 0), pvLine, nodesEvaluatedInPly, false);
@@ -50,31 +53,18 @@ public class Scorer {
 			int currScore;
 
 			try {
-				currScore = alphaBeta(move, depth - 1, alpha, beta, leftmostLine, pvSubLine, finishTime, debugLine, 1);
+				currScore = -alphaBeta(move, depth - 1, -beta, -alpha, leftmostLine, pvSubLine, finishTime, debugLine, 1);
 			} catch (Throwable error) {
 				System.out.println("----------------------ERROR!-------------------------------------");
 				System.out.println("ROOT STATE: " + rootState);
 				throw error;
 			}
+			if (currScore > alpha) {
+				pvLine.updateSubline(pvSubLine, move);
+				System.out.println(spaces(UCI.INFO, UCI.PV, pvLine.toString(), UCI.SCORE, UCI.formatScore(currScore)));
+				alpha = currScore;
+			}
 
-			if (maximizing) {
-				if (currScore > resultScore) {
-					pvLine.updateSubline(pvSubLine, move);
-					System.out.println(spaces(UCI.INFO, UCI.PV, pvLine.toString(), UCI.SCORE, UCI.formatScore(currScore,true)));
-					resultScore = currScore;
-				}
-				alpha = Math.max(currScore, alpha);
-			} else {
-				if (currScore < resultScore) {
-					pvLine.updateSubline(pvSubLine, move);
-					System.out.println(spaces(UCI.INFO, UCI.PV, pvLine.toString(), UCI.SCORE, UCI.formatScore(currScore,false)));
-					resultScore = currScore;
-				}
-				beta = Math.min(currScore, beta);
-			}
-			if (alpha >= beta) {
-				break;
-			}
 			if (Utils.nanoNow().isAfter(finishTime)) {
 				return new Result(0, null, nodesEvaluatedInPly, false);
 			}
@@ -82,7 +72,7 @@ public class Scorer {
 				break;
 			}
 		}
-		return new Result(resultScore, pvLine, nodesEvaluatedInPly, moves.size() == 1);
+		return new Result(alpha, pvLine, nodesEvaluatedInPly, moves.size() == 1);
 	}
 
 	public static void terminate() {
@@ -110,13 +100,11 @@ public class Scorer {
 				debugChildrenScores = true;
 			}
 		}
-		boolean maximizingTurn = state.test(State.WHITE_TURN);
 		if (depth <= 0) {
 			principalVariation.movesCount = 0;
 			return evaluate(state, ply);
 		}
 
-		int resultScore = maximizingTurn ? Integer.MIN_VALUE : Integer.MAX_VALUE;
 		Line pvSubLine = Line.empty();
 
 		List<State> moves = state.generateLegalMoves();
@@ -129,7 +117,7 @@ public class Scorer {
 		for (State move : moves) {
 			int currScore;
 			try {
-				currScore = alphaBeta(move, depth - 1, alpha, beta, leftmostLine, pvSubLine, finishTime, debugLine, ply + 1);
+				currScore = -alphaBeta(move, depth - 1, -beta, -alpha, leftmostLine, pvSubLine, finishTime, debugLine, ply + 1);
 			} catch (Throwable error) {
 				System.out.println("----------------------ERROR!-------------------------------------");
 				System.out.println("PLY: " + ply + " STATE: " + state);
@@ -138,31 +126,21 @@ public class Scorer {
 			if (debugChildrenScores) {
 				System.out.println("\t" + Lan.toStringLastMove(move) + ": " + currScore);
 			}
-			if (maximizingTurn) {
-				if (currScore > resultScore) {
-					principalVariation.updateSubline(pvSubLine, move);
-					resultScore = currScore;
-				}
-				alpha = Math.max(currScore, alpha);
-			} else {
-				if (currScore < resultScore) {
-					principalVariation.updateSubline(pvSubLine, move);
-					resultScore = currScore;
-				}
-				beta = Math.min(currScore, beta);
+			if (currScore >= beta) {
+				return beta;
 			}
-			if (alpha >= beta) {
-				break;
+			if (currScore > alpha) {
+				principalVariation.updateSubline(pvSubLine, move);
+				alpha = currScore;
 			}
-			// TODO if (Utils.nanoNow().isAfter(finishTime)) {
-			if (Instant.now().isAfter(finishTime)) {
+			if (Utils.nanoNow().isAfter(finishTime)) {
 				break;
 			}
 			if (interrupt) {
 				break;
 			}
 		}
-		return resultScore;
+		return alpha;
 	}
 
 	private static void reorderMoves(List<State> moves, Line leftmostLine, int ply) {
@@ -176,7 +154,6 @@ public class Scorer {
 			}
 		}
 	}
-
 
 	public static long perft(State state, int depth) {
 		long movesCount = 0;
@@ -202,13 +179,13 @@ public class Scorer {
 		}
 	}
 
-	public static boolean scoreCloseToWinning(int score) {
+	public static boolean scoreCloseToMating(int score) {
 		return Math.abs(score) > Scorer.SCORE_CLOSE_TO_WIN;
 	}
 
 	private static boolean nextMoveWins(int score) {
 		final int onePly = 1;
-		return Math.abs(score) == MAXIMIZING_WIN - onePly;
+		return score == -LOST - onePly;
 	}
 
 	public static class Result {
@@ -240,7 +217,9 @@ public class Scorer {
 		int materialScore = evaluateMaterialScore(state);
 		int mobilityScore = mobilityScore(legalMoves, state);
 
-		return materialScore + mobilityScore;
+		int score = materialScore + mobilityScore;
+		// negamax requires score relative to the moving side
+		return state.test(State.WHITE_TURN) ? score : -score;
 	}
 
 	private static int mobilityScore(int currSideLegalMoves, State state) {
@@ -307,19 +286,10 @@ public class Scorer {
 //	}
 
 	private static int terminalNodeScore(State state, int ply) {
-		boolean maximizingTurn = state.test(State.WHITE_TURN);
-		if (maximizingTurn) {
-			if (state.isKingInCheck()) {
-				return MINIMIZING_WIN + ply;
-			} else {
-				return DRAW;
-			}
+		if (state.isKingInCheck()) {
+			return LOST + ply;
 		} else {
-			if (state.isKingInCheck()) {
-				return MAXIMIZING_WIN - ply;
-			} else {
-				return DRAW;
-			}
+			return DRAW;
 		}
 	}
 }
