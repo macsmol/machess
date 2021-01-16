@@ -5,6 +5,7 @@ import machess.interfaces.UCI;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static machess.Utils.spaces;
 
@@ -102,7 +103,7 @@ public class Scorer {
 		}
 		if (depth <= 0) {
 			principalVariation.movesCount = 0;
-			return evaluate(state, ply);
+			return quiescence(state, alpha, beta, ply);
 		}
 
 		Line pvSubLine = Line.empty();
@@ -138,6 +139,31 @@ public class Scorer {
 			}
 			if (interrupt) {
 				break;
+			}
+		}
+		return alpha;
+	}
+
+	private static int quiescence(State state, int alpha, int beta, int ply) {
+		int score = evaluate(state, ply);
+
+		if (score >= beta) {
+			return beta;
+		}
+		if (score > alpha) {
+			alpha = score;
+		}
+		List<State> moves = state.generateLegalMoves()
+				.stream().filter(move -> move.takenPiece!=Content.EMPTY).collect(Collectors.toList());
+
+		for (State move : moves) {
+			score = -quiescence(move, -beta, -alpha, ply + 1);
+
+			if (score >= beta) {
+				return beta;
+			}
+			if (score > alpha) {
+				alpha = score;
 			}
 		}
 		return alpha;

@@ -10,7 +10,7 @@ import java.util.Scanner;
 import static machess.Utils.*;
 
 public class UCI {
-    private static final String VERSION_STRING = "1.0-SNAPSHOT-reordering-30.12.2020";
+    private static final String VERSION_STRING = "1.0-quiescence-13.01.2020";
     public static final String POSITION = "position";
     public static final String STARTPOS = "startpos";
     public static final String MOVES = "moves";

@@ -137,7 +137,7 @@ public class FEN {
         int fullmoveCounter = Integer.parseInt(fullMoveCounterStr);
 
         return new State(board0x88, pieces.build(), (byte)flags, enPassantSquare, halfmoveClock, fullmoveCounter,
-                NULL, NULL);
+                NULL, NULL, Content.EMPTY);
     }
 
     private static byte initEnPassantSquare(String epSquareStr) {

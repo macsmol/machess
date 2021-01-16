@@ -77,7 +77,7 @@ public class State {
 	byte from;
 	byte to;
 	Content promotion;
-
+	final Content takenPiece;
 	/**
 	 * new game
 	 */
@@ -122,13 +122,14 @@ public class State {
 		fullMoveCounter = 1;
 		from = NULL;
 		to = NULL;
+		takenPiece = Content.EMPTY;
 
 		pinnedPieces = new Pin[Square.values().length];
 		initChecksAroundKings();
 	}
 
 	public State(short[] board0x88, PieceLists pieces, byte flags,
-				 byte enPassantSquare, byte halfmoveClock, int fullMoveCounter, byte from, byte to) {
+				 byte enPassantSquare, byte halfmoveClock, int fullMoveCounter, byte from, byte to, Content takenPiece) {
 		this.board0x88 = board0x88;
 		this.pieces = pieces;
 		this.flags = flags;
@@ -137,6 +138,7 @@ public class State {
 		this.fullMoveCounter = fullMoveCounter;
 		this.from = from;
 		this.to = to;
+		this.takenPiece = takenPiece;
 
 		resetSquaresInCheck();
 		initChecksAroundKings();
@@ -301,7 +303,7 @@ public class State {
 
 		int newFullMoveClock = test(WHITE_TURN) ? fullMoveCounter : fullMoveCounter + 1;
 		return new State(board0x88Copy, piecesCopy, (byte) flagsCopy, futureEnPassantSquare, (byte)0, newFullMoveClock,
-				from, to);
+				from, to, takenPiece);
 	}
 
 	public boolean test(int flagMask) {
