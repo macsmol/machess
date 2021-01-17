@@ -1,5 +1,9 @@
 Release 1:
 -quiescence search!
+    -nps fix
+    -don't generate all and filter, just generate less
+    -better move ordering
+    -worse than ptf in 4 mins - why?
 -better mobility evaluation (less points for stronger pieces)
 -UCI
     -timed moves
