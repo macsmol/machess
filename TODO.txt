@@ -14,6 +14,7 @@ Release 1:
 
 Bugs:
 -minor: fix invalid PVs reported in pgns from Arena (due to scrapping results of unfinished iterative deepening runs)
+-debug line matching does not work
 
 Later:
 -improve evaluation (piece-square table, pins, pawn structure)
