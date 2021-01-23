@@ -10,7 +10,7 @@ import java.util.Scanner;
 import static machess.Utils.*;
 
 public class UCI {
-    private static final String VERSION_STRING = "1.0-quiescence-13.01.2020";
+    private static final String VERSION_STRING = "1.0-quiescence-23.01.2020";
     public static final String POSITION = "position";
     public static final String STARTPOS = "startpos";
     public static final String MOVES = "moves";
@@ -53,18 +53,20 @@ public class UCI {
 
     private void tryToParseInput(String input) {
         try {
-            if (input.startsWith("uci")) {
-                enterUci();
-            } else if (input.startsWith("isready")) {
-                isReady();
-            } else if (input.startsWith("ucinewgame")) {
+            if (input.equals("ucinewgame")) {
                 newGame();
+            } else if (input.equals("uci")) {
+                enterUci();
+            } else if (input.equals("isready")) {
+                isReady();
             } else if (input.startsWith(POSITION)) {
                 setPosition(input.substring(POSITION.length()).trim());
             } else if (input.startsWith(GO)) {
                 go(input.substring(GO.length()).trim());
-            } else if (input.startsWith("tostr")) {
+            } else if (input.equals("tostr")) {
                 System.out.println(state);
+            } else if (input.equals("eval")) {
+                printEvaluation();
             } else if (input.startsWith(Config.DEBUG_LINE_KEY)) {
                 setDebugLine(input.substring(Config.DEBUG_LINE_KEY.length()).trim());
             } else if (input.startsWith(QUIT)) {
@@ -73,6 +75,12 @@ public class UCI {
         } catch (Exception ex) {
             System.out.println("Cannot parse input: " + input + " ex: "+ ex);
             ex.printStackTrace();
+        }
+    }
+
+    private void printEvaluation() {
+        if (state != null) {
+            System.out.println(spaces(UCI.INFO, UCI.SCORE, formatScore(Scorer.evaluate(state,0))));
         }
     }
 

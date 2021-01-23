@@ -36,6 +36,9 @@ public class Scorer {
 	private static volatile boolean interrupt;
 
 	public static Result startAlphaBeta(State rootState, int depth, Instant finishTime, Line leftmostLine, Line debugLine) {
+		if (debugLine.movesCount > 0) {
+			System.out.println("debug line " + debugLine);
+		}
 		interrupt = false;
 		nodesEvaluatedInPly = 0;
 		Line pvLine = Line.empty();
@@ -96,14 +99,13 @@ public class Scorer {
 			debugLine.isMoveMatched(state, ply);
 			if (debugLine.isLineMatched()) {
 				System.out.println("\tFound debug line: " + debugLine);
-				System.out.println("alpha: " + alpha + " beta: " + beta);
-				System.out.println("State is: " + state);
+				System.out.println("\talpha: " + alpha + " beta: " + beta);
+				System.out.println("\tState is: " + state);
 				debugChildrenScores = true;
 			}
 		}
 		if (depth <= 0) {
-			principalVariation.movesCount = 0;
-			return quiescence(state, alpha, beta, ply);
+			return quiescence(state, alpha, beta, ply, principalVariation);
 		}
 
 		Line pvSubLine = Line.empty();
@@ -144,25 +146,29 @@ public class Scorer {
 		return alpha;
 	}
 
-	private static int quiescence(State state, int alpha, int beta, int ply) {
+	private static int quiescence(State state, int alpha, int beta, int ply, Line principalVariation) {
 		int score = evaluate(state, ply);
 
 		if (score >= beta) {
 			return beta;
 		}
 		if (score > alpha) {
+			principalVariation.movesCount = 0;
 			alpha = score;
 		}
+
+		Line pvSubLine = Line.empty();
 		List<State> moves = state.generateLegalMoves()
 				.stream().filter(move -> move.takenPiece != Content.EMPTY).collect(Collectors.toList());
 
 		for (State move : moves) {
-			score = -quiescence(move, -beta, -alpha, ply + 1);
+			score = -quiescence(move, -beta, -alpha, ply + 1, pvSubLine);
 
 			if (score >= beta) {
 				return beta;
 			}
 			if (score > alpha) {
+				principalVariation.updateSubline(pvSubLine, move);
 				alpha = score;
 			}
 		}
