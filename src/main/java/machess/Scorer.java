@@ -154,7 +154,7 @@ public class Scorer {
 			alpha = score;
 		}
 		List<State> moves = state.generateLegalMoves()
-				.stream().filter(move -> move.takenPiece!=Content.EMPTY).collect(Collectors.toList());
+				.stream().filter(move -> move.takenPiece != Content.EMPTY).collect(Collectors.toList());
 
 		for (State move : moves) {
 			score = -quiescence(move, -beta, -alpha, ply + 1);
