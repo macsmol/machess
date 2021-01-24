@@ -68,7 +68,7 @@ public class Scorer {
 				alpha = currScore;
 			}
 
-			if (Utils.nanoNow().isAfter(finishTime)) {
+			if (Utils.nanoNow().isAfter(finishTime) && depth > 1) {
 				return new Result(0, null, nodesEvaluatedInPly, false);
 			}
 			if (nextMoveWins(currScore)) {
