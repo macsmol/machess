@@ -5,7 +5,6 @@ import machess.interfaces.UCI;
 
 import java.time.Instant;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static machess.Utils.spaces;
 
@@ -95,7 +94,7 @@ public class Scorer {
 	private static int alphaBeta(State state, int depth, int alpha, int beta, Line leftmostLine, Line principalVariation,
 								 Instant finishTime, Line debugLine, int ply) {
 		boolean debugChildrenScores = false;
-		if (debugLine != null) {
+		if (debugLine.movesCount > 0) {
 			debugLine.isMoveMatched(state, ply);
 			if (debugLine.isLineMatched()) {
 				System.out.println("\tFound debug line: " + debugLine);
@@ -158,8 +157,7 @@ public class Scorer {
 		}
 
 		Line pvSubLine = Line.empty();
-		List<State> moves = state.generateLegalMoves()
-				.stream().filter(move -> move.takenPiece != Content.EMPTY).collect(Collectors.toList());
+		List<State> moves = state.generateLegalTacticalMoves();
 
 		for (State move : moves) {
 			score = -quiescence(move, -beta, -alpha, ply + 1, pvSubLine);
@@ -187,18 +185,23 @@ public class Scorer {
 		}
 	}
 
-	public static long perft(State state, int depth) {
+	public static long perft(State state, int depth, State.GeneratorMode mode) {
 		long movesCount = 0;
-		if (depth == 0) {
-			return 1;
+		if (depth == 1) {
+			switch (mode) {
+				case ALL_MOVES:
+					return state.generateLegalMoves().size();
+				case TACTICAL_MOVES:
+					return state.generateLegalTacticalMoves().size();
+			}
 		}
 		for (State child : state.generateLegalMoves()) {
-			movesCount += perft(child, depth - 1);
+			movesCount += perft(child, depth - 1, mode);
 		}
 		return movesCount;
 	}
 
-	public static void perftDivide(State state, int depth) {
+	public static void perftDivide(State state, int depth, State.GeneratorMode mode) {
 		List<State> legalMoves = state.generateLegalMoves();
 		if (depth < 1) {
 			System.out.println("nothing to divide");
@@ -206,7 +209,7 @@ public class Scorer {
 		}
 		System.out.println("divide(" + depth + "):");
 		for (State child : legalMoves) {
-			long movesCount = perft(child, depth - 1);
+			long movesCount = perft(child, depth - 1, mode);
 			System.out.println(Lan.toStringLastMove(child) + " " + movesCount);
 		}
 	}

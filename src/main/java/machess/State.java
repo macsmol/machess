@@ -77,7 +77,6 @@ public class State {
 	byte from;
 	byte to;
 	Content promotion;
-	final Content takenPiece;
 	/**
 	 * new game
 	 */
@@ -122,14 +121,13 @@ public class State {
 		fullMoveCounter = 1;
 		from = NULL;
 		to = NULL;
-		takenPiece = Content.EMPTY;
 
 		pinnedPieces = new Pin[Square.values().length];
 		initChecksAroundKings();
 	}
 
 	public State(short[] board0x88, PieceLists pieces, byte flags,
-				 byte enPassantSquare, byte halfmoveClock, int fullMoveCounter, byte from, byte to, Content takenPiece) {
+				 byte enPassantSquare, byte halfmoveClock, int fullMoveCounter, byte from, byte to) {
 		this.board0x88 = board0x88;
 		this.pieces = pieces;
 		this.flags = flags;
@@ -138,7 +136,6 @@ public class State {
 		this.fullMoveCounter = fullMoveCounter;
 		this.from = from;
 		this.to = to;
-		this.takenPiece = takenPiece;
 
 		resetSquaresInCheck();
 		initChecksAroundKings();
@@ -237,22 +234,22 @@ public class State {
 		assert movedPiece.isWhite == test(WHITE_TURN) : "Moved " + movedPiece + " on " + (test(WHITE_TURN) ? "white" : "black") + " turn";
 		board0x88Copy[from] = Content.EMPTY.asByte;
 
-		Content takenPiece = Content.fromShort(board0x88Copy[to]);
-		assert takenPiece != Content.BLACK_KING && takenPiece != Content.WHITE_KING : from + "->" + to + " is taking king";
+		Content capturedPiece = Content.fromShort(board0x88Copy[to]);
+		assert capturedPiece != Content.BLACK_KING && capturedPiece != Content.WHITE_KING : from + "->" + to + " is taking king";
 		board0x88Copy[to] = movedPiece.asByte;
 
 		piecesCopy.move(movedPiece, from, to);
 
-		byte squareWithPawnTakenEnPassant = NULL;
+		byte squareWithPawnCapturedEnPassant = NULL;
 		if (enPassantSquare == to) {
 			if (movedPiece == Content.WHITE_PAWN) {
-				squareWithPawnTakenEnPassant = Direction.move(to, Direction.S);
-				takenPiece = Content.fromShort(board0x88Copy[squareWithPawnTakenEnPassant]);
-				board0x88Copy[squareWithPawnTakenEnPassant] = Content.EMPTY.asByte;
+				squareWithPawnCapturedEnPassant = Direction.move(to, Direction.S);
+				capturedPiece = Content.fromShort(board0x88Copy[squareWithPawnCapturedEnPassant]);
+				board0x88Copy[squareWithPawnCapturedEnPassant] = Content.EMPTY.asByte;
 			} else if (movedPiece == Content.BLACK_PAWN) {
-				squareWithPawnTakenEnPassant = Direction.move(to, Direction.N);
-				takenPiece = Content.fromShort(board0x88Copy[squareWithPawnTakenEnPassant]);
-				board0x88Copy[squareWithPawnTakenEnPassant] = Content.EMPTY.asByte;
+				squareWithPawnCapturedEnPassant = Direction.move(to, Direction.N);
+				capturedPiece = Content.fromShort(board0x88Copy[squareWithPawnCapturedEnPassant]);
+				board0x88Copy[squareWithPawnCapturedEnPassant] = Content.EMPTY.asByte;
 			}
 		} else if (rookCastleFrom != NULL) {
 			board0x88Copy[rookCastleFrom] = Content.EMPTY.asByte;
@@ -272,9 +269,9 @@ public class State {
 			piecesCopy.promote(to, promotion);
 		}
 
-		if (takenPiece != Content.EMPTY) {
-			assert movedPiece.isWhite != takenPiece.isWhite : from + "->" + to + " is a friendly take";
-			piecesCopy.kill(takenPiece, squareWithPawnTakenEnPassant != NULL ? squareWithPawnTakenEnPassant : to);
+		if (capturedPiece != Content.EMPTY) {
+			assert movedPiece.isWhite != capturedPiece.isWhite : from + "->" + to + " is a friendly capture";
+			piecesCopy.kill(capturedPiece, squareWithPawnCapturedEnPassant != NULL ? squareWithPawnCapturedEnPassant : to);
 		}
 
 		int flagsCopy = flags ^ WHITE_TURN;
@@ -303,7 +300,7 @@ public class State {
 
 		int newFullMoveClock = test(WHITE_TURN) ? fullMoveCounter : fullMoveCounter + 1;
 		return new State(board0x88Copy, piecesCopy, (byte) flagsCopy, futureEnPassantSquare, (byte)0, newFullMoveClock,
-				from, to, takenPiece);
+				from, to);
 	}
 
 	public boolean test(int flagMask) {
@@ -823,9 +820,9 @@ public class State {
 	public int countLegalMoves() {
 		if (isKingInCheck()) {
 			byte checkedKing = test(WHITE_TURN) ? pieces.getWhiteKing() : pieces.getBlackKing();
-			return generateLegalMovesWhenKingInCheck(null, checkedKing);
+			return generateLegalMovesWhenKingInCheck(null, checkedKing, GeneratorMode.ALL_MOVES);
 		}
-		return generatePseudoLegalMoves(null);
+		return generatePseudoLegalMoves(null, GeneratorMode.ALL_MOVES);
 	}
 
 	public int countOtherSideLegalMoves() {
@@ -839,18 +836,26 @@ public class State {
 		flags ^= WHITE_TURN;
 	}
 
+	public List<State> generateLegalTacticalMoves() {
+		return generateLegalMoves(GeneratorMode.TACTICAL_MOVES);
+	}
+
 	public List<State> generateLegalMoves() {
+		return generateLegalMoves(GeneratorMode.ALL_MOVES);
+	}
+
+	private List<State> generateLegalMoves(GeneratorMode mode) {
 		assert isLegal() : "King is still left in check after previous move!\n" + this;
 		List<State> moves = new ArrayList<>(Config.MOVES_LIST_CAPACITY);
 		try {
 
 			if (isKingInCheck()) {
 				byte checkedKing = test(WHITE_TURN) ? pieces.getWhiteKing() : pieces.getBlackKing();
-				generateLegalMovesWhenKingInCheck(moves, checkedKing);
+				generateLegalMovesWhenKingInCheck(moves, checkedKing, mode);
 				return moves;
 			}
 
-			generatePseudoLegalMoves(moves);
+			generatePseudoLegalMoves(moves, mode);
 		} catch (AssertionError ae) {
 			System.out.println("------------------FAILED ASSERTION IN MOVE GENERATION----------------------------");
 			System.out.println(" STATE: " + this);
@@ -867,77 +872,89 @@ public class State {
 	 * 	 Generates pseudo-legal moves. Takes into consideration absolute pins. Moves generated by this method are legal
 	 * 	 * 	 provided that the king of the side taking turn was not in check.
 	 * @param ouputMoves - leave this null to skip actual generation and just count the moves
+	 * @param mode
 	 * @return number of output moves
 	 */
-	private int generatePseudoLegalMoves(List<State> ouputMoves) {
+	private int generatePseudoLegalMoves(List<State> ouputMoves, GeneratorMode mode) {
 		int movesCount = 0;
 		byte[] piecesOfOneType = test(WHITE_TURN) ? pieces.whitePawns : pieces.blackPawns;
 		byte piecesCount = test(WHITE_TURN) ? pieces.whitePawnsCount : pieces.blackPawnsCount;
 		for (byte i = 0; i < piecesCount; i++) {
-			movesCount += generatePseudoLegalPawnTakes(piecesOfOneType[i], ouputMoves);
+			movesCount += generatePseudoLegalPawnCaptures(piecesOfOneType[i], ouputMoves);
 		}
 		for (byte i = 0; i < piecesCount; i++) {
-			movesCount += generatePseudoLegalPawnPushes(piecesOfOneType[i], ouputMoves);
+			movesCount += generatePseudoLegalPawnPushes(piecesOfOneType[i], ouputMoves, mode);
 		}
 		piecesOfOneType = test(WHITE_TURN) ? pieces.whiteKnights : pieces.blackKnights;
 		piecesCount = test(WHITE_TURN) ? pieces.whiteKnightsCount : pieces.blackKnightsCount;
 		for (byte i = 0; i < piecesCount; i++) {
-				movesCount += generatePseudoLegalKnightMoves(piecesOfOneType[i], ouputMoves);
+				movesCount += generatePseudoLegalKnightMoves(piecesOfOneType[i], ouputMoves, mode);
 		}
 		piecesOfOneType = test(WHITE_TURN) ? pieces.whiteBishops : pieces.blackBishops;
 		piecesCount = test(WHITE_TURN) ? pieces.whiteBishopsCount : pieces.blackBishopsCount;
 		for (byte i = 0; i < piecesCount; i++) {
-			movesCount += generatePseudoLegalBishopMoves(piecesOfOneType[i], ouputMoves);
+			movesCount += generatePseudoLegalBishopMoves(piecesOfOneType[i], ouputMoves, mode);
 		}
 		piecesOfOneType = test(WHITE_TURN) ? pieces.whiteRooks : pieces.blackRooks;
 		piecesCount = test(WHITE_TURN) ? pieces.whiteRooksCount : pieces.blackRooksCount;
 		for (byte i = 0; i < piecesCount; i++) {
-			movesCount += generatePseudoLegalRookMoves(piecesOfOneType[i], ouputMoves);
+			movesCount += generatePseudoLegalRookMoves(piecesOfOneType[i], ouputMoves, mode);
 		}
 		piecesOfOneType = test(WHITE_TURN) ? pieces.whiteQueens : pieces.blackQueens;
 		piecesCount = test(WHITE_TURN) ? pieces.whiteQueensCount : pieces.blackQueensCount;
 		for (byte i = 0; i < piecesCount; i++) {
-			movesCount += generatePseudoLegalQueenMoves(piecesOfOneType[i], ouputMoves);
+			movesCount += generatePseudoLegalQueenMoves(piecesOfOneType[i], ouputMoves, mode);
 		}
 		movesCount += generateLegalKingMoves(test(WHITE_TURN) ? pieces.getWhiteKing() : pieces.getBlackKing(),
-				ouputMoves);
+				ouputMoves, mode);
 		return movesCount;
 	}
 
-	private int generateLegalKingMoves(byte from, List<State> outputMoves) {
+	private int generateLegalKingMoves(byte from, List<State> outputMoves, GeneratorMode mode) {
 		int movesCount = 0;
 		boolean isWhiteTurn = test(WHITE_TURN);
 		byte to = Direction.move(from, Direction.NE);
-		if (inBounds(to) && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
+		if (inBounds(to) && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)
+				&& (GeneratorMode.TACTICAL_MOVES != mode || isOppositeColorPieceOn(to))) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
 		to = Direction.move(from, Direction.E);
-		if (inBounds(to) && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
+		if (inBounds(to) && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)
+				&& (GeneratorMode.TACTICAL_MOVES != mode || isOppositeColorPieceOn(to))) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
 		to = Direction.move(from, Direction.SE);
-		if (inBounds(to) && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
+		if (inBounds(to) && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)
+				&& (GeneratorMode.TACTICAL_MOVES != mode || isOppositeColorPieceOn(to))) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
 		to = Direction.move(from, Direction.S);
-		if (inBounds(to) && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
+		if (inBounds(to) && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)
+				&& (GeneratorMode.TACTICAL_MOVES != mode || isOppositeColorPieceOn(to))) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
 		to = Direction.move(from, Direction.SW);
-		if (inBounds(to) && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
+		if (inBounds(to) && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)
+				&& (GeneratorMode.TACTICAL_MOVES != mode || isOppositeColorPieceOn(to))) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
 		to = Direction.move(from, Direction.W);
-		if (inBounds(to) && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
+		if (inBounds(to) && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)
+				&& (GeneratorMode.TACTICAL_MOVES != mode || isOppositeColorPieceOn(to))) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
 		to = Direction.move(from, Direction.NW);
-		if (inBounds(to) && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
+		if (inBounds(to) && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)
+				&& (GeneratorMode.TACTICAL_MOVES != mode || isOppositeColorPieceOn(to))) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
 		to = Direction.move(from, Direction.N);
-		if (inBounds(to) && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)) {
+		if (inBounds(to) && !isSameColorPieceOn(to) && canKingWalkOnSquare(to, isWhiteTurn)
+				&& (GeneratorMode.TACTICAL_MOVES != mode || isOppositeColorPieceOn(to))) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
+		}
+		if (GeneratorMode.TACTICAL_MOVES == mode) {
+			return movesCount;
 		}
 
 		int qsCastlePossible = isWhiteTurn ? WHITE_QS_CASTLE_POSSIBLE : BLACK_QS_CASTLE_POSSIBLE;
@@ -985,32 +1002,32 @@ public class State {
 		return true;
 	}
 
-	private int generatePseudoLegalQueenMoves(byte from, List<State> outputMoves) {
+	private int generatePseudoLegalQueenMoves(byte from, List<State> outputMoves, GeneratorMode mode) {
 		int movesCount = 0;
-		movesCount += generatePseudoLegalRookMoves(from, outputMoves);
-		movesCount += generatePseudoLegalBishopMoves(from, outputMoves);
+		movesCount += generatePseudoLegalRookMoves(from, outputMoves, mode);
+		movesCount += generatePseudoLegalBishopMoves(from, outputMoves, mode);
 		return movesCount;
 	}
 
-	private int generatePseudoLegalRookMoves(byte from, List<State> outputMoves) {
+	private int generatePseudoLegalRookMoves(byte from, List<State> outputMoves, GeneratorMode mode) {
 		int movesCount = 0;
-		movesCount += generateSlidingPieceMoves(from, outputMoves, Direction.N);
-		movesCount += generateSlidingPieceMoves(from, outputMoves, Direction.E);
-		movesCount += generateSlidingPieceMoves(from, outputMoves, Direction.S);
-		movesCount += generateSlidingPieceMoves(from, outputMoves, Direction.W);
+		movesCount += generateSlidingPieceMoves(from, outputMoves, Direction.N, mode);
+		movesCount += generateSlidingPieceMoves(from, outputMoves, Direction.E, mode);
+		movesCount += generateSlidingPieceMoves(from, outputMoves, Direction.S, mode);
+		movesCount += generateSlidingPieceMoves(from, outputMoves, Direction.W, mode);
 		return movesCount;
 	}
 
-	private int generatePseudoLegalBishopMoves(byte from, List<State> outputMoves) {
+	private int generatePseudoLegalBishopMoves(byte from, List<State> outputMoves, GeneratorMode mode) {
 		int movesCount = 0;
-		movesCount += generateSlidingPieceMoves(from, outputMoves, Direction.NE);
-		movesCount += generateSlidingPieceMoves(from, outputMoves, Direction.SE);
-		movesCount += generateSlidingPieceMoves(from, outputMoves, Direction.SW);
-		movesCount += generateSlidingPieceMoves(from, outputMoves, Direction.NW);
+		movesCount += generateSlidingPieceMoves(from, outputMoves, Direction.NE, mode);
+		movesCount += generateSlidingPieceMoves(from, outputMoves, Direction.SE, mode);
+		movesCount += generateSlidingPieceMoves(from, outputMoves, Direction.SW, mode);
+		movesCount += generateSlidingPieceMoves(from, outputMoves, Direction.NW, mode);
 		return movesCount;
 	}
 
-	private int generateSlidingPieceMoves(byte from0x88, List<State> outputMoves, byte direction) {
+	private int generateSlidingPieceMoves(byte from0x88, List<State> outputMoves, byte direction, GeneratorMode mode) {
 		int movesCount = 0;
 		if (pieceIsFreeToMove(Square0x88.to8x8Square(from0x88), Pin.fromDirection(direction))) {
 			byte to = Direction.move(from0x88, direction);
@@ -1018,8 +1035,13 @@ public class State {
 				if (isSameColorPieceOn(to)) {
 					break;
 				}
-				movesCount = createOrCountMove(from0x88, to, outputMoves, movesCount);
+				if (GeneratorMode.TACTICAL_MOVES != mode) {
+					movesCount = createOrCountMove(from0x88, to, outputMoves, movesCount);
+				}
 				if (isOppositeColorPieceOn(to)) {
+					if (GeneratorMode.TACTICAL_MOVES == mode) {
+						movesCount = createOrCountMove(from0x88, to, outputMoves, movesCount);
+					}
 					break;
 				}
 				to = Direction.move(to, direction);
@@ -1028,7 +1050,7 @@ public class State {
 		return movesCount;
 	}
 
-	private int generatePseudoLegalPawnPushes(byte from0x88, List<State> outputMoves) {
+	private int generatePseudoLegalPawnPushes(byte from0x88, List<State> outputMoves, GeneratorMode mode) {
 		int movesCount = 0;
 
 		byte pawnDisplacement = test(WHITE_TURN) ? Direction.N : Direction.S;
@@ -1039,7 +1061,7 @@ public class State {
 		if (getContent(to0x88) == Content.EMPTY && pieceIsFreeToMove(Square0x88.to8x8Square(from0x88), Pin.FILE)) {
 			if (isPromotingSquare(to0x88)) {
 				movesCount += generatePromotionMoves(from0x88, to0x88, outputMoves);
-			} else {
+			} else if (GeneratorMode.TACTICAL_MOVES != mode) {
 				movesCount = createOrCountMove(from0x88, to0x88, outputMoves, movesCount);
 				to0x88 = Direction.move(from0x88, (byte) pawnDoubleDisplacement);
 				if (isInitialSquareOfPawn(from0x88) && getContent(to0x88) == Content.EMPTY) {
@@ -1055,28 +1077,28 @@ public class State {
 	}
 
 	/**
-	 * Takes generated before pushes - move ordering
+	 * Captures are generated before pushes
 	 */
-	private int generatePseudoLegalPawnTakes(byte from0x88, List<State> outputMoves) {
+	private int generatePseudoLegalPawnCaptures(byte from0x88, List<State> outputMoves) {
 		int movesCount = 0;
-		byte pawnQsTake = test(WHITE_TURN) ? Direction.NW : Direction.SW;
-		byte pawnKsTake = test(WHITE_TURN) ? Direction.NE : Direction.SE;
+		byte pawnQsCapture = test(WHITE_TURN) ? Direction.NW : Direction.SW;
+		byte pawnKsCapture = test(WHITE_TURN) ? Direction.NE : Direction.SE;
 
-		// move with take to the queen-side
-		byte to0x88 = Direction.move(from0x88, pawnQsTake);
+		// move with capture to the queen-side
+		byte to0x88 = Direction.move(from0x88, pawnQsCapture);
 
 		if (Square0x88.inBounds(to0x88) && (isOppositeColorPieceOn(to0x88) || to0x88 == enPassantSquare)
-				&& pieceIsFreeToMove(Square0x88.to8x8Square(from0x88), Pin.fromDirection(pawnQsTake))) {
+				&& pieceIsFreeToMove(Square0x88.to8x8Square(from0x88), Pin.fromDirection(pawnQsCapture))) {
 			if (isPromotingSquare(to0x88)) {
 				movesCount += generatePromotionMoves(from0x88, to0x88, outputMoves);
 			} else {
 				movesCount = createOrCountMove(from0x88, to0x88, outputMoves, movesCount);
 			}
 		}
-		// move with take to the king side
-		to0x88 = Direction.move(from0x88, pawnKsTake);
+		// move with capture to the king side
+		to0x88 = Direction.move(from0x88, pawnKsCapture);
 		if (Square0x88.inBounds(to0x88) && (isOppositeColorPieceOn(to0x88) || to0x88 == enPassantSquare)
-				&& pieceIsFreeToMove(Square0x88.to8x8Square(from0x88), Pin.fromDirection(pawnKsTake))) {
+				&& pieceIsFreeToMove(Square0x88.to8x8Square(from0x88), Pin.fromDirection(pawnKsCapture))) {
 			if (isPromotingSquare(to0x88)) {
 				movesCount += generatePromotionMoves(from0x88, to0x88, outputMoves);
 			} else {
@@ -1097,44 +1119,44 @@ public class State {
 		return 4;
 	}
 
-	private int generatePseudoLegalKnightMoves(byte from, List<State> outputMoves) {
+	private int generatePseudoLegalKnightMoves(byte from, List<State> outputMoves, GeneratorMode mode) {
 		if (!pieceIsFreeToMove(Square0x88.to8x8Square(from), null)) {
 			return 0;
 		}
 		int movesCount = 0;
 		byte to = Direction.move(from, Direction.NNE);
-		if (inBounds(to) && !isSameColorPieceOn(to)) {
+
+		if (inBounds(to) && !isSameColorPieceOn(to) && (GeneratorMode.TACTICAL_MOVES != mode || isOppositeColorPieceOn(to))) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
 		to = Direction.move(from, Direction.NEE);
-		if (inBounds(to) && !isSameColorPieceOn(to)) {
+		if (inBounds(to) && !isSameColorPieceOn(to) && (GeneratorMode.TACTICAL_MOVES != mode || isOppositeColorPieceOn(to))) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
 		to = Direction.move(from, Direction.SEE);
-		if (inBounds(to) && !isSameColorPieceOn(to)) {
+		if (inBounds(to) && !isSameColorPieceOn(to) && (GeneratorMode.TACTICAL_MOVES != mode || isOppositeColorPieceOn(to))) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
 		to = Direction.move(from, Direction.SSE);
-		if (inBounds(to) && !isSameColorPieceOn(to)) {
+		if (inBounds(to) && !isSameColorPieceOn(to) && (GeneratorMode.TACTICAL_MOVES != mode || isOppositeColorPieceOn(to))) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
 		to = Direction.move(from, Direction.SSW);
-		if (inBounds(to) && !isSameColorPieceOn(to)) {
+		if (inBounds(to) && !isSameColorPieceOn(to) && (GeneratorMode.TACTICAL_MOVES != mode || isOppositeColorPieceOn(to))) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
 		to = Direction.move(from, Direction.SWW);
-		if (inBounds(to) && !isSameColorPieceOn(to)) {
+		if (inBounds(to) && !isSameColorPieceOn(to) && (GeneratorMode.TACTICAL_MOVES != mode || isOppositeColorPieceOn(to))) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
 		to = Direction.move(from, Direction.NWW);
-		if (inBounds(to) && !isSameColorPieceOn(to)) {
+		if (inBounds(to) && !isSameColorPieceOn(to) && (GeneratorMode.TACTICAL_MOVES != mode || isOppositeColorPieceOn(to))) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
 		to = Direction.move(from, Direction.NNW);
-		if (inBounds(to) && !isSameColorPieceOn(to)) {
+		if (inBounds(to) && !isSameColorPieceOn(to) && (GeneratorMode.TACTICAL_MOVES != mode || isOppositeColorPieceOn(to))) {
 			movesCount = createOrCountMove(from, to, outputMoves, movesCount);
 		}
-
 		return movesCount;
 	}
 
@@ -1155,11 +1177,11 @@ public class State {
 		return pin == null || pin == movementDirection;
 	}
 
-	private int generateLegalMovesWhenKingInCheck(List<State> outputMoves, byte checkedKing) {
+	private int generateLegalMovesWhenKingInCheck(List<State> outputMoves, byte checkedKing, GeneratorMode mode) {
 		int movesCount = 0;
 		if (getChecksCount(checkedKing, !test(WHITE_TURN)) < 2) {
 			List<State> pseudoLegalMoves = new ArrayList<>(Config.MOVES_LIST_CAPACITY);
-			generatePseudoLegalMoves(pseudoLegalMoves);
+			generatePseudoLegalMoves(pseudoLegalMoves, mode);
 			for (State pseudoLegalState : pseudoLegalMoves) {
 				if (pseudoLegalState.isLegal()) {
 					if (outputMoves != null) {
@@ -1170,7 +1192,7 @@ public class State {
 				}
 			}
 		} else {
-			movesCount = generateLegalKingMoves(checkedKing, outputMoves);
+			movesCount = generateLegalKingMoves(checkedKing, outputMoves, mode);
 		}
 		return movesCount;
 	}
@@ -1182,5 +1204,11 @@ public class State {
 		boolean isWhiteTurn = test(WHITE_TURN);
 		byte king = isWhiteTurn ? pieces.getBlackKing() : pieces.getWhiteKing();
 		return !isSquareCheckedBy(king, isWhiteTurn);
+	}
+
+	public enum GeneratorMode {
+		ALL_MOVES,
+		// captures and promotions
+		TACTICAL_MOVES;
 	}
 }

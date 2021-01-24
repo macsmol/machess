@@ -35,7 +35,7 @@ public class Line {
      * @param movesLan eg. "e2e4 e7e5"
      */
     public static Line of(String movesLan) {
-        return movesLan != null ? new Line(movesLan) : null;
+        return movesLan != null ? new Line(movesLan) : Line.empty();
     }
 
     public boolean isMoveMatched(State move, int ply) {

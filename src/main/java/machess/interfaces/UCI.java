@@ -10,7 +10,7 @@ import java.util.Scanner;
 import static machess.Utils.*;
 
 public class UCI {
-    private static final String VERSION_STRING = "1.0-quiescence-23.01.2020";
+    private static final String VERSION_STRING = "1.0-movegen-24.01.2020";
     public static final String POSITION = "position";
     public static final String STARTPOS = "startpos";
     public static final String MOVES = "moves";
@@ -112,7 +112,7 @@ public class UCI {
         }
     }
 
-    private State parseState(String positionWithoutMoves) {
+    public static State parseState(String positionWithoutMoves) {
         if (positionWithoutMoves.startsWith(STARTPOS)) {
             return new State();
         }
