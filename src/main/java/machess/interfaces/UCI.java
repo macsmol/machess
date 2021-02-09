@@ -10,7 +10,7 @@ import java.util.Scanner;
 import static machess.Utils.*;
 
 public class UCI {
-    private static final String VERSION_STRING = "1.0-SNAPSHOT-reordering-30.12.2020";
+    private static final String VERSION_STRING = "1.0-movegen-25.01.2020";
     public static final String POSITION = "position";
     public static final String STARTPOS = "startpos";
     public static final String MOVES = "moves";
@@ -53,18 +53,20 @@ public class UCI {
 
     private void tryToParseInput(String input) {
         try {
-            if (input.startsWith("uci")) {
-                enterUci();
-            } else if (input.startsWith("isready")) {
-                isReady();
-            } else if (input.startsWith("ucinewgame")) {
+            if (input.equals("ucinewgame")) {
                 newGame();
+            } else if (input.equals("uci")) {
+                enterUci();
+            } else if (input.equals("isready")) {
+                isReady();
             } else if (input.startsWith(POSITION)) {
                 setPosition(input.substring(POSITION.length()).trim());
             } else if (input.startsWith(GO)) {
                 go(input.substring(GO.length()).trim());
-            } else if (input.startsWith("tostr")) {
+            } else if (input.equals("tostr")) {
                 System.out.println(state);
+            } else if (input.equals("eval")) {
+                printEvaluation();
             } else if (input.startsWith(Config.DEBUG_LINE_KEY)) {
                 setDebugLine(input.substring(Config.DEBUG_LINE_KEY.length()).trim());
             } else if (input.startsWith(QUIT)) {
@@ -73,6 +75,12 @@ public class UCI {
         } catch (Exception ex) {
             System.out.println("Cannot parse input: " + input + " ex: "+ ex);
             ex.printStackTrace();
+        }
+    }
+
+    private void printEvaluation() {
+        if (state != null) {
+            System.out.println(spaces(UCI.INFO, UCI.SCORE, formatScore(Scorer.evaluate(state,0))));
         }
     }
 
@@ -104,7 +112,7 @@ public class UCI {
         }
     }
 
-    private State parseState(String positionWithoutMoves) {
+    public static State parseState(String positionWithoutMoves) {
         if (positionWithoutMoves.startsWith(STARTPOS)) {
             return new State();
         }
@@ -140,12 +148,9 @@ public class UCI {
         );
     }
 
-    public static String formatScore(int score, boolean isWhiteTurn) {
-        if (Scorer.scoreCloseToWinning(score)) {
+    public static String formatScore(int score) {
+        if (Scorer.scoreCloseToMating(score)) {
             return UCI.MATE_IN + " " + fullMovesToMate(score);
-        }
-        if (!isWhiteTurn) { // score from engine's perspective
-            score = score * -1;
         }
         return UCI.CENTIPAWNS + " " + score;
     }
@@ -153,10 +158,10 @@ public class UCI {
     static int fullMovesToMate(int score) {
         int scoreAbsolute = Math.abs(score);
         // ply == halfmove
-        int pliesToMate = Scorer.MAXIMIZING_WIN - scoreAbsolute;
+        int pliesToMate = -Scorer.LOST - scoreAbsolute;
 
         // negative full move count = Machess is loosing
-        int sign = ((pliesToMate % 2) == 0) ? -1 : 1;
+        int sign = (score > 0) ? 1 : -1;
 
         return sign * (pliesToMate + 1) / 2;
     }
@@ -215,16 +220,18 @@ public class UCI {
                 System.out.println(info(result.nodesEvaluated, result.pv,
                         elapsedTime.toMillis(), depth,
                         calcNodesPerSecond(result.nodesEvaluated, elapsedTime.toNanos()),
-                        formatScore(result.score, state.test(State.WHITE_TURN))));
+                        formatScore(result.score)));
 
                 bestMove = result.pv.moves[0];
                 if (Instant.now().isAfter(finishTime)) {
                     break;
                 }
-                if (result.oneLegalMove) {
+                // skip deper searches in case when only one legal move and playing on time
+                if (result.oneLegalMove && whiteLeftMillis != Integer.MAX_VALUE) {
                     break;
                 }
-                if (Scorer.scoreCloseToWinning(result.score)) { // mating line was found no need to go deeper
+                // mating line was found no need to go deeper
+                if (Scorer.scoreCloseToMating(result.score)) {
                     break;
                 }
             }
