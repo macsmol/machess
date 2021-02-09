@@ -8,10 +8,10 @@ import static org.junit.Assert.*;
 
 public class StateTest {
 
-    @Test
-    public void moveGenerationTestDebug() {
+//    @Test
+//    public void moveGenerationTestDebug() {
 //        debugTestPosition(parseUciPosition("1n2k3/P7/8/8/8/8/8/4K3 w - - 0 1 moves a7a8q"),2,0, State.GeneratorMode.TACTICAL_MOVES);
-    }
+//    }
 
     @Test
     public void moveGenerationTest() {
