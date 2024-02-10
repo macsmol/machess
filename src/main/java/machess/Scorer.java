@@ -190,7 +190,7 @@ public class Scorer {
 		if (depth == 1) {
 			switch (mode) {
 				case ALL_MOVES:
-					return state.generateLegalMoves().size();
+					return state.countLegalMoves();
 				case TACTICAL_MOVES:
 					return state.generateLegalTacticalMoves().size();
 			}
