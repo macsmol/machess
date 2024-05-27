@@ -35,5 +35,11 @@ To verify if this I can do another tournament with different time controls where
 06.01.2020
 Did rematch ver. A vs ver. B rematch under different time settings. This time ver B did better. So it is indeed a problem with lack of quiescence search. (without it odd-depth searches are overoptimistic)
 
-
+24.04.2024
+While testing my other engine I've found an interesting bug while calculating mobility score. When calculating mobility of enemy pieces (the ones that are not moving).
+A pawn  tries to take its own pawn because the enPassant square is set. So simply making a null-move does not guarrantee calculating correct mobility of enemy pieces.
+I'm pretty sure this engine has the same bug!
+Test would be. Setup a starting position and do a search for depth ==1. After A2A4 there's a black turn.
+Static evaluation function will probably have a bad mobility score (wrong count of moves for white) because it will
+ assume that pawn take b2a3 is a move.
 

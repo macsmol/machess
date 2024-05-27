@@ -30,7 +30,7 @@ public class Scorer {
 
 	private static final int LEGAL_MOVE_SCORE = 5;
 
-	private static int nodesEvaluatedInPly = 0;
+	public static int nodesEvaluated = 0;
 
 	private static volatile boolean interrupt;
 
@@ -39,7 +39,6 @@ public class Scorer {
 			System.out.println("debug line " + debugLine);
 		}
 		interrupt = false;
-		nodesEvaluatedInPly = 0;
 		Line pvLine = Line.empty();
 		Line pvSubLine = Line.empty();
 		List<State> moves = rootState.generateLegalMoves();
@@ -48,7 +47,7 @@ public class Scorer {
 
 
 		if (moves.isEmpty()) {
-			return new Result(terminalNodeScore(rootState, 0), pvLine, nodesEvaluatedInPly, false);
+			return new Result(terminalNodeScore(rootState, 0), pvLine, nodesEvaluated, false);
 		}
 
 		reorderMoves(moves, leftmostLine, 1);
@@ -69,13 +68,13 @@ public class Scorer {
 			}
 
 			if (Utils.nanoNow().isAfter(finishTime) && depth > 1) {
-				return new Result(0, null, nodesEvaluatedInPly, false);
+				return new Result(0, null, nodesEvaluated, false);
 			}
 			if (nextMoveWins(currScore)) {
 				break;
 			}
 		}
-		return new Result(alpha, pvLine, nodesEvaluatedInPly, moves.size() == 1);
+		return new Result(alpha, pvLine, nodesEvaluated, moves.size() == 1);
 	}
 
 	public static void terminate() {
@@ -241,9 +240,9 @@ public class Scorer {
 	}
 
 	public static int evaluate(State state, int ply) {
-		nodesEvaluatedInPly++;
-		if (nodesEvaluatedInPly % Config.NODES_LOGGING_PERIOD == 0) {
-			System.out.println(spaces(UCI.INFO, UCI.NODES, Integer.toString(nodesEvaluatedInPly)));
+		nodesEvaluated++;
+		if (nodesEvaluated % Config.NODES_LOGGING_PERIOD == 0) {
+			System.out.println(spaces(UCI.INFO, UCI.NODES, Integer.toString(nodesEvaluated)));
 		}
 		int legalMoves = state.countLegalMoves();
 		if (legalMoves == 0) {

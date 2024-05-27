@@ -29,7 +29,7 @@ public class Config {
 	/**
 	 * Used in calculation of time devoted to next move
 	 */
-	public static int EXPECTED_FULL_MOVES_TO_BE_PLAYED = getProperty("expectedFullMovesToBePlayed", 25);
+	public static int EXPECTED_FULL_MOVES_TO_BE_PLAYED = getProperty("expectedFullMovesToBePlayed", 40);
 
 	private static String getProperty(String key, String defaultValue) {
 		String value = System.getProperty(key);

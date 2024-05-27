@@ -65,6 +65,8 @@ public class UCI {
                 go(input.substring(GO.length()).trim());
             } else if (input.equals("tostr")) {
                 System.out.println(state);
+            } else if (input.startsWith("perft")) {
+                runPerftDivide(input);
             } else if (input.equals("eval")) {
                 printEvaluation();
             } else if (input.startsWith(Config.DEBUG_LINE_KEY)) {
@@ -109,6 +111,18 @@ public class UCI {
             for (String move : moves) {
                 state = Lan.move(state, move);
             }
+        }
+    }
+    private void runPerftDivide(String command) {
+        String[] tokens = command.split(" ");
+        if (tokens.length != 2) {
+            return;
+        }
+
+        try {
+            Scorer.perftDivide(state, Integer.parseInt(tokens[1]), State.GeneratorMode.ALL_MOVES);
+        } catch(NumberFormatException ex) {
+
         }
     }
 
@@ -207,7 +221,7 @@ public class UCI {
             String bestMove = "";
             Instant before = Utils.nanoNow();
             Instant finishTime = before.plus(calcTimeForNextMove());
-
+            Scorer.nodesEvaluated = 0;
             Line bestLine = Line.empty();
             for (int depth = 1; depth <= maxDepth; depth++) {
                 Scorer.Result result = Scorer.startAlphaBeta(state, depth, finishTime, bestLine, Line.of(Config.debugLine()));
@@ -226,7 +240,7 @@ public class UCI {
                 if (Instant.now().isAfter(finishTime)) {
                     break;
                 }
-                // skip deper searches in case when only one legal move and playing on time
+                // skip deeper searches in case when only one legal move and playing on time
                 if (result.oneLegalMove && whiteLeftMillis != Integer.MAX_VALUE) {
                     break;
                 }
@@ -235,6 +249,7 @@ public class UCI {
                     break;
                 }
             }
+            System.out.println("nodes evaluateddd " + Scorer.nodesEvaluated);
             System.out.println(BESTMOVE + " " + bestMove);
         }
 

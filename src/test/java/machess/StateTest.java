@@ -16,7 +16,7 @@ public class StateTest {
     @Test
     public void moveGenerationTest() {
         // test new game from no-arg constructor
-        testPosition(new State(), new long[] { 20,  400,  8902,  197281,  4865609}, State.GeneratorMode.ALL_MOVES);
+        testPosition(new State(), new long[]{20, 400, 8902, 197281, 4865609}, State.GeneratorMode.ALL_MOVES);
         // test new game from fen string
         testAllMoves("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", new long[] { 20,  400,  8902,  197281,  4865609});
         testAllMoves("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", new long[] { 48,  2039,  97862,  4085603,  });
